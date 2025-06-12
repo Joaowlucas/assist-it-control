@@ -154,50 +154,52 @@ export default function UserPortal() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Portal do Usuário</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-700">Portal do Usuário</h2>
+          <p className="text-slate-500">
             Gerencie seus chamados e visualize seus equipamentos
           </p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>Novo Chamado</Button>
+            <Button className="bg-slate-600 hover:bg-slate-700 text-white">Novo Chamado</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] bg-slate-50 border-slate-200">
             <DialogHeader>
-              <DialogTitle>Criar Novo Chamado</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-slate-700">Criar Novo Chamado</DialogTitle>
+              <DialogDescription className="text-slate-600">
                 Descreva seu problema e nossa equipe irá ajudá-lo
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-4">
                 <div>
-                  <Label htmlFor="title">Título</Label>
+                  <Label htmlFor="title" className="text-slate-700">Título</Label>
                   <Input 
                     id="title" 
                     name="title" 
                     placeholder="Descreva brevemente o problema"
                     required 
+                    className="border-slate-300 focus:border-slate-400"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="description">Descrição</Label>
+                  <Label htmlFor="description" className="text-slate-700">Descrição</Label>
                   <Textarea 
                     id="description" 
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
                     required 
+                    className="border-slate-300 focus:border-slate-400"
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="priority">Prioridade</Label>
+                    <Label htmlFor="priority" className="text-slate-700">Prioridade</Label>
                     <Select name="priority" required>
-                      <SelectTrigger>
+                      <SelectTrigger className="border-slate-300">
                         <SelectValue placeholder="Selecione a prioridade" />
                       </SelectTrigger>
                       <SelectContent>
@@ -210,9 +212,9 @@ export default function UserPortal() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="category">Categoria</Label>
+                    <Label htmlFor="category" className="text-slate-700">Categoria</Label>
                     <Select name="category" required>
-                      <SelectTrigger>
+                      <SelectTrigger className="border-slate-300">
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
@@ -227,9 +229,9 @@ export default function UserPortal() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="unit">Unidade</Label>
+                  <Label htmlFor="unit" className="text-slate-700">Unidade</Label>
                   <Select name="unit" required>
-                    <SelectTrigger>
+                    <SelectTrigger className="border-slate-300">
                       <SelectValue placeholder="Selecione sua unidade" />
                     </SelectTrigger>
                     <SelectContent>
@@ -244,10 +246,10 @@ export default function UserPortal() {
               </div>
               
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="border-slate-300 text-slate-700 hover:bg-slate-100">
                   Cancelar
                 </Button>
-                <Button type="submit">Criar Chamado</Button>
+                <Button type="submit" className="bg-slate-600 hover:bg-slate-700 text-white">Criar Chamado</Button>
               </div>
             </form>
           </DialogContent>
@@ -256,86 +258,86 @@ export default function UserPortal() {
 
       {/* Dashboard Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chamados Abertos</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-700">Chamados Abertos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{openTickets.length}</div>
+            <div className="text-2xl font-bold text-slate-800">{openTickets.length}</div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chamados Fechados</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-700">Chamados Fechados</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{closedTickets.length}</div>
+            <div className="text-2xl font-bold text-slate-800">{closedTickets.length}</div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Equipamentos Ativos</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-700">Equipamentos Ativos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeAssignments.length}</div>
+            <div className="text-2xl font-bold text-slate-800">{activeAssignments.length}</div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Atribuições</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-700">Total de Atribuições</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{assignments.length}</div>
+            <div className="text-2xl font-bold text-slate-800">{assignments.length}</div>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="tickets" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="tickets">Meus Chamados</TabsTrigger>
-          <TabsTrigger value="assignments">Meus Equipamentos</TabsTrigger>
+        <TabsList className="bg-slate-200 border-slate-300">
+          <TabsTrigger value="tickets" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Chamados</TabsTrigger>
+          <TabsTrigger value="assignments" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Equipamentos</TabsTrigger>
         </TabsList>
         
         <TabsContent value="tickets" className="space-y-4">
-          <Card>
+          <Card className="bg-slate-100/50 border-slate-200">
             <CardHeader>
-              <CardTitle>Histórico de Chamados</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-slate-700">Histórico de Chamados</CardTitle>
+              <CardDescription className="text-slate-600">
                 Todos os seus chamados de suporte
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Prioridade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Criado em</TableHead>
+                  <TableRow className="border-slate-200">
+                    <TableHead className="text-slate-600">ID</TableHead>
+                    <TableHead className="text-slate-600">Título</TableHead>
+                    <TableHead className="text-slate-600">Unidade</TableHead>
+                    <TableHead className="text-slate-600">Categoria</TableHead>
+                    <TableHead className="text-slate-600">Prioridade</TableHead>
+                    <TableHead className="text-slate-600">Status</TableHead>
+                    <TableHead className="text-slate-600">Criado em</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tickets.map((ticket) => (
-                    <TableRow key={ticket.id}>
-                      <TableCell className="font-medium">{ticket.id}</TableCell>
+                    <TableRow key={ticket.id} className="border-slate-200">
+                      <TableCell className="font-medium text-slate-700">{ticket.id}</TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{ticket.title}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="font-medium text-slate-700">{ticket.title}</div>
+                          <div className="text-sm text-slate-500">
                             {ticket.description.length > 40 
                               ? `${ticket.description.substring(0, 40)}...` 
                               : ticket.description}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{ticket.unit}</TableCell>
-                      <TableCell>{ticket.category}</TableCell>
+                      <TableCell className="text-slate-600">{ticket.unit}</TableCell>
+                      <TableCell className="text-slate-600">{ticket.category}</TableCell>
                       <TableCell>
                         <Badge variant={getPriorityColor(ticket.priority) as any}>
                           {ticket.priority}
@@ -346,7 +348,7 @@ export default function UserPortal() {
                           {ticket.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{ticket.createdAt}</TableCell>
+                      <TableCell className="text-slate-600">{ticket.createdAt}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -356,31 +358,31 @@ export default function UserPortal() {
         </TabsContent>
         
         <TabsContent value="assignments" className="space-y-4">
-          <Card>
+          <Card className="bg-slate-100/50 border-slate-200">
             <CardHeader>
-              <CardTitle>Histórico de Equipamentos</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-slate-700">Histórico de Equipamentos</CardTitle>
+              <CardDescription className="text-slate-600">
                 Todos os equipamentos que você utilizou ou está utilizando
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Equipamento</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Data de Início</TableHead>
-                    <TableHead>Data de Fim</TableHead>
-                    <TableHead>Status</TableHead>
+                  <TableRow className="border-slate-200">
+                    <TableHead className="text-slate-600">Equipamento</TableHead>
+                    <TableHead className="text-slate-600">Tipo</TableHead>
+                    <TableHead className="text-slate-600">Data de Início</TableHead>
+                    <TableHead className="text-slate-600">Data de Fim</TableHead>
+                    <TableHead className="text-slate-600">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {assignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
-                      <TableCell className="font-medium">{assignment.equipmentName}</TableCell>
-                      <TableCell>{assignment.equipmentType}</TableCell>
-                      <TableCell>{assignment.startDate}</TableCell>
-                      <TableCell>{assignment.endDate || "-"}</TableCell>
+                    <TableRow key={assignment.id} className="border-slate-200">
+                      <TableCell className="font-medium text-slate-700">{assignment.equipmentName}</TableCell>
+                      <TableCell className="text-slate-600">{assignment.equipmentType}</TableCell>
+                      <TableCell className="text-slate-600">{assignment.startDate}</TableCell>
+                      <TableCell className="text-slate-600">{assignment.endDate || "-"}</TableCell>
                       <TableCell>
                         <Badge variant={getAssignmentStatusColor(assignment.status) as any}>
                           {assignment.status}
