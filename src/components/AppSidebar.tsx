@@ -21,11 +21,8 @@ const adminItems = [
   { title: "Chamados", url: "/tickets", icon: FileText },
   { title: "Equipamentos", url: "/equipment", icon: Computer },
   { title: "Atribuições", url: "/assignments", icon: Users },
+  { title: "Usuários", url: "/users", icon: User },
   { title: "Configurações", url: "/settings", icon: Settings },
-]
-
-const userItems = [
-  { title: "Portal do Usuário", url: "/user-portal", icon: User },
 ]
 
 export function AppSidebar() {
@@ -56,24 +53,6 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {adminItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {state !== "collapsed" && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Usuário</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {userItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
