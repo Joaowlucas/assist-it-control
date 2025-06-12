@@ -3,20 +3,21 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { Button } from "@/components/ui/button"
 import { ReactNode } from "react"
-import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/hooks/useAuth"
 
 interface AdminLayoutProps {
   children: ReactNode
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const navigate = useNavigate()
-  const currentUserStr = localStorage.getItem('currentUser')
-  const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null
+  const { signOut, profile } = useAuth()
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser')
-    navigate('/login')
+  const handleLogout = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   return (
@@ -32,7 +33,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
-                Bem-vindo, {currentUser?.name || 'Admin'}
+                Bem-vindo, {profile?.name || 'Admin'}
               </span>
               <Button variant="outline" onClick={handleLogout}>
                 Sair

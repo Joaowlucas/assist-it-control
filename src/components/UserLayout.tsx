@@ -1,20 +1,21 @@
 
 import { ReactNode } from "react"
-import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
 
 interface UserLayoutProps {
   children: ReactNode
 }
 
 export function UserLayout({ children }: UserLayoutProps) {
-  const navigate = useNavigate()
-  const currentUserStr = localStorage.getItem('currentUser')
-  const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null
+  const { signOut, profile } = useAuth()
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser')
-    navigate('/login')
+  const handleLogout = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   return (
@@ -23,7 +24,7 @@ export function UserLayout({ children }: UserLayoutProps) {
         <h1 className="text-xl font-semibold">Portal do Usuário - Suporte TI</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            Bem-vindo, {currentUser?.name || 'Usuário'}
+            Bem-vindo, {profile?.name || 'Usuário'}
           </span>
           <Button variant="outline" onClick={handleLogout}>
             Sair
