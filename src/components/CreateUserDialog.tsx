@@ -19,7 +19,7 @@ export function CreateUserDialog() {
     email: '',
     password: '',
     role: 'user' as 'admin' | 'technician' | 'user',
-    unit_id: ''
+    unit_id: 'none'
   })
   
   const { toast } = useToast()
@@ -48,7 +48,7 @@ export function CreateUserDialog() {
           .from('profiles')
           .update({
             role: formData.role,
-            unit_id: formData.unit_id || null
+            unit_id: formData.unit_id === 'none' ? null : formData.unit_id
           })
           .eq('id', authData.user.id)
 
@@ -65,7 +65,7 @@ export function CreateUserDialog() {
         email: '',
         password: '',
         role: 'user',
-        unit_id: ''
+        unit_id: 'none'
       })
       setOpen(false)
     } catch (error: any) {
@@ -151,6 +151,7 @@ export function CreateUserDialog() {
                   <SelectValue placeholder="Selecione uma unidade" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Nenhuma unidade</SelectItem>
                   {units?.map((unit) => (
                     <SelectItem key={unit.id} value={unit.id}>
                       {unit.name}

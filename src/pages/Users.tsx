@@ -56,7 +56,7 @@ export default function Users() {
   const handleUnitChange = (userId: string, newUnitId: string) => {
     updateProfile.mutate({
       id: userId,
-      unit_id: newUnitId || null
+      unit_id: newUnitId === "none" ? null : newUnitId
     })
   }
 
@@ -120,14 +120,14 @@ export default function Users() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Unidade</label>
                   <Select
-                    value={profile.unit_id || ""}
+                    value={profile.unit_id || "none"}
                     onValueChange={(value) => handleUnitChange(profile.id, value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma unidade</SelectItem>
+                      <SelectItem value="none">Nenhuma unidade</SelectItem>
                       {units?.map((unit) => (
                         <SelectItem key={unit.id} value={unit.id}>
                           {unit.name}
