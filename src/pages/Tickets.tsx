@@ -19,6 +19,7 @@ interface Ticket {
   status: "Aberto" | "Em Andamento" | "Aguardando" | "Fechado"
   category: "Hardware" | "Software" | "Rede" | "Acesso" | "Outros"
   requester: string
+  unit: string
   assignee?: string
   createdAt: string
   updatedAt: string
@@ -33,6 +34,7 @@ const mockTickets: Ticket[] = [
     status: "Aberto",
     category: "Hardware",
     requester: "João Silva",
+    unit: "Matriz São Paulo",
     createdAt: "2024-06-10",
     updatedAt: "2024-06-10"
   },
@@ -44,6 +46,7 @@ const mockTickets: Ticket[] = [
     status: "Em Andamento",
     category: "Acesso",
     requester: "Maria Santos",
+    unit: "Filial Rio de Janeiro",
     assignee: "Carlos Tech",
     createdAt: "2024-06-09",
     updatedAt: "2024-06-10"
@@ -56,9 +59,15 @@ const mockTickets: Ticket[] = [
     status: "Aguardando",
     category: "Rede",
     requester: "Ana Costa",
+    unit: "Matriz São Paulo",
     createdAt: "2024-06-08",
     updatedAt: "2024-06-09"
   }
+]
+
+const units = [
+  { id: "1", name: "Matriz São Paulo" },
+  { id: "2", name: "Filial Rio de Janeiro" }
 ]
 
 export default function Tickets() {
@@ -98,6 +107,7 @@ export default function Tickets() {
       status: "Aberto",
       category: formData.get('category') as any,
       requester: formData.get('requester') as string,
+      unit: formData.get('unit') as string,
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0]
     }
@@ -186,14 +196,32 @@ export default function Tickets() {
                   </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="requester">Solicitante</Label>
-                  <Input 
-                    id="requester" 
-                    name="requester" 
-                    placeholder="Nome do solicitante"
-                    required 
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="requester">Solicitante</Label>
+                    <Input 
+                      id="requester" 
+                      name="requester" 
+                      placeholder="Nome do solicitante"
+                      required 
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="unit">Unidade</Label>
+                    <Select name="unit" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.name}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
               
@@ -222,6 +250,7 @@ export default function Tickets() {
                 <TableHead>ID</TableHead>
                 <TableHead>Título</TableHead>
                 <TableHead>Solicitante</TableHead>
+                <TableHead>Unidade</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
@@ -243,6 +272,7 @@ export default function Tickets() {
                     </div>
                   </TableCell>
                   <TableCell>{ticket.requester}</TableCell>
+                  <TableCell>{ticket.unit}</TableCell>
                   <TableCell>{ticket.category}</TableCell>
                   <TableCell>
                     <Badge variant={getPriorityColor(ticket.priority) as any}>

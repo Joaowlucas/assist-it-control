@@ -10,6 +10,7 @@ import Tickets from "./pages/Tickets";
 import Equipment from "./pages/Equipment";
 import Assignments from "./pages/Assignments";
 import Settings from "./pages/Settings";
+import UserPortal from "./pages/UserPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/equipment" element={<Equipment />} />
             <Route path="/assignments" element={<Assignments />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/user-portal" element={<UserPortal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
