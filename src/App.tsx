@@ -28,35 +28,37 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           
-          {/* Admin Routes */}
+          {/* Admin/Technician Routes */}
           <Route path="/" element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole="admin_tech">
               <AdminLayout>
                 <Dashboard />
               </AdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/tickets" element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole="admin_tech">
               <AdminLayout>
                 <Tickets />
               </AdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/equipment" element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole="admin_tech">
               <AdminLayout>
                 <Equipment />
               </AdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/assignments" element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole="admin_tech">
               <AdminLayout>
                 <Assignments />
               </AdminLayout>
             </ProtectedRoute>
           } />
+          
+          {/* Admin Only Routes */}
           <Route path="/users" element={
             <ProtectedRoute requiredRole="admin">
               <AdminLayout>

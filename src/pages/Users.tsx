@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,7 +14,7 @@ interface SystemUser {
   id: string
   name: string
   email: string
-  role: "admin" | "user"
+  role: "admin" | "user" | "technician"
   unit: string
   status: "Ativo" | "Inativo"
   createdAt: string
@@ -48,6 +47,24 @@ const mockUsers: SystemUser[] = [
     unit: "Filial Rio de Janeiro",
     status: "Ativo",
     createdAt: "2024-03-05"
+  },
+  {
+    id: "4",
+    name: "Carlos Tech",
+    email: "carlos@empresa.com",
+    role: "technician", 
+    unit: "TI",
+    status: "Ativo",
+    createdAt: "2024-03-10"
+  },
+  {
+    id: "5",
+    name: "Ana Tech",
+    email: "ana@empresa.com",
+    role: "technician", 
+    unit: "TI",
+    status: "Ativo",
+    createdAt: "2024-03-15"
   }
 ]
 
@@ -63,7 +80,21 @@ export default function Users() {
   const { toast } = useToast()
 
   const getRoleColor = (role: string) => {
-    return role === "admin" ? "destructive" : "default"
+    switch (role) {
+      case "admin": return "destructive"
+      case "technician": return "default"
+      case "user": return "secondary"
+      default: return "default"
+    }
+  }
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "admin": return "Administrador"
+      case "technician": return "Técnico"
+      case "user": return "Usuário"
+      default: return role
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -78,7 +109,7 @@ export default function Users() {
       id: editingUser?.id || String(users.length + 1),
       name: formData.get('name') as string,
       email: formData.get('email') as string,
-      role: formData.get('role') as "admin" | "user",
+      role: formData.get('role') as "admin" | "user" | "technician",
       unit: formData.get('unit') as string,
       status: formData.get('status') as "Ativo" | "Inativo",
       createdAt: editingUser?.createdAt || new Date().toISOString().split('T')[0]
@@ -181,6 +212,7 @@ export default function Users() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="user">Usuário</SelectItem>
+                        <SelectItem value="technician">Técnico</SelectItem>
                         <SelectItem value="admin">Administrador</SelectItem>
                       </SelectContent>
                     </Select>
@@ -231,7 +263,7 @@ export default function Users() {
       </div>
 
       {/* Dashboard Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
@@ -266,7 +298,18 @@ export default function Users() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuários Comuns</CardTitle>
+            <CardTitle className="text-sm font-medium">Técnicos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter(u => u.role === "technician").length}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Usuários</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -304,7 +347,7 @@ export default function Users() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge variant={getRoleColor(user.role) as any}>
-                      {user.role === "admin" ? "Administrador" : "Usuário"}
+                      {getRoleLabel(user.role)}
                     </Badge>
                   </TableCell>
                   <TableCell>{user.unit}</TableCell>

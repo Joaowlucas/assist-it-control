@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 
-// Mock users - em produção, isso viria de uma API/banco de dados
+// Mock users database
 const mockUsers = [
-  { id: "1", email: "admin@empresa.com", password: "admin123", role: "admin", name: "Administrador" },
-  { id: "2", email: "user@empresa.com", password: "user123", role: "user", name: "João Silva" },
-  { id: "3", email: "maria@empresa.com", password: "maria123", role: "user", name: "Maria Santos" }
+  { id: "1", email: "admin@empresa.com", password: "admin123", name: "Administrador", role: "admin" },
+  { id: "2", email: "user@empresa.com", password: "user123", name: "João Silva", role: "user" },
+  { id: "3", email: "carlos@empresa.com", password: "tech123", name: "Carlos Tech", role: "technician" },
+  { id: "4", email: "ana@empresa.com", password: "tech123", name: "Ana Tech", role: "technician" },
 ]
 
 export default function Login() {
@@ -21,52 +22,51 @@ export default function Login() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simular delay de autenticação
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    const user = mockUsers.find(u => u.email === email && u.password === password)
-    
-    if (user) {
-      // Salvar dados do usuário no localStorage
-      localStorage.setItem('currentUser', JSON.stringify(user))
+    // Simulate API call
+    setTimeout(() => {
+      const user = mockUsers.find(u => u.email === email && u.password === password)
       
-      toast({
-        title: "Login realizado com sucesso!",
-        description: `Bem-vindo, ${user.name}`,
-      })
+      if (user) {
+        localStorage.setItem('currentUser', JSON.stringify(user))
+        
+        toast({
+          title: "Login realizado com sucesso!",
+          description: `Bem-vindo, ${user.name}!`,
+        })
 
-      // Redirecionar baseado no role
-      if (user.role === 'admin') {
-        navigate('/')
+        // Redirect based on role
+        if (user.role === "admin" || user.role === "technician") {
+          navigate("/")
+        } else {
+          navigate("/user-portal")
+        }
       } else {
-        navigate('/user-portal')
+        toast({
+          title: "Erro no login",
+          description: "Email ou senha incorretos.",
+          variant: "destructive",
+        })
       }
-    } else {
-      toast({
-        title: "Erro de autenticação",
-        description: "Email ou senha incorretos",
-        variant: "destructive"
-      })
-    }
-    
-    setIsLoading(false)
+      
+      setIsLoading(false)
+    }, 1000)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Sistema de Suporte de TI</CardTitle>
+          <CardTitle className="text-2xl text-center">Sistema de Suporte TI</CardTitle>
           <CardDescription className="text-center">
             Entre com suas credenciais para acessar o sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -94,9 +94,12 @@ export default function Login() {
           </form>
           
           <div className="mt-6 text-sm text-muted-foreground">
-            <p className="text-center mb-2">Usuários de teste:</p>
-            <p><strong>Admin:</strong> admin@empresa.com / admin123</p>
-            <p><strong>Usuário:</strong> user@empresa.com / user123</p>
+            <p className="font-medium mb-2">Credenciais de teste:</p>
+            <div className="space-y-1">
+              <p><strong>Admin:</strong> admin@empresa.com / admin123</p>
+              <p><strong>Usuário:</strong> user@empresa.com / user123</p>
+              <p><strong>Técnico:</strong> carlos@empresa.com / tech123</p>
+            </div>
           </div>
         </CardContent>
       </Card>

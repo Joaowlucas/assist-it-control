@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom"
 
 interface ProtectedRouteProps {
   children: ReactNode
-  requiredRole?: "admin" | "user"
+  requiredRole?: "admin" | "user" | "technician" | "admin_tech"
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
@@ -16,14 +16,21 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   const currentUser = JSON.parse(currentUserStr)
   
-  if (requiredRole && currentUser.role !== requiredRole) {
-    // Se é admin tentando acessar área de usuário, redireciona para dashboard
-    if (currentUser.role === 'admin' && requiredRole === 'user') {
-      return <Navigate to="/" replace />
-    }
-    // Se é usuário tentando acessar área de admin, redireciona para portal do usuário
-    if (currentUser.role === 'user' && requiredRole === 'admin') {
-      return <Navigate to="/user-portal" replace />
+  if (requiredRole) {
+    // admin_tech means both admin and technician can access
+    if (requiredRole === "admin_tech") {
+      if (currentUser.role !== "admin" && currentUser.role !== "technician") {
+        return <Navigate to="/user-portal" replace />
+      }
+    } else if (currentUser.role !== requiredRole) {
+      // Se é admin ou técnico tentando acessar área de usuário, redireciona para dashboard
+      if ((currentUser.role === 'admin' || currentUser.role === 'technician') && requiredRole === 'user') {
+        return <Navigate to="/" replace />
+      }
+      // Se é usuário tentando acessar área de admin/técnico, redireciona para portal do usuário
+      if (currentUser.role === 'user' && (requiredRole === 'admin' || requiredRole === 'technician')) {
+        return <Navigate to="/user-portal" replace />
+      }
     }
   }
 

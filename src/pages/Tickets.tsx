@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
+import { Edit, Trash2, Plus } from "lucide-react"
 
 interface Ticket {
   id: string
@@ -18,12 +19,34 @@ interface Ticket {
   priority: "Baixa" | "Média" | "Alta" | "Crítica"
   status: "Aberto" | "Em Andamento" | "Aguardando" | "Fechado"
   category: "Hardware" | "Software" | "Rede" | "Acesso" | "Outros"
-  requester: string
+  requesterId: string
+  requesterName: string
   unit: string
-  assignee?: string
+  assigneeId?: string
+  assigneeName?: string
   createdAt: string
   updatedAt: string
 }
+
+interface User {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "user" | "technician"
+  unit: string
+}
+
+interface Unit {
+  id: string
+  name: string
+}
+
+const mockUsers: User[] = [
+  { id: "1", name: "João Silva", email: "joao@empresa.com", role: "user", unit: "Matriz São Paulo" },
+  { id: "2", name: "Maria Santos", email: "maria@empresa.com", role: "user", unit: "Filial Rio de Janeiro" },
+  { id: "3", name: "Carlos Tech", email: "carlos@empresa.com", role: "technician", unit: "TI" },
+  { id: "4", name: "Ana Tech", email: "ana@empresa.com", role: "technician", unit: "TI" },
+]
 
 const mockTickets: Ticket[] = [
   {
@@ -33,7 +56,8 @@ const mockTickets: Ticket[] = [
     priority: "Alta",
     status: "Aberto",
     category: "Hardware",
-    requester: "João Silva",
+    requesterId: "1",
+    requesterName: "João Silva",
     unit: "Matriz São Paulo",
     createdAt: "2024-06-10",
     updatedAt: "2024-06-10"
@@ -45,35 +69,30 @@ const mockTickets: Ticket[] = [
     priority: "Média",
     status: "Em Andamento",
     category: "Acesso",
-    requester: "Maria Santos",
+    requesterId: "2",
+    requesterName: "Maria Santos",
     unit: "Filial Rio de Janeiro",
-    assignee: "Carlos Tech",
+    assigneeId: "3",
+    assigneeName: "Carlos Tech",
     createdAt: "2024-06-09",
     updatedAt: "2024-06-10"
-  },
-  {
-    id: "TK-003",
-    title: "Internet lenta",
-    description: "A internet está muito lenta no setor financeiro",
-    priority: "Baixa",
-    status: "Aguardando",
-    category: "Rede",
-    requester: "Ana Costa",
-    unit: "Matriz São Paulo",
-    createdAt: "2024-06-08",
-    updatedAt: "2024-06-09"
   }
 ]
 
-const units = [
+const units: Unit[] = [
   { id: "1", name: "Matriz São Paulo" },
   { id: "2", name: "Filial Rio de Janeiro" }
 ]
 
 export default function Tickets() {
   const [tickets, setTickets] = useState<Ticket[]>(mockTickets)
+  const [users] = useState<User[]>(mockUsers)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null)
   const { toast } = useToast()
+
+  const technicians = users.filter(user => user.role === "technician")
+  const systemUsers = users.filter(user => user.role === "user")
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -99,25 +118,84 @@ export default function Tickets() {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
     
-    const newTicket: Ticket = {
-      id: `TK-${String(tickets.length + 1).padStart(3, '0')}`,
+    const requesterId = formData.get('requesterId') as string
+    const requester = systemUsers.find(u => u.id === requesterId)
+    const assigneeId = formData.get('assigneeId') as string
+    const assignee = assigneeId ? technicians.find(t => t.id === assigneeId) : undefined
+
+    const ticketData: Ticket = {
+      id: editingTicket?.id || `TK-${String(tickets.length + 1).padStart(3, '0')}`,
       title: formData.get('title') as string,
       description: formData.get('description') as string,
       priority: formData.get('priority') as any,
-      status: "Aberto",
+      status: formData.get('status') as any || "Aberto",
       category: formData.get('category') as any,
-      requester: formData.get('requester') as string,
+      requesterId: requesterId,
+      requesterName: requester?.name || "",
       unit: formData.get('unit') as string,
-      createdAt: new Date().toISOString().split('T')[0],
+      assigneeId: assigneeId || undefined,
+      assigneeName: assignee?.name || undefined,
+      createdAt: editingTicket?.createdAt || new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0]
     }
 
-    setTickets([newTicket, ...tickets])
+    if (editingTicket) {
+      setTickets(tickets.map(t => t.id === editingTicket.id ? ticketData : t))
+      toast({
+        title: "Chamado atualizado com sucesso!",
+        description: `Chamado ${ticketData.id} foi atualizado.`,
+      })
+    } else {
+      setTickets([ticketData, ...tickets])
+      toast({
+        title: "Chamado criado com sucesso!",
+        description: `Chamado ${ticketData.id} foi criado e está aguardando atendimento.`,
+      })
+    }
+
     setIsDialogOpen(false)
+    setEditingTicket(null)
+  }
+
+  const handleEdit = (ticket: Ticket) => {
+    setEditingTicket(ticket)
+    setIsDialogOpen(true)
+  }
+
+  const handleStatusChange = (ticketId: string, newStatus: Ticket['status']) => {
+    setTickets(tickets.map(ticket => 
+      ticket.id === ticketId 
+        ? { ...ticket, status: newStatus, updatedAt: new Date().toISOString().split('T')[0] }
+        : ticket
+    ))
     toast({
-      title: "Chamado criado com sucesso!",
-      description: `Chamado ${newTicket.id} foi criado e está aguardando atendimento.`,
+      title: "Status atualizado!",
+      description: `Status do chamado ${ticketId} alterado para ${newStatus}.`,
     })
+  }
+
+  const handleAssignTechnician = (ticketId: string, technicianId: string) => {
+    const technician = technicians.find(t => t.id === technicianId)
+    setTickets(tickets.map(ticket => 
+      ticket.id === ticketId 
+        ? { 
+            ...ticket, 
+            assigneeId: technicianId, 
+            assigneeName: technician?.name,
+            status: "Em Andamento",
+            updatedAt: new Date().toISOString().split('T')[0]
+          }
+        : ticket
+    ))
+    toast({
+      title: "Técnico atribuído!",
+      description: `Chamado ${ticketId} atribuído para ${technician?.name}.`,
+    })
+  }
+
+  const openCreateDialog = () => {
+    setEditingTicket(null)
+    setIsDialogOpen(true)
   }
 
   return (
@@ -132,13 +210,18 @@ export default function Tickets() {
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>Novo Chamado</Button>
+            <Button onClick={openCreateDialog}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Chamado
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Criar Novo Chamado</DialogTitle>
+              <DialogTitle>
+                {editingTicket ? "Editar Chamado" : "Criar Novo Chamado"}
+              </DialogTitle>
               <DialogDescription>
-                Preencha as informações do chamado de suporte
+                {editingTicket ? "Modifique as informações do chamado" : "Preencha as informações do chamado de suporte"}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -149,6 +232,7 @@ export default function Tickets() {
                     id="title" 
                     name="title" 
                     placeholder="Descreva brevemente o problema"
+                    defaultValue={editingTicket?.title}
                     required 
                   />
                 </div>
@@ -159,6 +243,7 @@ export default function Tickets() {
                     id="description" 
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
+                    defaultValue={editingTicket?.description}
                     required 
                   />
                 </div>
@@ -166,7 +251,7 @@ export default function Tickets() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="priority">Prioridade</Label>
-                    <Select name="priority" required>
+                    <Select name="priority" defaultValue={editingTicket?.priority} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a prioridade" />
                       </SelectTrigger>
@@ -181,7 +266,7 @@ export default function Tickets() {
                   
                   <div>
                     <Label htmlFor="category">Categoria</Label>
-                    <Select name="category" required>
+                    <Select name="category" defaultValue={editingTicket?.category} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
@@ -198,18 +283,24 @@ export default function Tickets() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="requester">Solicitante</Label>
-                    <Input 
-                      id="requester" 
-                      name="requester" 
-                      placeholder="Nome do solicitante"
-                      required 
-                    />
+                    <Label htmlFor="requesterId">Solicitante</Label>
+                    <Select name="requesterId" defaultValue={editingTicket?.requesterId} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o solicitante" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {systemUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name} - {user.unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div>
                     <Label htmlFor="unit">Unidade</Label>
-                    <Select name="unit" required>
+                    <Select name="unit" defaultValue={editingTicket?.unit} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a unidade" />
                       </SelectTrigger>
@@ -223,13 +314,51 @@ export default function Tickets() {
                     </Select>
                   </div>
                 </div>
+
+                {editingTicket && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select name="status" defaultValue={editingTicket?.status} required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Aberto">Aberto</SelectItem>
+                          <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                          <SelectItem value="Aguardando">Aguardando</SelectItem>
+                          <SelectItem value="Fechado">Fechado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="assigneeId">Técnico Responsável</Label>
+                      <Select name="assigneeId" defaultValue={editingTicket?.assigneeId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um técnico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {technicians.map((tech) => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Criar Chamado</Button>
+                <Button type="submit">
+                  {editingTicket ? "Atualizar" : "Criar"} Chamado
+                </Button>
               </div>
             </form>
           </DialogContent>
@@ -254,7 +383,8 @@ export default function Tickets() {
                 <TableHead>Categoria</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Criado em</TableHead>
+                <TableHead>Técnico</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -271,7 +401,7 @@ export default function Tickets() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{ticket.requester}</TableCell>
+                  <TableCell>{ticket.requesterName}</TableCell>
                   <TableCell>{ticket.unit}</TableCell>
                   <TableCell>{ticket.category}</TableCell>
                   <TableCell>
@@ -280,11 +410,49 @@ export default function Tickets() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusColor(ticket.status) as any}>
-                      {ticket.status}
-                    </Badge>
+                    <Select 
+                      value={ticket.status} 
+                      onValueChange={(value) => handleStatusChange(ticket.id, value as Ticket['status'])}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Aberto">Aberto</SelectItem>
+                        <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                        <SelectItem value="Aguardando">Aguardando</SelectItem>
+                        <SelectItem value="Fechado">Fechado</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
-                  <TableCell>{ticket.createdAt}</TableCell>
+                  <TableCell>
+                    <Select 
+                      value={ticket.assigneeId || ""} 
+                      onValueChange={(value) => value && handleAssignTechnician(ticket.id, value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Atribuir" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {technicians.map((tech) => (
+                          <SelectItem key={tech.id} value={tech.id}>
+                            {tech.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(ticket)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
