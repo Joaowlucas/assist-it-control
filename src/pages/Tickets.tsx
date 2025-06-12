@@ -96,21 +96,21 @@ export default function Tickets() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "Crítica": return "destructive"
-      case "Alta": return "destructive"
-      case "Média": return "default"
-      case "Baixa": return "secondary"
-      default: return "default"
+      case "Crítica": return "bg-red-100 text-red-800 border-red-200"
+      case "Alta": return "bg-orange-100 text-orange-800 border-orange-200"
+      case "Média": return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "Baixa": return "bg-green-100 text-green-800 border-green-200"
+      default: return "bg-gray-100 text-gray-800 border-gray-200"
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Aberto": return "destructive"
-      case "Em Andamento": return "default"
-      case "Aguardando": return "secondary"
-      case "Fechado": return "outline"
-      default: return "default"
+      case "Aberto": return "bg-red-100 text-red-800 border-red-200"
+      case "Em Andamento": return "bg-blue-100 text-blue-800 border-blue-200"
+      case "Aguardando": return "bg-purple-100 text-purple-800 border-purple-200"
+      case "Fechado": return "bg-green-100 text-green-800 border-green-200"
+      default: return "bg-gray-100 text-gray-800 border-gray-200"
     }
   }
 
@@ -210,7 +210,10 @@ export default function Tickets() {
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openCreateDialog}>
+            <Button 
+              onClick={openCreateDialog}
+              className="bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-200"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Novo Chamado
             </Button>
@@ -232,7 +235,7 @@ export default function Tickets() {
                     id="title" 
                     name="title" 
                     placeholder="Descreva brevemente o problema"
-                    defaultValue={editingTicket?.title}
+                    defaultValue={editingTicket?.title || ""}
                     required 
                   />
                 </div>
@@ -243,7 +246,7 @@ export default function Tickets() {
                     id="description" 
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
-                    defaultValue={editingTicket?.description}
+                    defaultValue={editingTicket?.description || ""}
                     required 
                   />
                 </div>
@@ -251,7 +254,7 @@ export default function Tickets() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="priority">Prioridade</Label>
-                    <Select name="priority" defaultValue={editingTicket?.priority} required>
+                    <Select name="priority" defaultValue={editingTicket?.priority || ""}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a prioridade" />
                       </SelectTrigger>
@@ -266,7 +269,7 @@ export default function Tickets() {
                   
                   <div>
                     <Label htmlFor="category">Categoria</Label>
-                    <Select name="category" defaultValue={editingTicket?.category} required>
+                    <Select name="category" defaultValue={editingTicket?.category || ""}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
@@ -284,7 +287,7 @@ export default function Tickets() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="requesterId">Solicitante</Label>
-                    <Select name="requesterId" defaultValue={editingTicket?.requesterId} required>
+                    <Select name="requesterId" defaultValue={editingTicket?.requesterId || ""}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o solicitante" />
                       </SelectTrigger>
@@ -300,7 +303,7 @@ export default function Tickets() {
                   
                   <div>
                     <Label htmlFor="unit">Unidade</Label>
-                    <Select name="unit" defaultValue={editingTicket?.unit} required>
+                    <Select name="unit" defaultValue={editingTicket?.unit || ""}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a unidade" />
                       </SelectTrigger>
@@ -319,7 +322,7 @@ export default function Tickets() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="status">Status</Label>
-                      <Select name="status" defaultValue={editingTicket?.status} required>
+                      <Select name="status" defaultValue={editingTicket?.status || ""}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o status" />
                         </SelectTrigger>
@@ -334,12 +337,12 @@ export default function Tickets() {
                     
                     <div>
                       <Label htmlFor="assigneeId">Técnico Responsável</Label>
-                      <Select name="assigneeId" defaultValue={editingTicket?.assigneeId}>
+                      <Select name="assigneeId" defaultValue={editingTicket?.assigneeId || "none"}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um técnico" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {technicians.map((tech) => (
                             <SelectItem key={tech.id} value={tech.id}>
                               {tech.name}
@@ -353,10 +356,18 @@ export default function Tickets() {
               </div>
               
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                  className="bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+                >
                   Cancelar
                 </Button>
-                <Button type="submit">
+                <Button 
+                  type="submit"
+                  className="bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
+                >
                   {editingTicket ? "Atualizar" : "Criar"} Chamado
                 </Button>
               </div>
@@ -405,7 +416,7 @@ export default function Tickets() {
                   <TableCell>{ticket.unit}</TableCell>
                   <TableCell>{ticket.category}</TableCell>
                   <TableCell>
-                    <Badge variant={getPriorityColor(ticket.priority) as any}>
+                    <Badge className={getPriorityColor(ticket.priority)}>
                       {ticket.priority}
                     </Badge>
                   </TableCell>
@@ -427,13 +438,14 @@ export default function Tickets() {
                   </TableCell>
                   <TableCell>
                     <Select 
-                      value={ticket.assigneeId || ""} 
-                      onValueChange={(value) => value && handleAssignTechnician(ticket.id, value)}
+                      value={ticket.assigneeId || "none"} 
+                      onValueChange={(value) => value !== "none" && handleAssignTechnician(ticket.id, value)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue placeholder="Atribuir" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {technicians.map((tech) => (
                           <SelectItem key={tech.id} value={tech.id}>
                             {tech.name}
@@ -448,6 +460,7 @@ export default function Tickets() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEdit(ticket)}
+                        className="bg-blue-50 text-blue-700 hover:bg-blue-100"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
