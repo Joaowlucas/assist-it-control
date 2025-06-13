@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -368,7 +369,7 @@ export default function UserPortal() {
                       </TableCell>
                       <TableCell>
                         <AttachmentIcon
-                          count={ticket.attachments_count || 0}
+                          count={ticket.attachments?.length || 0}
                           onClick={() => handleAttachmentClick(ticket)}
                           showPreview={true}
                         />
