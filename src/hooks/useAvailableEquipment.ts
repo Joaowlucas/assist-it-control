@@ -9,6 +9,8 @@ export interface AvailableEquipment {
   brand: string | null
   model: string | null
   serial_number: string | null
+  tombamento: string | null
+  location: string | null
   status: 'disponivel' | 'em_uso' | 'manutencao' | 'descartado'
   unit?: {
     name: string
@@ -28,6 +30,8 @@ export function useAvailableEquipment() {
           brand,
           model,
           serial_number,
+          tombamento,
+          location,
           status,
           unit:units(name)
         `)
@@ -53,6 +57,8 @@ export function useEquipmentByType(equipmentType: string) {
           brand,
           model,
           serial_number,
+          tombamento,
+          location,
           status,
           unit:units(name)
         `)

@@ -76,11 +76,13 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          location: string | null
           model: string | null
           name: string
           purchase_date: string | null
           serial_number: string | null
           status: Database["public"]["Enums"]["equipment_status"]
+          tombamento: string | null
           type: string
           unit_id: string | null
           updated_at: string | null
@@ -91,11 +93,13 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          location?: string | null
           model?: string | null
           name: string
           purchase_date?: string | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["equipment_status"]
+          tombamento?: string | null
           type: string
           unit_id?: string | null
           updated_at?: string | null
@@ -106,11 +110,13 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          location?: string | null
           model?: string | null
           name?: string
           purchase_date?: string | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["equipment_status"]
+          tombamento?: string | null
           type?: string
           unit_id?: string | null
           updated_at?: string | null
@@ -122,6 +128,54 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_photos: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          equipment_id: string
+          id: string
+          is_primary: boolean | null
+          photo_url: string
+          updated_at: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          equipment_id: string
+          id?: string
+          is_primary?: boolean | null
+          photo_url: string
+          updated_at?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          equipment_id?: string
+          id?: string
+          is_primary?: boolean | null
+          photo_url?: string
+          updated_at?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_photos_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -471,6 +525,10 @@ export type Database = {
           admin_comments?: string
         }
         Returns: undefined
+      }
+      generate_tombamento: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_user_role: {
         Args: { user_id: string }
