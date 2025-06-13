@@ -157,7 +157,7 @@ export function useDeleteEquipmentRequest() {
     },
     onMutate: async (deletedId) => {
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
-      await queryClient.cancelQueries({ queryKey: ['user-equipment-requests'] })
+      await queryClient.cancelQueries({ queryKey: ['user-equipment-requests', profile?.id] })
 
       // Snapshot the previous value
       const previousRequests = queryClient.getQueryData(['user-equipment-requests', profile?.id])
@@ -184,7 +184,7 @@ export function useDeleteEquipmentRequest() {
     },
     onSuccess: () => {
       // Always refetch after error or success to ensure we have the latest data
-      queryClient.invalidateQueries({ queryKey: ['user-equipment-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['user-equipment-requests', profile?.id] })
       toast({
         title: "Solicitação cancelada!",
         description: "Sua solicitação foi cancelada com sucesso.",
