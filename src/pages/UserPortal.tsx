@@ -1,22 +1,16 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ImageUpload } from "@/components/ImageUpload"
 import { UserProfileSection } from "@/components/UserProfileSection"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
 import { EquipmentRequestsSection } from "@/components/EquipmentRequestsSection"
 import { AttachmentIcon } from "@/components/AttachmentIcon"
 import { AttachmentsPreview } from "@/components/AttachmentsPreview"
+import { TicketFormDialog, TicketFormData } from "@/components/TicketFormDialog"
 import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useAuth } from "@/hooks/useAuth"
@@ -30,7 +24,6 @@ export default function UserPortal() {
   const deleteTicketMutation = useDeleteUserTicket()
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [images, setImages] = useState<File[]>([])
   const [editingTicket, setEditingTicket] = useState<UserTicket | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedTicketForAttachments, setSelectedTicketForAttachments] = useState<UserTicket | null>(null)
@@ -95,26 +88,8 @@ export default function UserPortal() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
-    
-    const ticketData = {
-      title: formData.get('title') as string,
-      description: formData.get('description') as string,
-      priority: formData.get('priority') as 'baixa' | 'media' | 'alta' | 'critica',
-      category: formData.get('category') as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
-      images: images.length > 0 ? images : undefined
-    }
-
-    try {
-      await createTicketMutation.mutateAsync(ticketData)
-      setIsDialogOpen(false)
-      setImages([])
-      ;(e.target as HTMLFormElement).reset()
-    } catch (error) {
-      console.error('Error creating ticket:', error)
-    }
+  const handleCreateTicket = async (data: TicketFormData) => {
+    await createTicketMutation.mutateAsync(data)
   }
 
   const handleEditTicket = (ticket: UserTicket) => {
@@ -161,114 +136,12 @@ export default function UserPortal() {
           </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-slate-600 hover:bg-slate-700 text-white">Novo Chamado</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] bg-slate-50 border-slate-200 max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-slate-700">Criar Novo Chamado</DialogTitle>
-              <DialogDescription className="text-slate-600">
-                Descreva seu problema e nossa equipe irá ajudá-lo
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4">
-                <div>
-                  <Label htmlFor="title" className="text-slate-700">Título</Label>
-                  <Input 
-                    id="title" 
-                    name="title" 
-                    placeholder="Descreva brevemente o problema"
-                    required 
-                    className="border-slate-300 focus:border-slate-400"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="description" className="text-slate-700">Descrição</Label>
-                  <Textarea 
-                    id="description" 
-                    name="description" 
-                    placeholder="Descreva detalhadamente o problema"
-                    required 
-                    className="border-slate-300 focus:border-slate-400"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="priority" className="text-slate-700">Prioridade</Label>
-                    <Select name="priority" required>
-                      <SelectTrigger className="border-slate-300">
-                        <SelectValue placeholder="Selecione a prioridade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                        <SelectItem value="media">Média</SelectItem>
-                        <SelectItem value="alta">Alta</SelectItem>
-                        <SelectItem value="critica">Crítica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="category" className="text-slate-700">Categoria</Label>
-                    <Select name="category" required>
-                      <SelectTrigger className="border-slate-300">
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hardware">Hardware</SelectItem>
-                        <SelectItem value="software">Software</SelectItem>
-                        <SelectItem value="rede">Rede</SelectItem>
-                        <SelectItem value="acesso">Acesso</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <ImageUpload 
-                  images={images}
-                  onImagesChange={setImages}
-                  maxImages={5}
-                />
-                
-                <div>
-                  <Label className="text-slate-700">Unidade</Label>
-                  <Input 
-                    value={profile?.unit?.name || 'Unidade não definida'}
-                    disabled
-                    className="bg-slate-100 border-slate-300"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Sua unidade será automaticamente selecionada
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)} 
-                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
-                  disabled={createTicketMutation.isPending}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-slate-600 hover:bg-slate-700 text-white"
-                  disabled={createTicketMutation.isPending}
-                >
-                  {createTicketMutation.isPending ? 'Criando...' : 'Criar Chamado'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => setIsDialogOpen(true)}
+          className="bg-slate-600 hover:bg-slate-700 text-white"
+        >
+          Novo Chamado
+        </Button>
       </div>
 
       {/* Dashboard Cards */}
@@ -489,6 +362,14 @@ export default function UserPortal() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <TicketFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        mode="user"
+        onSubmit={handleCreateTicket}
+        isLoading={createTicketMutation.isPending}
+      />
 
       <EditTicketDialog
         ticket={editingTicket}

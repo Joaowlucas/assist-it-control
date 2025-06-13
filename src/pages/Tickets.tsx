@@ -1,16 +1,11 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { TicketFormDialog, TicketFormData } from "@/components/TicketFormDialog"
 import { useTickets, useCreateTicket } from "@/hooks/useTickets"
-import { useUnits } from "@/hooks/useUnits"
 import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
 import { TicketFilters } from "@/components/TicketFilters"
@@ -18,7 +13,7 @@ import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
 import { AttachmentIcon } from "@/components/AttachmentIcon"
 import { QuickAttachmentsModal } from "@/components/QuickAttachmentsModal"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
-import { Edit, Plus, Eye, Clock, User, MapPin } from "lucide-react"
+import { Plus, Eye, Clock, User, MapPin } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -38,7 +33,6 @@ export default function Tickets() {
 
   const { user } = useAuth()
   const { data: tickets = [], isLoading: ticketsLoading, error: ticketsError } = useTickets()
-  const { data: units = [] } = useUnits()
   const { data: profiles = [] } = useProfiles()
   const createTicket = useCreateTicket()
   const updateStatus = useUpdateTicketStatus()
@@ -48,9 +42,6 @@ export default function Tickets() {
   const technicians = profiles.filter(profile => 
     profile.role === 'technician' || profile.role === 'admin'
   )
-
-  // Filtrar usuários regulares
-  const systemUsers = profiles.filter(profile => profile.role === 'user')
 
   // Aplicar filtros
   const filteredTickets = tickets.filter(ticket => {
@@ -89,22 +80,15 @@ export default function Tickets() {
     }
   }
 
-  const handleCreateTicket = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) return
-
-    const formData = new FormData(e.target as HTMLFormElement)
-    
+  const handleCreateTicket = async (data: TicketFormData) => {
     await createTicket.mutateAsync({
-      title: formData.get('title') as string,
-      description: formData.get('description') as string,
-      priority: formData.get('priority') as any,
-      category: formData.get('category') as any,
-      requester_id: user.id,
-      unit_id: formData.get('unit_id') as string,
+      title: data.title,
+      description: data.description,
+      priority: data.priority,
+      category: data.category,
+      requester_id: data.requester_id!,
+      unit_id: data.unit_id,
     })
-
-    setIsCreateDialogOpen(false)
   }
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
@@ -160,114 +144,13 @@ export default function Tickets() {
           </p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Chamado
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] bg-gray-50 mx-4">
-            <DialogHeader>
-              <DialogTitle>Criar Novo Chamado</DialogTitle>
-              <DialogDescription>
-                Preencha as informações do chamado de suporte
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateTicket} className="space-y-4">
-              <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
-                <div>
-                  <Label htmlFor="title">Título</Label>
-                  <Input 
-                    id="title" 
-                    name="title" 
-                    placeholder="Descreva brevemente o problema"
-                    required 
-                    className="bg-white border-gray-300"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea 
-                    id="description" 
-                    name="description" 
-                    placeholder="Descreva detalhadamente o problema"
-                    required 
-                    className="bg-white border-gray-300"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="priority">Prioridade</Label>
-                    <Select name="priority" defaultValue="media">
-                      <SelectTrigger className="bg-white border-gray-300">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                        <SelectItem value="media">Média</SelectItem>
-                        <SelectItem value="alta">Alta</SelectItem>
-                        <SelectItem value="critica">Crítica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="category">Categoria</Label>
-                    <Select name="category">
-                      <SelectTrigger className="bg-white border-gray-300">
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hardware">Hardware</SelectItem>
-                        <SelectItem value="software">Software</SelectItem>
-                        <SelectItem value="rede">Rede</SelectItem>
-                        <SelectItem value="acesso">Acesso</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="unit_id">Unidade</Label>
-                  <Select name="unit_id">
-                    <SelectTrigger className="bg-white border-gray-300">
-                      <SelectValue placeholder="Selecione a unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id}>
-                          {unit.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsCreateDialogOpen(false)}
-                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={createTicket.isPending}
-                  className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
-                >
-                  {createTicket.isPending ? 'Criando...' : 'Criar Chamado'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Chamado
+        </Button>
       </div>
 
       {/* Filtros */}
@@ -532,6 +415,15 @@ export default function Tickets() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Criação de Chamados */}
+      <TicketFormDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        mode="admin"
+        onSubmit={handleCreateTicket}
+        isLoading={createTicket.isPending}
+      />
 
       {/* Dialog de Detalhes */}
       <TicketDetailsDialog
