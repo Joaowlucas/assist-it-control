@@ -51,6 +51,10 @@ export function useTicket(id: string) {
           comments:ticket_comments(
             *,
             user:profiles(name, email)
+          ),
+          attachments:ticket_attachments(
+            *,
+            uploader:profiles(name, email)
           )
         `)
         .eq('id', id)

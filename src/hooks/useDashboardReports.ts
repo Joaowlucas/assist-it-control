@@ -2,13 +2,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 
-interface TechnicianPerformance {
+interface TechnicianReport {
   id: string
   name: string
-  totalAssigned: number
-  totalResolved: number
+  totalTickets: number
+  resolvedTickets: number
   avgResolutionTime: number
-  activeTickets: number
+  resolutionRate: number
 }
 
 interface UnitReport {
@@ -17,7 +17,7 @@ interface UnitReport {
   totalTickets: number
   openTickets: number
   totalEquipment: number
-  activeAssignments: number
+  availableEquipment: number
 }
 
 interface EquipmentReport {
@@ -25,164 +25,186 @@ interface EquipmentReport {
   name: string
   type: string
   status: string
-  currentUser?: string
-  assignmentDate?: string
-  usageDays?: number
+  assignedTo?: string
+  unit?: string
+  lastMaintenance?: string
+}
+
+interface TopIssuesReport {
+  category: string
+  count: number
+  avgResolutionTime: number
+  priority: string
 }
 
 interface DashboardReports {
-  technicianPerformance: TechnicianPerformance[]
+  technicianReports: TechnicianReport[]
   unitReports: UnitReport[]
   equipmentReports: EquipmentReport[]
-  topIssues: Array<{ category: string; count: number; avgResolutionTime: number }>
+  topIssues: TopIssuesReport[]
+  loading: boolean
+  error: any
 }
 
-export function useDashboardReports(dateRange?: { start: Date; end: Date }) {
+export function useDashboardReports() {
   return useQuery({
-    queryKey: ['dashboard-reports', dateRange],
+    queryKey: ['dashboard-reports'],
     queryFn: async (): Promise<DashboardReports> => {
       console.log('Fetching dashboard reports...')
       
-      // Definir range de datas (último mês se não especificado)
-      const endDate = dateRange?.end || new Date()
-      const startDate = dateRange?.start || (() => {
-        const date = new Date()
-        date.setMonth(date.getMonth() - 1)
-        return date
-      })()
-      
-      // Buscar dados de tickets com relacionamentos
-      const { data: ticketsData } = await supabase
-        .from('tickets')
-        .select(`
-          id, status, priority, category, created_at, resolved_at, assignee_id,
-          assignee:profiles!tickets_assignee_id_fkey(id, name),
-          requester:profiles!tickets_requester_id_fkey(id, name),
-          unit:units(id, name)
-        `)
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-      
-      // Buscar todos os técnicos
-      const { data: techniciansData } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('role', ['admin', 'technician'])
-      
-      // Buscar unidades com dados relacionados
-      const { data: unitsData } = await supabase
-        .from('units')
-        .select(`
-          id, name,
-          tickets(id, status),
-          equipment(id, status),
-          assignments(id, status)
-        `)
-      
-      // Buscar equipamentos com atribuições
-      const { data: equipmentData } = await supabase
-        .from('equipment')
-        .select(`
-          id, name, type, status,
-          assignments(
-            id, status, start_date,
-            user:profiles(id, name)
-          )
-        `)
-      
-      // Processar performance dos técnicos
-      const technicianPerformance: TechnicianPerformance[] = techniciansData?.map(tech => {
-        const assignedTickets = ticketsData?.filter(t => t.assignee_id === tech.id) || []
-        const resolvedTickets = assignedTickets.filter(t => t.status === 'fechado')
-        const activeTickets = assignedTickets.filter(t => t.status !== 'fechado')
+      try {
+        // Buscar relatório de técnicos
+        const { data: techniciansData } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('role', ['technician', 'admin'])
         
-        const avgResolutionTime = resolvedTickets.length > 0
-          ? resolvedTickets.reduce((acc, ticket) => {
-              if (ticket.resolved_at) {
+        const { data: ticketsData } = await supabase
+          .from('tickets')
+          .select('assignee_id, status, created_at, resolved_at')
+        
+        // Processar dados dos técnicos
+        const technicianReports: TechnicianReport[] = (techniciansData || []).map(tech => {
+          const techTickets = (ticketsData || []).filter(t => t.assignee_id === tech.id)
+          const resolvedTickets = techTickets.filter(t => t.status === 'fechado')
+          
+          const avgResolutionTime = resolvedTickets.length > 0 
+            ? resolvedTickets.reduce((acc, ticket) => {
+                if (ticket.resolved_at) {
+                  const created = new Date(ticket.created_at)
+                  const resolved = new Date(ticket.resolved_at)
+                  const hours = (resolved.getTime() - created.getTime()) / (1000 * 60 * 60)
+                  return acc + hours
+                }
+                return acc
+              }, 0) / resolvedTickets.length
+            : 0
+          
+          return {
+            id: tech.id,
+            name: tech.name,
+            totalTickets: techTickets.length,
+            resolvedTickets: resolvedTickets.length,
+            avgResolutionTime: Math.round(avgResolutionTime * 10) / 10,
+            resolutionRate: techTickets.length > 0 ? Math.round((resolvedTickets.length / techTickets.length) * 100) : 0
+          }
+        })
+        
+        // Buscar relatório de unidades
+        const { data: unitsData } = await supabase
+          .from('units')
+          .select(`
+            id, 
+            name,
+            tickets:tickets(id, status),
+            equipment:equipment(id, status)
+          `)
+        
+        const unitReports: UnitReport[] = (unitsData || []).map(unit => {
+          const tickets = unit.tickets || []
+          const equipment = unit.equipment || []
+          
+          return {
+            id: unit.id,
+            name: unit.name,
+            totalTickets: tickets.length,
+            openTickets: tickets.filter((t: any) => t.status !== 'fechado').length,
+            totalEquipment: equipment.length,
+            availableEquipment: equipment.filter((e: any) => e.status === 'disponivel').length
+          }
+        })
+        
+        // Buscar relatório de equipamentos
+        const { data: equipmentData } = await supabase
+          .from('equipment')
+          .select(`
+            id,
+            name,
+            type,
+            status,
+            unit:units(name),
+            assignments:assignments(
+              user:profiles(name),
+              status
+            )
+          `)
+        
+        const equipmentReports: EquipmentReport[] = (equipmentData || []).map(eq => {
+          const activeAssignment = eq.assignments?.find((a: any) => a.status === 'ativo')
+          
+          return {
+            id: eq.id,
+            name: eq.name,
+            type: eq.type,
+            status: eq.status,
+            assignedTo: activeAssignment?.user?.name,
+            unit: eq.unit?.name,
+            lastMaintenance: undefined // Pode ser implementado depois
+          }
+        })
+        
+        // Buscar top issues
+        const { data: issuesData } = await supabase
+          .from('tickets')
+          .select('category, priority, created_at, resolved_at')
+        
+        const categoryGroups = (issuesData || []).reduce((acc: any, ticket) => {
+          if (!acc[ticket.category]) {
+            acc[ticket.category] = []
+          }
+          acc[ticket.category].push(ticket)
+          return acc
+        }, {})
+        
+        const topIssues: TopIssuesReport[] = Object.entries(categoryGroups).map(([category, tickets]: [string, any]) => {
+          const resolvedTickets = tickets.filter((t: any) => t.resolved_at)
+          const avgResolutionTime = resolvedTickets.length > 0
+            ? resolvedTickets.reduce((acc: number, ticket: any) => {
                 const created = new Date(ticket.created_at)
                 const resolved = new Date(ticket.resolved_at)
                 const hours = (resolved.getTime() - created.getTime()) / (1000 * 60 * 60)
                 return acc + hours
-              }
-              return acc
-            }, 0) / resolvedTickets.length
-          : 0
+              }, 0) / resolvedTickets.length
+            : 0
+          
+          // Determinar prioridade mais comum
+          const priorities = tickets.map((t: any) => t.priority)
+          const priorityCount = priorities.reduce((acc: any, p: string) => {
+            acc[p] = (acc[p] || 0) + 1
+            return acc
+          }, {})
+          const mostCommonPriority = Object.entries(priorityCount)
+            .sort(([,a]: any, [,b]: any) => b - a)[0]?.[0] || 'media'
+          
+          return {
+            category,
+            count: tickets.length,
+            avgResolutionTime: Math.round(avgResolutionTime * 10) / 10,
+            priority: mostCommonPriority
+          }
+        }).sort((a, b) => b.count - a.count)
         
         return {
-          id: tech.id,
-          name: tech.name,
-          totalAssigned: assignedTickets.length,
-          totalResolved: resolvedTickets.length,
-          avgResolutionTime: Math.round(avgResolutionTime * 10) / 10,
-          activeTickets: activeTickets.length
-        }
-      }) || []
-      
-      // Processar relatórios por unidade
-      const unitReports: UnitReport[] = unitsData?.map(unit => ({
-        id: unit.id,
-        name: unit.name,
-        totalTickets: unit.tickets?.length || 0,
-        openTickets: unit.tickets?.filter((t: any) => t.status !== 'fechado').length || 0,
-        totalEquipment: unit.equipment?.length || 0,
-        activeAssignments: unit.assignments?.filter((a: any) => a.status === 'ativo').length || 0
-      })) || []
-      
-      // Processar relatórios de equipamentos
-      const equipmentReports: EquipmentReport[] = equipmentData?.map(eq => {
-        const activeAssignment = eq.assignments?.find((a: any) => a.status === 'ativo')
-        
-        let usageDays: number | undefined
-        if (activeAssignment?.start_date) {
-          const startDate = new Date(activeAssignment.start_date)
-          const today = new Date()
-          usageDays = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+          technicianReports,
+          unitReports,
+          equipmentReports,
+          topIssues,
+          loading: false,
+          error: null
         }
         
+      } catch (error) {
+        console.error('Error fetching dashboard reports:', error)
         return {
-          id: eq.id,
-          name: eq.name,
-          type: eq.type,
-          status: eq.status,
-          currentUser: activeAssignment?.user?.name,
-          assignmentDate: activeAssignment?.start_date,
-          usageDays
+          technicianReports: [],
+          unitReports: [],
+          equipmentReports: [],
+          topIssues: [],
+          loading: false,
+          error
         }
-      }) || []
-      
-      // Processar principais problemas
-      const categoryStats = ticketsData?.reduce((acc, ticket) => {
-        if (!acc[ticket.category]) {
-          acc[ticket.category] = { count: 0, totalTime: 0, resolvedCount: 0 }
-        }
-        acc[ticket.category].count++
-        
-        if (ticket.resolved_at) {
-          const created = new Date(ticket.created_at)
-          const resolved = new Date(ticket.resolved_at)
-          const hours = (resolved.getTime() - created.getTime()) / (1000 * 60 * 60)
-          acc[ticket.category].totalTime += hours
-          acc[ticket.category].resolvedCount++
-        }
-        
-        return acc
-      }, {} as Record<string, { count: number; totalTime: number; resolvedCount: number }>)
-      
-      const topIssues = Object.entries(categoryStats || {}).map(([category, stats]) => ({
-        category: category.charAt(0).toUpperCase() + category.slice(1),
-        count: stats.count,
-        avgResolutionTime: stats.resolvedCount > 0 
-          ? Math.round((stats.totalTime / stats.resolvedCount) * 10) / 10
-          : 0
-      })).sort((a, b) => b.count - a.count)
-      
-      return {
-        technicianPerformance,
-        unitReports,
-        equipmentReports,
-        topIssues
       }
     },
-    refetchInterval: 120000, // Atualizar a cada 2 minutos
+    refetchInterval: 60000, // Atualizar a cada minuto
   })
 }
