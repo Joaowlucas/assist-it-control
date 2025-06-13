@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,12 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImageUpload } from "@/components/ImageUpload"
-import { ProfilePictureUpload } from "@/components/ProfilePictureUpload"
+import { UserProfileSection } from "@/components/UserProfileSection"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
 import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useAuth } from "@/hooks/useAuth"
-import { Edit, Trash2, User } from "lucide-react"
+import { Edit, Trash2 } from "lucide-react"
 
 export default function UserPortal() {
   const { profile } = useAuth()
@@ -106,7 +105,6 @@ export default function UserPortal() {
       await createTicketMutation.mutateAsync(ticketData)
       setIsDialogOpen(false)
       setImages([])
-      // Reset form
       ;(e.target as HTMLFormElement).reset()
     } catch (error) {
       console.error('Error creating ticket:', error)
@@ -472,63 +470,7 @@ export default function UserPortal() {
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-4">
-          <Card className="bg-slate-100/50 border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-slate-700 flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Meu Perfil
-              </CardTitle>
-              <CardDescription className="text-slate-600">
-                Gerencie suas informações pessoais
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <Label className="text-slate-700 text-base font-medium">Foto de Perfil</Label>
-                <div className="mt-2">
-                  <ProfilePictureUpload />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-slate-700">Nome</Label>
-                  <Input 
-                    value={profile?.name || ''}
-                    disabled
-                    className="bg-slate-100 border-slate-300"
-                  />
-                </div>
-                
-                <div>
-                  <Label className="text-slate-700">Email</Label>
-                  <Input 
-                    value={profile?.email || ''}
-                    disabled
-                    className="bg-slate-100 border-slate-300"
-                  />
-                </div>
-                
-                <div>
-                  <Label className="text-slate-700">Unidade</Label>
-                  <Input 
-                    value={profile?.unit?.name || 'Unidade não definida'}
-                    disabled
-                    className="bg-slate-100 border-slate-300"
-                  />
-                </div>
-                
-                <div>
-                  <Label className="text-slate-700">Status</Label>
-                  <Input 
-                    value={profile?.status || ''}
-                    disabled
-                    className="bg-slate-100 border-slate-300"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <UserProfileSection />
         </TabsContent>
       </Tabs>
 
