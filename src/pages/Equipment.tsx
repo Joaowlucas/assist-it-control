@@ -1,5 +1,4 @@
-
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ImageIcon, Plus, MapPin, Package } from "lucide-react"
+import { ImageIcon, Plus, MapPin, Package, AlertCircle } from "lucide-react"
 import { useEquipment, useCreateEquipment } from "@/hooks/useEquipment"
 import { useUnits } from "@/hooks/useUnits"
 import { useUploadEquipmentPhoto } from "@/hooks/useEquipmentPhotos"
@@ -20,17 +19,57 @@ import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
 import { EquipmentFilters } from "@/components/EquipmentFilters"
 import { EquipmentReports } from "@/components/EquipmentReports"
 
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+    </div>
+  )
+}
+
+function ErrorDisplay({ error, onRetry }: { error: any, onRetry?: () => void }) {
+  console.error('🚨 Equipment page error:', error)
+  
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-center">
+        <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold text-red-600 mb-2">Erro ao carregar equipamentos</h3>
+        <p className="text-muted-foreground mb-4">
+          {error?.message || 'Ocorreu um erro inesperado'}
+        </p>
+        {onRetry && (
+          <Button onClick={onRetry} variant="outline">
+            Tentar Novamente
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Equipment() {
+  console.log('🏗️ Equipment page rendering...')
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
   const [images, setImages] = useState<File[]>([])
   
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useEquipmentFilters()
-  const { data: equipment, isLoading: loadingEquipment, error: equipmentError } = useEquipment(filters)
-  const { data: units, isLoading: loadingUnits } = useUnits()
+  const { data: equipment, isLoading: loadingEquipment, error: equipmentError, refetch: refetchEquipment } = useEquipment(filters)
+  const { data: units, isLoading: loadingUnits, error: unitsError } = useUnits()
   const { profile } = useAuth()
   const createEquipment = useCreateEquipment()
   const uploadPhoto = useUploadEquipmentPhoto()
+
+  console.log('📊 Equipment page state:', {
+    equipmentCount: equipment?.length || 0,
+    loadingEquipment,
+    loadingUnits,
+    hasFilters: hasActiveFilters,
+    equipmentError: equipmentError?.message,
+    unitsError: unitsError?.message
+  })
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'technician'
 
@@ -56,19 +95,20 @@ export default function Equipment() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
+    console.log('📝 Form submission started')
     
-    console.log('Form submission started')
+    const formData = new FormData(e.target as HTMLFormElement)
     
     // Helper function to get form field value or null
     const getFieldValue = (name: string): string | null => {
       const value = formData.get(name) as string
-      return value && value.trim() !== '' ? value.trim() : null
+      const trimmed = value?.trim()
+      return trimmed && trimmed !== '' ? trimmed : null
     }
 
     const equipmentData = {
-      name: formData.get('name') as string, // Required field
-      type: formData.get('type') as string, // Required field
+      name: getFieldValue('name') || '', // Required field
+      type: getFieldValue('type') || '', // Required field
       brand: getFieldValue('brand'),
       model: getFieldValue('model'),
       serial_number: getFieldValue('serialNumber'),
@@ -81,22 +121,22 @@ export default function Equipment() {
       status: 'disponivel' as const
     }
 
-    console.log('Equipment data to be submitted:', equipmentData)
+    console.log('📋 Equipment data to be submitted:', equipmentData)
 
     // Validate required fields
     if (!equipmentData.name || !equipmentData.type) {
-      console.error('Name and type are required fields')
+      console.error('❌ Name and type are required fields')
       return
     }
 
     try {
-      console.log('Creating equipment...')
+      console.log('⏳ Creating equipment...')
       const newEquipment = await createEquipment.mutateAsync(equipmentData)
-      console.log('Equipment created successfully:', newEquipment)
+      console.log('✅ Equipment created successfully:', newEquipment)
       
       // Upload photos if any
       if (images.length > 0) {
-        console.log('Uploading photos:', images.length)
+        console.log('📸 Uploading photos:', images.length)
         for (let i = 0; i < images.length; i++) {
           try {
             await uploadPhoto.mutateAsync({
@@ -104,9 +144,9 @@ export default function Equipment() {
               file: images[i],
               isPrimary: i === 0 // First image is primary
             })
-            console.log(`Photo ${i + 1} uploaded successfully`)
+            console.log(`✅ Photo ${i + 1} uploaded successfully`)
           } catch (photoError) {
-            console.error(`Error uploading photo ${i + 1}:`, photoError)
+            console.error(`❌ Error uploading photo ${i + 1}:`, photoError)
           }
         }
       }
@@ -117,34 +157,32 @@ export default function Equipment() {
       // Reset form
       const form = e.target as HTMLFormElement
       form.reset()
-      console.log('Form reset completed')
+      console.log('🔄 Form reset completed')
     } catch (error) {
-      console.error('Error creating equipment:', error)
+      console.error('❌ Error creating equipment:', error)
     }
   }
 
+  // Handle loading states
   if (loadingEquipment || loadingUnits) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    )
+    console.log('⏳ Still loading data...')
+    return <LoadingSpinner />
   }
 
+  // Handle equipment error
   if (equipmentError) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-red-600">Erro ao carregar equipamentos</h3>
-          <p className="text-muted-foreground mt-2">
-            {equipmentError.message || 'Ocorreu um erro inesperado'}
-          </p>
-        </div>
-      </div>
-    )
+    console.error('❌ Equipment error detected:', equipmentError)
+    return <ErrorDisplay error={equipmentError} onRetry={refetchEquipment} />
+  }
+
+  // Handle units error (non-critical)
+  if (unitsError) {
+    console.warn('⚠️ Units error (non-critical):', unitsError)
   }
 
   const hasEquipment = equipment && equipment.length > 0
+
+  console.log('✅ Equipment page ready to render, equipment count:', equipment?.length || 0)
 
   return (
     <div className="space-y-6">
@@ -157,7 +195,9 @@ export default function Equipment() {
         </div>
         
         <div className="flex gap-2">
-          <EquipmentReports />
+          <Suspense fallback={<div>Carregando...</div>}>
+            <EquipmentReports />
+          </Suspense>
           
           {canEdit && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -324,12 +364,14 @@ export default function Equipment() {
         </div>
       </div>
 
-      <EquipmentFilters
-        filters={filters}
-        onFilterChange={updateFilter}
-        onClearFilters={clearFilters}
-        hasActiveFilters={hasActiveFilters}
-      />
+      <Suspense fallback={<div>Carregando filtros...</div>}>
+        <EquipmentFilters
+          filters={filters}
+          onFilterChange={updateFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+        />
+      </Suspense>
 
       <Card>
         <CardHeader>
