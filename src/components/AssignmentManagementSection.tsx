@@ -7,43 +7,73 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { useAssignments, useCreateAssignment, useUpdateAssignment } from "@/hooks/useAssignments"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
+import { useAuth } from "@/hooks/useAuth"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Settings } from "lucide-react"
+import { Plus, Edit, Calendar } from "lucide-react"
 
 export function AssignmentManagementSection() {
   const { data: assignments = [], isLoading } = useAssignments()
   const { data: availableEquipment = [] } = useAvailableEquipment()
   const { data: availableUsers = [] } = useAvailableUsers()
+  const { user } = useAuth()
   const createAssignmentMutation = useCreateAssignment()
   const updateAssignmentMutation = useUpdateAssignment()
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string>("")
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>("")
   const [notes, setNotes] = useState<string>("")
-  const [selectedAssignment, setSelectedAssignment] = useState<any>(null)
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [expectedReturnDate, setExpectedReturnDate] = useState<string>("")
+  const [editingAssignment, setEditingAssignment] = useState<any>(null)
 
   const handleCreateAssignment = async () => {
-    if (!selectedUserId || !selectedEquipmentId) return
+    if (!selectedUserId || !selectedEquipmentId || !user?.id) {
+      console.error('Missing required fields:', { selectedUserId, selectedEquipmentId, userId: user?.id })
+      return
+    }
 
     try {
       await createAssignmentMutation.mutateAsync({
         user_id: selectedUserId,
         equipment_id: selectedEquipmentId,
-        assigned_by: '', // Will be set by the backend
-        start_date: new Date().toISOString().split('T')[0],
+        assigned_by: user.id,
+        start_date: startDate,
         notes: notes || undefined
       })
       
       setIsCreateDialogOpen(false)
-      setSelectedUserId("")
-      setSelectedEquipmentId("")
-      setNotes("")
+      resetCreateForm()
     } catch (error) {
       console.error('Error creating assignment:', error)
+    }
+  }
+
+  const handleEditAssignment = async () => {
+    if (!editingAssignment || !user?.id) return
+
+    try {
+      const updates: any = {
+        id: editingAssignment.id,
+        notes: notes || undefined
+      }
+
+      // Only update start_date if it's different
+      if (startDate !== editingAssignment.start_date) {
+        updates.start_date = startDate
+      }
+
+      await updateAssignmentMutation.mutateAsync(updates)
+      
+      setIsEditDialogOpen(false)
+      resetEditForm()
+    } catch (error) {
+      console.error('Error updating assignment:', error)
     }
   }
 
@@ -57,6 +87,32 @@ export function AssignmentManagementSection() {
     } catch (error) {
       console.error('Error ending assignment:', error)
     }
+  }
+
+  const openEditDialog = (assignment: any) => {
+    setEditingAssignment(assignment)
+    setSelectedUserId(assignment.user_id)
+    setSelectedEquipmentId(assignment.equipment_id)
+    setStartDate(assignment.start_date)
+    setNotes(assignment.notes || "")
+    setIsEditDialogOpen(true)
+  }
+
+  const resetCreateForm = () => {
+    setSelectedUserId("")
+    setSelectedEquipmentId("")
+    setNotes("")
+    setStartDate(new Date().toISOString().split('T')[0])
+    setExpectedReturnDate("")
+  }
+
+  const resetEditForm = () => {
+    setEditingAssignment(null)
+    setSelectedUserId("")
+    setSelectedEquipmentId("")
+    setNotes("")
+    setStartDate(new Date().toISOString().split('T')[0])
+    setExpectedReturnDate("")
   }
 
   const getStatusColor = (status: string) => {
@@ -73,6 +129,11 @@ export function AssignmentManagementSection() {
       case "finalizado": return "Finalizado"
       default: return status
     }
+  }
+
+  const isOverdue = (assignment: any) => {
+    if (assignment.status !== 'ativo' || !assignment.expected_return_date) return false
+    return new Date(assignment.expected_return_date) < new Date()
   }
 
   if (isLoading) {
@@ -100,7 +161,7 @@ export function AssignmentManagementSection() {
                 Nova Atribuição
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Criar Nova Atribuição</DialogTitle>
                 <DialogDescription>
@@ -143,6 +204,25 @@ export function AssignmentManagementSection() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div>
+                  <Label>Data de Início</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label>Data Prevista de Devolução (opcional)</Label>
+                  <Input
+                    type="date"
+                    value={expectedReturnDate}
+                    onChange={(e) => setExpectedReturnDate(e.target.value)}
+                    min={startDate}
+                  />
+                </div>
                 
                 <div>
                   <Label>Observações</Label>
@@ -156,15 +236,100 @@ export function AssignmentManagementSection() {
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button variant="outline" onClick={() => {
+                  setIsCreateDialogOpen(false)
+                  resetCreateForm()
+                }}>
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleCreateAssignment}
-                  disabled={!selectedUserId || !selectedEquipmentId || createAssignmentMutation.isPending}
+                  disabled={!selectedUserId || !selectedEquipmentId || createAssignmentMutation.isPending || !user?.id}
                   className="bg-slate-600 hover:bg-slate-700"
                 >
                   Criar Atribuição
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Editar Atribuição</DialogTitle>
+                <DialogDescription>
+                  Modifique os detalhes da atribuição
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label>Usuário</Label>
+                  <Select value={selectedUserId} disabled>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} - {user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500 mt-1">O usuário não pode ser alterado após a criação</p>
+                </div>
+                
+                <div>
+                  <Label>Equipamento</Label>
+                  <Select value={selectedEquipmentId} disabled>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableEquipment.map((equipment) => (
+                        <SelectItem key={equipment.id} value={equipment.id}>
+                          {equipment.name} - {equipment.type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500 mt-1">O equipamento não pode ser alterado após a criação</p>
+                </div>
+
+                <div>
+                  <Label>Data de Início</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Observações sobre a atribuição"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setIsEditDialogOpen(false)
+                  resetEditForm()
+                }}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleEditAssignment}
+                  disabled={updateAssignmentMutation.isPending}
+                  className="bg-slate-600 hover:bg-slate-700"
+                >
+                  Salvar Alterações
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -221,21 +386,40 @@ export function AssignmentManagementSection() {
                     {assignment.end_date ? new Date(assignment.end_date).toLocaleDateString('pt-BR') : '-'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusColor(assignment.status) as any}>
-                      {getStatusLabel(assignment.status)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getStatusColor(assignment.status) as any}>
+                        {getStatusLabel(assignment.status)}
+                      </Badge>
+                      {isOverdue(assignment) && (
+                        <Badge variant="destructive" className="text-xs">
+                          Vencido
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    {assignment.status === 'ativo' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEndAssignment(assignment.id)}
-                        disabled={updateAssignmentMutation.isPending}
-                      >
-                        Finalizar
-                      </Button>
-                    )}
+                    <div className="flex gap-2">
+                      {assignment.status === 'ativo' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(assignment)}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEndAssignment(assignment.id)}
+                            disabled={updateAssignmentMutation.isPending}
+                          >
+                            Finalizar
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
