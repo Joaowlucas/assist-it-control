@@ -304,7 +304,6 @@ export default function UserPortal() {
         <TabsList className="bg-slate-200 border-slate-300">
           <TabsTrigger value="tickets" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Chamados</TabsTrigger>
           <TabsTrigger value="assignments" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Equipamentos</TabsTrigger>
-          <TabsTrigger value="profile" className="data-[state=active]:bg-slate-100 text-slate-700">Perfil</TabsTrigger>
         </TabsList>
         
         <TabsContent value="tickets" className="space-y-4">
@@ -470,10 +469,6 @@ export default function UserPortal() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="profile" className="space-y-4">
-          <UserProfileSection />
         </TabsContent>
       </Tabs>
 

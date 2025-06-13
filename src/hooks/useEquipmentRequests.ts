@@ -144,6 +144,7 @@ export function useUpdateEquipmentRequest() {
 
 export function useDeleteEquipmentRequest() {
   const queryClient = useQueryClient()
+  const { profile } = useAuth()
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -154,19 +155,39 @@ export function useDeleteEquipmentRequest() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-equipment-requests'] })
-      toast({
-        title: "Solicitação cancelada!",
-        description: "Sua solicitação foi cancelada com sucesso.",
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['user-equipment-requests'] })
+
+      // Snapshot the previous value
+      const previousRequests = queryClient.getQueryData(['user-equipment-requests', profile?.id])
+
+      // Optimistically update by removing the deleted item
+      queryClient.setQueryData(['user-equipment-requests', profile?.id], (old: EquipmentRequest[] | undefined) => {
+        return old ? old.filter(request => request.id !== deletedId) : []
       })
+
+      // Return a context object with the snapshotted value
+      return { previousRequests }
     },
-    onError: (error) => {
-      console.error('Error deleting equipment request:', error)
+    onError: (err, deletedId, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousRequests) {
+        queryClient.setQueryData(['user-equipment-requests', profile?.id], context.previousRequests)
+      }
+      console.error('Error deleting equipment request:', err)
       toast({
         title: "Erro ao cancelar",
         description: "Não foi possível cancelar a solicitação.",
         variant: "destructive",
+      })
+    },
+    onSuccess: () => {
+      // Always refetch after error or success to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: ['user-equipment-requests'] })
+      toast({
+        title: "Solicitação cancelada!",
+        description: "Sua solicitação foi cancelada com sucesso.",
       })
     },
   })

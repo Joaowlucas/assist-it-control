@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useUserEquipmentRequests, useDeleteEquipmentRequest, EquipmentRequest } from "@/hooks/useEquipmentRequests"
 import { EquipmentRequestDialog } from "@/components/EquipmentRequestDialog"
-import { Eye, Trash2 } from "lucide-react"
+import { Trash2 } from "lucide-react"
 
 export function EquipmentRequestsSection() {
   const { data: requests = [], isLoading } = useUserEquipmentRequests()
@@ -113,7 +113,6 @@ export function EquipmentRequestsSection() {
         {requests.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-slate-500 mb-4">Você ainda não fez nenhuma solicitação de equipamento.</p>
-            <EquipmentRequestDialog />
           </div>
         ) : (
           <Table>
