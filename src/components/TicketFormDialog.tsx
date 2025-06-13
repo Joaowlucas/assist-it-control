@@ -194,7 +194,7 @@ export function TicketFormDialog({
               )}
               {mode === 'user' && (
                 <>
-                  <input type="hidden" name="unit_id" value={profile?.unit?.id || ''} />
+                  <input type="hidden" name="unit_id" value={profile?.unit_id || ''} />
                   <p className="text-xs text-slate-500 mt-1">
                     Sua unidade será automaticamente selecionada
                   </p>
