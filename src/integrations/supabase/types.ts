@@ -290,6 +290,7 @@ export type Database = {
       system_settings: {
         Row: {
           auto_assign_tickets: boolean
+          company_logo_url: string | null
           company_name: string
           created_at: string
           default_priority: string
@@ -302,6 +303,7 @@ export type Database = {
         }
         Insert: {
           auto_assign_tickets?: boolean
+          company_logo_url?: string | null
           company_name?: string
           created_at?: string
           default_priority?: string
@@ -314,6 +316,7 @@ export type Database = {
         }
         Update: {
           auto_assign_tickets?: boolean
+          company_logo_url?: string | null
           company_name?: string
           created_at?: string
           default_priority?: string

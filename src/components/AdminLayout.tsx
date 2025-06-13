@@ -1,47 +1,24 @@
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
-import { Button } from "@/components/ui/button"
-import { ReactNode } from "react"
-import { useAuth } from "@/hooks/useAuth"
+import { AdminProfileDropdown } from "@/components/AdminProfileDropdown"
 
 interface AdminLayoutProps {
-  children: ReactNode
+  children: React.ReactNode
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const { signOut, profile } = useAuth()
-
-  const handleLogout = async () => {
-    try {
-      await signOut()
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
-
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
-        
         <div className="flex-1 flex flex-col">
-          <header className="h-16 flex items-center justify-between border-b bg-card px-6">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="lg:hidden" />
-              <h1 className="text-xl font-semibold">Sistema de Suporte de TI</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Bem-vindo, {profile?.name || 'Admin'}
-              </span>
-              <Button variant="outline" onClick={handleLogout}>
-                Sair
-              </Button>
+          <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex h-14 items-center justify-end px-6">
+              <AdminProfileDropdown />
             </div>
           </header>
-          
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-6 overflow-auto">
             {children}
           </main>
         </div>

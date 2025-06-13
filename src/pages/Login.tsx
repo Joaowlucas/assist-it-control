@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useSystemSettings } from '@/hooks/useSystemSettings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function Login() {
   const { user, profile, signIn, loading } = useAuth()
+  const { data: systemSettings } = useSystemSettings()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -49,7 +51,16 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="text-center">
+          {systemSettings?.company_logo_url && (
+            <div className="flex justify-center mb-4">
+              <img 
+                src={systemSettings.company_logo_url} 
+                alt="Logo da Empresa" 
+                className="h-16 w-auto object-contain"
+              />
+            </div>
+          )}
           <CardTitle>Sistema de Suporte TI</CardTitle>
           <CardDescription>
             Faça login para acessar o sistema

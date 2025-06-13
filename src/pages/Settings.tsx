@@ -12,6 +12,7 @@ import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSet
 import { useUnits } from "@/hooks/useUnits"
 import { useCreateUnit, useDeleteUnit } from "@/hooks/useUnitManagement"
 import { Loader2, Trash2 } from "lucide-react"
+import { CompanyLogoUpload } from "@/components/CompanyLogoUpload"
 
 export default function Settings() {
   const { toast } = useToast()
@@ -92,6 +93,26 @@ export default function Settings() {
       </div>
 
       <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Identidade Visual</CardTitle>
+            <CardDescription>
+              Configure a logo da empresa que aparecerá no sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-base font-medium">Logo da Empresa</Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  A logo será exibida na barra lateral e na tela de login
+                </p>
+                <CompanyLogoUpload />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
