@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useProfiles, useUpdateProfile } from "@/hooks/useProfiles"
 import { useUnits } from "@/hooks/useUnits"
 import { CreateUserDialog } from "@/components/CreateUserDialog"
-import { Loader2, User, Shield, Wrench } from "lucide-react"
+import { UserActionsDropdown } from "@/components/UserActionsDropdown"
+import { Loader2, User, Shield, Wrench, Calendar } from "lucide-react"
 
 export default function Users() {
   const { data: profiles, isLoading } = useProfiles()
@@ -35,6 +36,10 @@ export default function Users() {
     }
   }
 
+  const getStatusBadgeVariant = (status: string) => {
+    return status === 'ativo' ? 'default' : 'secondary'
+  }
+
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'admin':
@@ -58,6 +63,10 @@ export default function Users() {
       id: userId,
       unit_id: newUnitId === "none" ? null : newUnitId
     })
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR')
   }
 
   if (isLoading) {
@@ -93,13 +102,19 @@ export default function Users() {
                     <CardDescription>{profile.email}</CardDescription>
                   </div>
                 </div>
-                <Badge variant={getRoleBadgeVariant(profile.role)}>
-                  {getRoleLabel(profile.role)}
-                </Badge>
+                <div className="flex items-center space-x-2">
+                  <Badge variant={getRoleBadgeVariant(profile.role)}>
+                    {getRoleLabel(profile.role)}
+                  </Badge>
+                  <Badge variant={getStatusBadgeVariant(profile.status)}>
+                    {profile.status}
+                  </Badge>
+                  <UserActionsDropdown user={profile} />
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Função</label>
                   <Select
@@ -139,9 +154,17 @@ export default function Users() {
                 
                 <div>
                   <label className="text-sm font-medium mb-2 block">Status</label>
-                  <Badge variant={profile.status === 'ativo' ? 'default' : 'secondary'}>
+                  <Badge variant={getStatusBadgeVariant(profile.status)}>
                     {profile.status}
                   </Badge>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Criado em</label>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    {profile.created_at ? formatDate(profile.created_at) : 'N/A'}
+                  </div>
                 </div>
               </div>
             </CardContent>

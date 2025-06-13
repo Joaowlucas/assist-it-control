@@ -6,77 +6,56 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Card, CardContent } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
-import { supabase } from '@/integrations/supabase/client'
+import { useCreateUser } from '@/hooks/useUserManagement'
 import { useUnits } from '@/hooks/useUnits'
-import { Plus } from 'lucide-react'
+import { Plus, Loader2 } from 'lucide-react'
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     role: 'user' as 'admin' | 'technician' | 'user',
     unit_id: 'none'
   })
   
-  const { toast } = useToast()
+  const createUser = useCreateUser()
   const { data: units } = useUnits()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
 
-    try {
-      // Criar usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        user_metadata: {
-          name: formData.name
-        },
-        email_confirm: true
-      })
-
-      if (authError) throw authError
-
-      // Atualizar o perfil com o role e unit_id corretos
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            role: formData.role,
-            unit_id: formData.unit_id === 'none' ? null : formData.unit_id
-          })
-          .eq('id', authData.user.id)
-
-        if (profileError) throw profileError
-      }
-
-      toast({
-        title: 'Sucesso',
-        description: 'Usuário criado com sucesso'
-      })
-
-      setFormData({
-        name: '',
-        email: '',
-        password: '',
-        role: 'user',
-        unit_id: 'none'
-      })
-      setOpen(false)
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao criar usuário',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsLoading(false)
+    if (formData.password !== formData.confirmPassword) {
+      alert('As senhas não coincidem')
+      return
     }
+
+    if (formData.password.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres')
+      return
+    }
+
+    createUser.mutate({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+      unit_id: formData.unit_id === 'none' ? null : formData.unit_id
+    }, {
+      onSuccess: () => {
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          role: 'user',
+          unit_id: 'none'
+        })
+        setOpen(false)
+      }
+    })
   }
 
   return (
@@ -131,6 +110,18 @@ export function CreateUserDialog() {
             </div>
             
             <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                required
+                minLength={6}
+              />
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="role">Função</Label>
               <Select value={formData.role} onValueChange={(value: 'admin' | 'technician' | 'user') => setFormData(prev => ({ ...prev, role: value }))}>
                 <SelectTrigger>
@@ -161,14 +152,20 @@ export function CreateUserDialog() {
               </Select>
             </div>
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Criando...' : 'Criar Usuário'}
+            <Button type="submit" className="w-full" disabled={createUser.isPending}>
+              {createUser.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                'Criar Usuário'
+              )}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Card com instruções para usuários de teste */}
       <Card className="mt-6">
         <CardContent className="pt-6">
           <h3 className="font-semibold mb-2">Usuários para Teste</h3>
