@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast'
 interface SystemSettings {
   id: string
   company_name: string
+  company_logo_url: string | null
   department_name: string
   support_email: string
   ticket_email: string
