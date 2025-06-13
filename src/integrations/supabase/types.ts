@@ -464,9 +464,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_equipment_request_and_assign: {
+        Args: {
+          request_id: string
+          equipment_id: string
+          admin_comments?: string
+        }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      reject_equipment_request: {
+        Args: { request_id: string; admin_comments?: string }
+        Returns: undefined
       }
     }
     Enums: {
