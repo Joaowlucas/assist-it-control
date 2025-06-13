@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,18 +12,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImageUpload } from "@/components/ImageUpload"
-import { useUserTickets, useCreateUserTicket } from "@/hooks/useUserTickets"
+import { ProfilePictureUpload } from "@/components/ProfilePictureUpload"
+import { EditTicketDialog } from "@/components/EditTicketDialog"
+import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useAuth } from "@/hooks/useAuth"
+import { Edit, Trash2, User } from "lucide-react"
 
 export default function UserPortal() {
   const { profile } = useAuth()
   const { data: tickets = [], isLoading: ticketsLoading } = useUserTickets()
   const { data: assignments = [], isLoading: assignmentsLoading } = useUserAssignments()
   const createTicketMutation = useCreateUserTicket()
+  const deleteTicketMutation = useDeleteUserTicket()
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [images, setImages] = useState<File[]>([])
+  const [editingTicket, setEditingTicket] = useState<UserTicket | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -104,6 +111,23 @@ export default function UserPortal() {
     } catch (error) {
       console.error('Error creating ticket:', error)
     }
+  }
+
+  const handleEditTicket = (ticket: UserTicket) => {
+    setEditingTicket(ticket)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    try {
+      await deleteTicketMutation.mutateAsync(ticketId)
+    } catch (error) {
+      console.error('Error deleting ticket:', error)
+    }
+  }
+
+  const canEditOrDelete = (ticket: UserTicket) => {
+    return ticket.status === 'aberto'
   }
 
   const openTickets = tickets.filter(t => t.status !== "fechado")
@@ -281,6 +305,7 @@ export default function UserPortal() {
         <TabsList className="bg-slate-200 border-slate-300">
           <TabsTrigger value="tickets" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Chamados</TabsTrigger>
           <TabsTrigger value="assignments" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Equipamentos</TabsTrigger>
+          <TabsTrigger value="profile" className="data-[state=active]:bg-slate-100 text-slate-700">Perfil</TabsTrigger>
         </TabsList>
         
         <TabsContent value="tickets" className="space-y-4">
@@ -302,13 +327,14 @@ export default function UserPortal() {
                     <TableHead className="text-slate-600">Prioridade</TableHead>
                     <TableHead className="text-slate-600">Status</TableHead>
                     <TableHead className="text-slate-600">Criado em</TableHead>
+                    <TableHead className="text-slate-600">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tickets.map((ticket) => (
                     <TableRow key={ticket.id} className="border-slate-200">
                       <TableCell className="font-medium text-slate-700">
-                        {ticket.id.substring(0, 8)}
+                        #{ticket.ticket_number}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -334,6 +360,51 @@ export default function UserPortal() {
                       </TableCell>
                       <TableCell className="text-slate-600">
                         {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {canEditOrDelete(ticket) && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditTicket(ticket)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir o chamado #{ticket.ticket_number}? 
+                                      Esta ação não pode ser desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteTicket(ticket.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Excluir
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -399,7 +470,76 @@ export default function UserPortal() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="profile" className="space-y-4">
+          <Card className="bg-slate-100/50 border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-slate-700 flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Meu Perfil
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                Gerencie suas informações pessoais
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <Label className="text-slate-700 text-base font-medium">Foto de Perfil</Label>
+                <div className="mt-2">
+                  <ProfilePictureUpload />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-700">Nome</Label>
+                  <Input 
+                    value={profile?.name || ''}
+                    disabled
+                    className="bg-slate-100 border-slate-300"
+                  />
+                </div>
+                
+                <div>
+                  <Label className="text-slate-700">Email</Label>
+                  <Input 
+                    value={profile?.email || ''}
+                    disabled
+                    className="bg-slate-100 border-slate-300"
+                  />
+                </div>
+                
+                <div>
+                  <Label className="text-slate-700">Unidade</Label>
+                  <Input 
+                    value={profile?.unit?.name || 'Unidade não definida'}
+                    disabled
+                    className="bg-slate-100 border-slate-300"
+                  />
+                </div>
+                
+                <div>
+                  <Label className="text-slate-700">Status</Label>
+                  <Input 
+                    value={profile?.status || ''}
+                    disabled
+                    className="bg-slate-100 border-slate-300"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <EditTicketDialog
+        ticket={editingTicket}
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+          if (!open) setEditingTicket(null)
+        }}
+      />
     </div>
   )
 }

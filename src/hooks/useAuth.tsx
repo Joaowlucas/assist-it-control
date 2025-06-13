@@ -4,7 +4,9 @@ import { supabase } from '@/integrations/supabase/client'
 import { Session, User } from '@supabase/supabase-js'
 import { Tables } from '@/integrations/supabase/types'
 
-type Profile = Tables<'profiles'>
+type Profile = Tables<'profiles'> & {
+  unit?: { name: string } | null
+}
 
 interface AuthContextType {
   session: Session | null
@@ -56,7 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          unit:units(name)
+        `)
         .eq('id', userId)
         .single()
       

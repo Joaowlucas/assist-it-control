@@ -15,6 +15,7 @@ export interface TicketAttachment {
 
 export interface UserTicket {
   id: string
+  ticket_number: number
   title: string
   description: string
   priority: 'baixa' | 'media' | 'alta' | 'critica'
@@ -39,6 +40,7 @@ export function useUserTickets() {
         .from('tickets')
         .select(`
           id,
+          ticket_number,
           title,
           description,
           priority,
@@ -162,6 +164,99 @@ export function useCreateUserTicket() {
       toast({
         title: 'Erro ao criar chamado',
         description: error.message || 'Erro ao criar o chamado.',
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useUpdateUserTicket() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async ({ 
+      id,
+      title, 
+      description, 
+      priority, 
+      category 
+    }: {
+      id: string
+      title: string
+      description: string
+      priority: 'baixa' | 'media' | 'alta' | 'critica'
+      category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
+    }) => {
+      if (!user) throw new Error('User not authenticated')
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .update({
+          title,
+          description,
+          priority,
+          category,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('requester_id', user.id)
+        .eq('status', 'aberto') // Só pode editar chamados abertos
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-tickets'] })
+      toast({
+        title: 'Chamado atualizado!',
+        description: 'Seu chamado foi atualizado com sucesso.',
+      })
+    },
+    onError: (error: any) => {
+      console.error('Update ticket error:', error)
+      toast({
+        title: 'Erro ao atualizar chamado',
+        description: error.message || 'Erro ao atualizar o chamado.',
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useDeleteUserTicket() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (ticketId: string) => {
+      if (!user) throw new Error('User not authenticated')
+
+      const { error } = await supabase
+        .from('tickets')
+        .delete()
+        .eq('id', ticketId)
+        .eq('requester_id', user.id)
+        .eq('status', 'aberto') // Só pode excluir chamados abertos
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-tickets'] })
+      toast({
+        title: 'Chamado excluído!',
+        description: 'Seu chamado foi excluído com sucesso.',
+      })
+    },
+    onError: (error: any) => {
+      console.error('Delete ticket error:', error)
+      toast({
+        title: 'Erro ao excluir chamado',
+        description: error.message || 'Erro ao excluir o chamado.',
         variant: 'destructive',
       })
     },
