@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
@@ -19,8 +20,7 @@ export function useTickets() {
           *,
           requester:profiles!tickets_requester_id_fkey(name, email),
           assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name),
-          ticket_attachments(count)
+          unit:units(name)
         `)
         .order('created_at', { ascending: false })
       
@@ -29,14 +29,8 @@ export function useTickets() {
         throw error
       }
       
-      // Mapear tickets com contagem de anexos
-      const ticketsWithAttachments = (data || []).map((ticket) => ({
-        ...ticket,
-        attachments_count: ticket.ticket_attachments?.length || 0
-      }))
-      
-      console.log('Tickets fetched:', ticketsWithAttachments)
-      return ticketsWithAttachments
+      console.log('Tickets fetched:', data)
+      return data || []
     },
   })
 }

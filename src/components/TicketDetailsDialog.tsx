@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -12,7 +11,7 @@ import { useTicketComments, useCreateTicketComment } from "@/hooks/useTicketComm
 import { useTicketAttachments } from "@/hooks/useTicketAttachments"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
 import { useAuth } from "@/hooks/useAuth"
-import { Calendar, User, MapPin, Tag, AlertCircle, Clock, FileImage, Download, Eye, ImageIcon, AlertTriangle } from "lucide-react"
+import { Calendar, User, MapPin, Tag, AlertCircle, Clock, FileImage, Download, Eye } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -32,19 +31,13 @@ export function TicketDetailsDialog({
   const [newComment, setNewComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   
   const { user } = useAuth()
   const { data: comments = [], isLoading: commentsLoading } = useTicketComments(ticket?.id)
-  const { data: attachments = [], isLoading: attachmentsLoading, error: attachmentsError } = useTicketAttachments(ticket?.id)
+  const { data: attachments = [], isLoading: attachmentsLoading } = useTicketAttachments(ticket?.id)
   const createComment = useCreateTicketComment()
   const updateStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
-
-  console.log('🎫 TicketDetailsDialog - Ticket ID:', ticket?.id)
-  console.log('📎 Attachments data:', attachments)
-  console.log('⏳ Attachments loading:', attachmentsLoading)
-  console.log('❌ Attachments error:', attachmentsError)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -67,9 +60,7 @@ export function TicketDetailsDialog({
   }
 
   const isImageFile = (mimeType: string) => {
-    const isImage = mimeType?.startsWith('image/')
-    console.log('🖼️ Checking if file is image:', mimeType, '→', isImage)
-    return isImage
+    return mimeType?.startsWith('image/')
   }
 
   const formatFileSize = (bytes: number) => {
@@ -78,20 +69,6 @@ export function TicketDetailsDialog({
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
-  const handleImageError = (url: string) => {
-    console.log('❌ Image failed to load:', url)
-    setImageErrors(prev => new Set([...prev, url]))
-  }
-
-  const handleImageLoad = (url: string) => {
-    console.log('✅ Image loaded successfully:', url)
-    setImageErrors(prev => {
-      const newSet = new Set(prev)
-      newSet.delete(url)
-      return newSet
-    })
   }
 
   const handleAddComment = async () => {
@@ -167,86 +144,30 @@ export function TicketDetailsDialog({
               </div>
 
               {/* Anexos */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-3 md:p-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-800 text-sm md:text-base flex items-center gap-2">
-                    <FileImage className="h-4 w-4" />
-                    Anexos 
-                    {attachmentsLoading && <span className="text-xs text-gray-500">(carregando...)</span>}
-                    {!attachmentsLoading && <span className="text-xs text-gray-500">({attachments.length})</span>}
-                  </h3>
-                </div>
-                
-                <div className="p-3 md:p-4">
-                  {attachmentsError && (
-                    <div className="text-center py-4">
-                      <AlertTriangle className="h-8 w-8 mx-auto text-red-500 mb-2" />
-                      <p className="text-red-600 text-sm">Erro ao carregar anexos: {attachmentsError.message}</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => window.location.reload()}
-                        className="mt-2"
-                      >
-                        Tentar novamente
-                      </Button>
-                    </div>
-                  )}
+              {attachments.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="p-3 md:p-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-800 text-sm md:text-base flex items-center gap-2">
+                      <FileImage className="h-4 w-4" />
+                      Anexos ({attachments.length})
+                    </h3>
+                  </div>
                   
-                  {attachmentsLoading && !attachmentsError && (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto mb-2"></div>
-                      <p className="text-gray-500 text-sm">Carregando anexos...</p>
-                    </div>
-                  )}
-                  
-                  {!attachmentsLoading && !attachmentsError && attachments.length === 0 && (
-                    <div className="text-center py-8">
-                      <ImageIcon className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                      <p className="text-gray-500 text-sm">Nenhum anexo encontrado</p>
-                    </div>
-                  )}
-                  
-                  {!attachmentsLoading && !attachmentsError && attachments.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {attachments.map((attachment: any) => {
-                        console.log('🖼️ Rendering attachment:', attachment)
-                        const hasImageError = imageErrors.has(attachment.public_url)
-                        
-                        return (
+                  <div className="p-3 md:p-4">
+                    {attachmentsLoading ? (
+                      <div className="text-center text-gray-500 text-sm">Carregando anexos...</div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {attachments.map((attachment: any) => (
                           <div key={attachment.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
                             {isImageFile(attachment.mime_type) ? (
                               <div className="space-y-2">
-                                {!hasImageError ? (
-                                  <img
-                                    src={attachment.public_url}
-                                    alt={attachment.file_name}
-                                    className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                                    onClick={() => setSelectedImage(attachment.public_url)}
-                                    onError={() => handleImageError(attachment.public_url)}
-                                    onLoad={() => handleImageLoad(attachment.public_url)}
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="w-full h-32 bg-gray-200 rounded flex flex-col items-center justify-center">
-                                    <AlertTriangle className="h-6 w-6 text-red-500 mb-1" />
-                                    <span className="text-xs text-red-600">Erro ao carregar</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        setImageErrors(prev => {
-                                          const newSet = new Set(prev)
-                                          newSet.delete(attachment.public_url)
-                                          return newSet
-                                        })
-                                      }}
-                                      className="text-xs mt-1"
-                                    >
-                                      Tentar novamente
-                                    </Button>
-                                  </div>
-                                )}
+                                <img
+                                  src={attachment.public_url}
+                                  alt={attachment.file_name}
+                                  className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedImage(attachment.public_url)}
+                                />
                                 <div className="flex items-center justify-between">
                                   <Button
                                     variant="ghost"
@@ -291,17 +212,14 @@ export function TicketDetailsDialog({
                               <div className="text-gray-500">
                                 {format(new Date(attachment.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                               </div>
-                              <div className="text-xs text-blue-600 font-mono">
-                                URL: {attachment.public_url}
-                              </div>
                             </div>
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Comentários */}
               <div className="bg-white rounded-lg border border-gray-200">
@@ -467,12 +385,6 @@ export function TicketDetailsDialog({
                 src={selectedImage}
                 alt="Anexo"
                 className="w-full h-auto max-h-[80vh] object-contain rounded"
-                onError={() => {
-                  console.log('❌ Error loading image in modal:', selectedImage)
-                }}
-                onLoad={() => {
-                  console.log('✅ Image loaded in modal:', selectedImage)
-                }}
               />
               <Button
                 variant="ghost"

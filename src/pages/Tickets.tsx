@@ -1,20 +1,22 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { TicketFormDialog, TicketFormData } from "@/components/TicketFormDialog"
 import { useTickets, useCreateTicket } from "@/hooks/useTickets"
+import { useUnits } from "@/hooks/useUnits"
 import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
-import { useUpdateTicketAttachments } from "@/hooks/useUpdateTicketAttachments"
 import { TicketFilters } from "@/components/TicketFilters"
 import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
-import { AttachmentIcon } from "@/components/AttachmentIcon"
-import { QuickAttachmentsModal } from "@/components/QuickAttachmentsModal"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
-import { Plus, Eye, Clock, User, MapPin } from "lucide-react"
+import { Edit, Plus, Eye, Clock, User, MapPin } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -22,8 +24,6 @@ export default function Tickets() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
-  const [selectedTicketForAttachments, setSelectedTicketForAttachments] = useState<any>(null)
-  const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false)
   
   // Filtros
   const [searchTerm, setSearchTerm] = useState('')
@@ -34,16 +34,19 @@ export default function Tickets() {
 
   const { user } = useAuth()
   const { data: tickets = [], isLoading: ticketsLoading, error: ticketsError } = useTickets()
+  const { data: units = [] } = useUnits()
   const { data: profiles = [] } = useProfiles()
   const createTicket = useCreateTicket()
   const updateStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
-  const { addAttachments } = useUpdateTicketAttachments()
 
   // Filtrar técnicos
   const technicians = profiles.filter(profile => 
     profile.role === 'technician' || profile.role === 'admin'
   )
+
+  // Filtrar usuários regulares
+  const systemUsers = profiles.filter(profile => profile.role === 'user')
 
   // Aplicar filtros
   const filteredTickets = tickets.filter(ticket => {
@@ -82,38 +85,22 @@ export default function Tickets() {
     }
   }
 
-  const handleCreateTicket = async (data: TicketFormData) => {
-    console.log('Creating ticket with data:', data)
+  const handleCreateTicket = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    const formData = new FormData(e.target as HTMLFormElement)
     
-    try {
-      // Primeiro criar o ticket básico
-      const ticketData = {
-        title: data.title,
-        description: data.description,
-        priority: data.priority,
-        category: data.category,
-        requester_id: data.requester_id!,
-        unit_id: data.unit_id,
-      }
+    await createTicket.mutateAsync({
+      title: formData.get('title') as string,
+      description: formData.get('description') as string,
+      priority: formData.get('priority') as any,
+      category: formData.get('category') as any,
+      requester_id: user.id,
+      unit_id: formData.get('unit_id') as string,
+    })
 
-      const createdTicket = await createTicket.mutateAsync(ticketData)
-      console.log('Ticket created successfully:', createdTicket)
-
-      // Se há imagens, fazer upload dos anexos
-      if (data.images && data.images.length > 0) {
-        console.log('Uploading attachments for ticket:', createdTicket.id)
-        await addAttachments.mutateAsync({
-          ticketId: createdTicket.id,
-          images: data.images
-        })
-        console.log('Attachments uploaded successfully')
-      }
-
-      return createdTicket
-    } catch (error) {
-      console.error('Error in handleCreateTicket:', error)
-      throw error
-    }
+    setIsCreateDialogOpen(false)
   }
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
@@ -128,11 +115,6 @@ export default function Tickets() {
   const openTicketDetails = (ticket: any) => {
     setSelectedTicket(ticket)
     setIsDetailsDialogOpen(true)
-  }
-
-  const openAttachmentsModal = (ticket: any) => {
-    setSelectedTicketForAttachments(ticket)
-    setIsAttachmentsModalOpen(true)
   }
 
   const clearFilters = () => {
@@ -159,9 +141,6 @@ export default function Tickets() {
     )
   }
 
-  // Verificar se está carregando criação ou upload de anexos
-  const isCreatingTicket = createTicket.isPending || addAttachments.isPending
-
   return (
     <div className="space-y-4 md:space-y-6 bg-gray-50 min-h-screen p-3 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -172,13 +151,114 @@ export default function Tickets() {
           </p>
         </div>
         
-        <Button 
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Chamado
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Chamado
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px] bg-gray-50 mx-4">
+            <DialogHeader>
+              <DialogTitle>Criar Novo Chamado</DialogTitle>
+              <DialogDescription>
+                Preencha as informações do chamado de suporte
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateTicket} className="space-y-4">
+              <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
+                <div>
+                  <Label htmlFor="title">Título</Label>
+                  <Input 
+                    id="title" 
+                    name="title" 
+                    placeholder="Descreva brevemente o problema"
+                    required 
+                    className="bg-white border-gray-300"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="description">Descrição</Label>
+                  <Textarea 
+                    id="description" 
+                    name="description" 
+                    placeholder="Descreva detalhadamente o problema"
+                    required 
+                    className="bg-white border-gray-300"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="priority">Prioridade</Label>
+                    <Select name="priority" defaultValue="media">
+                      <SelectTrigger className="bg-white border-gray-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="critica">Crítica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="category">Categoria</Label>
+                    <Select name="category">
+                      <SelectTrigger className="bg-white border-gray-300">
+                        <SelectValue placeholder="Selecione a categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hardware">Hardware</SelectItem>
+                        <SelectItem value="software">Software</SelectItem>
+                        <SelectItem value="rede">Rede</SelectItem>
+                        <SelectItem value="acesso">Acesso</SelectItem>
+                        <SelectItem value="outros">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="unit_id">Unidade</Label>
+                  <Select name="unit_id">
+                    <SelectTrigger className="bg-white border-gray-300">
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={createTicket.isPending}
+                  className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                >
+                  {createTicket.isPending ? 'Criando...' : 'Criar Chamado'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filtros */}
@@ -267,7 +347,6 @@ export default function Tickets() {
                   <TableHead className="text-gray-700">Prioridade</TableHead>
                   <TableHead className="text-gray-700">Status</TableHead>
                   <TableHead className="text-gray-700">Técnico</TableHead>
-                  <TableHead className="text-gray-700">Anexos</TableHead>
                   <TableHead className="text-gray-700">Criado</TableHead>
                   <TableHead className="text-gray-700">Ações</TableHead>
                 </TableRow>
@@ -343,12 +422,6 @@ export default function Tickets() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <AttachmentIcon
-                        count={ticket.attachments_count || 0}
-                        onClick={() => openAttachmentsModal(ticket)}
-                      />
-                    </TableCell>
-                    <TableCell>
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-gray-400" />
                         <span className="text-sm text-gray-600">
@@ -380,14 +453,7 @@ export default function Tickets() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium text-gray-900">#{ticket.ticket_number} - {ticket.title}</h3>
-                          <AttachmentIcon
-                            count={ticket.attachments_count || 0}
-                            onClick={() => openAttachmentsModal(ticket)}
-                            className="text-xs"
-                          />
-                        </div>
+                        <h3 className="font-medium text-gray-900">#{ticket.ticket_number} - {ticket.title}</h3>
                         <p className="text-sm text-gray-600 mt-1">
                           {ticket.description.length > 100 
                             ? `${ticket.description.substring(0, 100)}...` 
@@ -444,29 +510,12 @@ export default function Tickets() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Criação de Chamados */}
-      <TicketFormDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        mode="admin"
-        onSubmit={handleCreateTicket}
-        isLoading={isCreatingTicket}
-      />
-
       {/* Dialog de Detalhes */}
       <TicketDetailsDialog
         ticket={selectedTicket}
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         technicians={technicians}
-      />
-
-      {/* Modal de Anexos Rápido */}
-      <QuickAttachmentsModal
-        ticketId={selectedTicketForAttachments?.id || ''}
-        ticketNumber={selectedTicketForAttachments?.ticket_number || ''}
-        open={isAttachmentsModalOpen}
-        onOpenChange={setIsAttachmentsModalOpen}
       />
     </div>
   )
