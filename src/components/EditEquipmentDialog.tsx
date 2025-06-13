@@ -35,7 +35,7 @@ export function EditEquipmentDialog({ equipment, open, onOpenChange }: EditEquip
     warranty_end_date: '',
     description: '',
     unit_id: '',
-    status: ''
+    status: 'disponivel' as 'disponivel' | 'em_uso' | 'manutencao' | 'descartado'
   })
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function EditEquipmentDialog({ equipment, open, onOpenChange }: EditEquip
         warranty_end_date: equipment.warranty_end_date || '',
         description: equipment.description || '',
         unit_id: equipment.unit_id || '',
-        status: equipment.status || ''
+        status: equipment.status as 'disponivel' | 'em_uso' | 'manutencao' | 'descartado'
       })
     }
   }, [equipment])
@@ -84,6 +84,10 @@ export function EditEquipmentDialog({ equipment, open, onOpenChange }: EditEquip
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const handleStatusChange = (value: 'disponivel' | 'em_uso' | 'manutencao' | 'descartado') => {
+    setFormData(prev => ({ ...prev, status: value }))
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -109,7 +113,7 @@ export function EditEquipmentDialog({ equipment, open, onOpenChange }: EditEquip
               
               <div>
                 <Label htmlFor="edit-status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                <Select value={formData.status} onValueChange={handleStatusChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
