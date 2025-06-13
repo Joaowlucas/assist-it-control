@@ -2,161 +2,275 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { UserAssignment } from "@/hooks/useUserAssignments"
-import { Search } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAssignmentStats } from "@/hooks/useAssignmentStats"
+import { Search, Calendar, BarChart3, Users, Package } from "lucide-react"
 
 interface AllAssignmentsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  assignments: UserAssignment[]
 }
 
-export function AllAssignmentsModal({ open, onOpenChange, assignments }: AllAssignmentsModalProps) {
+export function AllAssignmentsModal({ open, onOpenChange }: AllAssignmentsModalProps) {
+  const { data, isLoading } = useAssignmentStats()
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterType, setFilterType] = useState("all")
 
-  const filteredAssignments = assignments.filter(assignment => {
-    const matchesSearch = assignment.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.equipment.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.equipment.model?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || assignment.status === statusFilter
-    const matchesType = typeFilter === "all" || assignment.equipment.type === typeFilter
-    
+  if (!data) return null
+
+  const allAssignments = data.allAssignments || []
+
+  // Filtros
+  const filteredAssignments = allAssignments.filter(assignment => {
+    const matchesSearch = 
+      assignment.equipment?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.equipment?.type?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesStatus = filterStatus === "all" || assignment.status === filterStatus
+    const matchesType = filterType === "all" || assignment.equipment?.type === filterType
+
     return matchesSearch && matchesStatus && matchesType
   })
 
-  // Obter tipos únicos para o filtro
-  const equipmentTypes = Array.from(new Set(assignments.map(a => a.equipment.type)))
+  // Estatísticas
+  const activeCount = allAssignments.filter(a => a.status === 'ativo').length
+  const finishedCount = allAssignments.filter(a => a.status === 'finalizado').length
+  
+  const equipmentCount = allAssignments.reduce((acc, assignment) => {
+    const equipmentName = assignment.equipment?.name || 'Desconhecido'
+    acc[equipmentName] = (acc[equipmentName] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
 
-  const getAssignmentStatusColor = (status: string) => {
+  const userCount = allAssignments.reduce((acc, assignment) => {
+    const userName = assignment.user?.name || 'Desconhecido'
+    acc[userName] = (acc[userName] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  const mostAssignedEquipment = Object.entries(equipmentCount)
+    .sort(([,a], [,b]) => b - a)[0]
+
+  const mostActiveUser = Object.entries(userCount)
+    .sort(([,a], [,b]) => b - a)[0]
+
+  // Obter valores únicos para filtros
+  const uniqueTypes = [...new Set(allAssignments.map(a => a.equipment?.type).filter(Boolean))]
+
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "ativo": return "default"
       case "finalizado": return "secondary"
-      default: return "default"
+      default: return "outline"
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "ativo": return "Ativo"
+      case "finalizado": return "Finalizado"
+      default: return status
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] bg-slate-50 border-slate-200 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-slate-700">Histórico de Equipamentos</DialogTitle>
-          <DialogDescription className="text-slate-600">
-            Todas as suas atribuições de equipamentos (ativas e finalizadas)
+          <DialogTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Histórico Completo de Atribuições ({filteredAssignments.length})
+          </DialogTitle>
+          <DialogDescription>
+            Visualização completa de todas as atribuições de equipamentos (ativas e finalizadas)
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Buscar por nome, marca ou modelo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 border-slate-300 focus:border-slate-400"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[140px] border-slate-300">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="finalizado">Finalizado</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[140px] border-slate-300">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                {equipmentTypes.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Tabela */}
-          <div className="border border-slate-200 rounded-lg">
+        {/* Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Ativas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{activeCount}</div>
+              <p className="text-xs text-muted-foreground">Atribuições em andamento</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Finalizadas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{finishedCount}</div>
+              <p className="text-xs text-muted-foreground">Atribuições concluídas</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Equipamento Mais Usado</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold truncate">
+                {mostAssignedEquipment?.[0] || 'N/A'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {mostAssignedEquipment?.[1] || 0} atribuições
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Usuário Mais Ativo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold truncate">
+                {mostActiveUser?.[0] || 'N/A'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {mostActiveUser?.[1] || 0} atribuições
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filtros */}
+        <div className="flex gap-4 mb-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por equipamento, usuário ou tipo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="finalizado">Finalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {uniqueTypes.map(type => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Tabela */}
+        <div className="flex-1 overflow-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
+            </div>
+          ) : filteredAssignments.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Nenhuma atribuição encontrada.</p>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-200">
-                  <TableHead className="text-slate-600">Equipamento</TableHead>
-                  <TableHead className="text-slate-600">Tipo</TableHead>
-                  <TableHead className="text-slate-600">Marca/Modelo</TableHead>
-                  <TableHead className="text-slate-600">Data de Início</TableHead>
-                  <TableHead className="text-slate-600">Data de Fim</TableHead>
-                  <TableHead className="text-slate-600">Status</TableHead>
-                  <TableHead className="text-slate-600">Observações</TableHead>
+                <TableRow>
+                  <TableHead>Equipamento</TableHead>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Período</TableHead>
+                  <TableHead>Duração</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Responsável</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssignments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-500 py-8">
-                      {assignments.length === 0 
-                        ? "Você ainda não possui histórico de equipamentos"
-                        : "Nenhuma atribuição encontrada"
-                      }
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAssignments.map((assignment) => (
-                    <TableRow key={assignment.id} className="border-slate-200">
-                      <TableCell className="font-medium text-slate-700">
-                        {assignment.equipment.name}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        <Badge variant="outline">
-                          {assignment.equipment.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.equipment.brand && assignment.equipment.model 
-                          ? `${assignment.equipment.brand} ${assignment.equipment.model}`
-                          : assignment.equipment.brand || assignment.equipment.model || '-'
-                        }
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.end_date 
-                          ? new Date(assignment.end_date).toLocaleDateString('pt-BR') 
-                          : "-"
-                        }
+                {filteredAssignments.map((assignment) => {
+                  const startDate = new Date(assignment.start_date)
+                  const endDate = assignment.end_date ? new Date(assignment.end_date) : new Date()
+                  const usageDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+                  
+                  return (
+                    <TableRow key={assignment.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{assignment.equipment?.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {assignment.equipment?.type}
+                            {assignment.equipment?.brand && assignment.equipment?.model && 
+                              ` - ${assignment.equipment.brand} ${assignment.equipment.model}`
+                            }
+                          </div>
+                          {assignment.equipment?.tombamento && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {assignment.equipment.tombamento}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getAssignmentStatusColor(assignment.status) as any}>
-                          {assignment.status === 'ativo' ? 'Ativo' : 'Finalizado'}
+                        <div>
+                          <div className="font-medium">{assignment.user?.name}</div>
+                          <div className="text-sm text-muted-foreground">{assignment.user?.email}</div>
+                          {assignment.user?.unit?.name && (
+                            <Badge variant="secondary" className="text-xs mt-1">
+                              {assignment.user.unit.name}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{startDate.toLocaleDateString('pt-BR')}</div>
+                          {assignment.end_date && (
+                            <div>até {endDate.toLocaleDateString('pt-BR')}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={usageDays > 90 ? "destructive" : usageDays > 30 ? "outline" : "default"}>
+                          {usageDays} dias
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.notes ? (
-                          <div className="max-w-[200px] truncate" title={assignment.notes}>
-                            {assignment.notes}
-                          </div>
-                        ) : '-'}
+                      <TableCell>
+                        <Badge variant={getStatusColor(assignment.status) as any}>
+                          {getStatusLabel(assignment.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {assignment.assigned_by_user?.name || 'Sistema'}
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  )
+                })}
               </TableBody>
             </Table>
-          </div>
-          
-          <div className="text-sm text-slate-500 text-center">
-            Mostrando {filteredAssignments.length} de {assignments.length} atribuições
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

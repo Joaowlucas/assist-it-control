@@ -14,14 +14,10 @@ import { ImageUpload } from "@/components/ImageUpload"
 import { UserProfileSection } from "@/components/UserProfileSection"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
 import { EquipmentRequestsSection } from "@/components/EquipmentRequestsSection"
-import { OpenTicketsModal } from "@/components/OpenTicketsModal"
-import { ClosedTicketsModal } from "@/components/ClosedTicketsModal"
-import { ActiveEquipmentModal } from "@/components/ActiveEquipmentModal"
-import { AllAssignmentsModal } from "@/components/AllAssignmentsModal"
 import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useAuth } from "@/hooks/useAuth"
-import { Edit, Trash2, BarChart3, CheckCircle, Monitor, Archive } from "lucide-react"
+import { Edit, Trash2 } from "lucide-react"
 
 export default function UserPortal() {
   const { profile } = useAuth()
@@ -34,12 +30,6 @@ export default function UserPortal() {
   const [images, setImages] = useState<File[]>([])
   const [editingTicket, setEditingTicket] = useState<UserTicket | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  
-  // Estados dos modais
-  const [isOpenTicketsModalOpen, setIsOpenTicketsModalOpen] = useState(false)
-  const [isClosedTicketsModalOpen, setIsClosedTicketsModalOpen] = useState(false)
-  const [isActiveEquipmentModalOpen, setIsActiveEquipmentModalOpen] = useState(false)
-  const [isAllAssignmentsModalOpen, setIsAllAssignmentsModalOpen] = useState(false)
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -161,7 +151,6 @@ export default function UserPortal() {
           </p>
         </div>
         
-        {/* Dialog for creating new ticket */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-slate-600 hover:bg-slate-700 text-white">Novo Chamado</Button>
@@ -272,61 +261,41 @@ export default function UserPortal() {
         </Dialog>
       </div>
 
-      {/* Dashboard Cards - Agora clicáveis */}
+      {/* Dashboard Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card 
-          className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
-          onClick={() => setIsOpenTicketsModalOpen(true)}
-        >
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Chamados Abertos</CardTitle>
-            <BarChart3 className="h-4 w-4 text-slate-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{openTickets.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card 
-          className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
-          onClick={() => setIsClosedTicketsModalOpen(true)}
-        >
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Chamados Fechados</CardTitle>
-            <CheckCircle className="h-4 w-4 text-slate-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{closedTickets.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver histórico</p>
           </CardContent>
         </Card>
         
-        <Card 
-          className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
-          onClick={() => setIsActiveEquipmentModalOpen(true)}
-        >
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Equipamentos Ativos</CardTitle>
-            <Monitor className="h-4 w-4 text-slate-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{activeAssignments.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card 
-          className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
-          onClick={() => setIsAllAssignmentsModalOpen(true)}
-        >
+        <Card className="bg-slate-100/70 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Total de Atribuições</CardTitle>
-            <Archive className="h-4 w-4 text-slate-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{assignments.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver histórico</p>
           </CardContent>
         </Card>
       </div>
@@ -502,33 +471,6 @@ export default function UserPortal() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Modais */}
-      <OpenTicketsModal
-        open={isOpenTicketsModalOpen}
-        onOpenChange={setIsOpenTicketsModalOpen}
-        tickets={openTickets}
-        onEditTicket={handleEditTicket}
-        onDeleteTicket={handleDeleteTicket}
-      />
-
-      <ClosedTicketsModal
-        open={isClosedTicketsModalOpen}
-        onOpenChange={setIsClosedTicketsModalOpen}
-        tickets={closedTickets}
-      />
-
-      <ActiveEquipmentModal
-        open={isActiveEquipmentModalOpen}
-        onOpenChange={setIsActiveEquipmentModalOpen}
-        assignments={assignments}
-      />
-
-      <AllAssignmentsModal
-        open={isAllAssignmentsModalOpen}
-        onOpenChange={setIsAllAssignmentsModalOpen}
-        assignments={assignments}
-      />
 
       <EditTicketDialog
         ticket={editingTicket}

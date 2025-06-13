@@ -20,7 +20,7 @@ export function useTickets() {
           requester:profiles!tickets_requester_id_fkey(name, email),
           assignee:profiles!tickets_assignee_id_fkey(name, email),
           unit:units(name),
-          attachments_count:ticket_attachments(count)
+          attachments:ticket_attachments(id, file_name)
         `)
         .order('created_at', { ascending: false })
       
@@ -29,15 +29,11 @@ export function useTickets() {
         throw error
       }
       
-      // Transform the data to include attachments count
-      const ticketsWithCount = data?.map(ticket => ({
-        ...ticket,
-        attachments_count: ticket.attachments_count?.[0]?.count || 0
-      })) || []
-      
-      console.log('Tickets fetched:', ticketsWithCount)
-      return ticketsWithCount
+      console.log('Tickets fetched:', data)
+      return data || []
     },
+    staleTime: 1 * 60 * 1000, // 1 minuto
+    gcTime: 5 * 60 * 1000, // 5 minutos
   })
 }
 
@@ -75,6 +71,7 @@ export function useTicket(id: string) {
       return data
     },
     enabled: !!id,
+    staleTime: 2 * 60 * 1000, // 2 minutos
   })
 }
 

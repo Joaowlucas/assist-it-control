@@ -6,7 +6,7 @@ export function useTicketAttachments(ticketId: string) {
   return useQuery({
     queryKey: ['ticket-attachments', ticketId],
     queryFn: async () => {
-      console.log('🔍 Fetching ticket attachments for:', ticketId)
+      console.log('Fetching ticket attachments for:', ticketId)
       
       const { data, error } = await supabase
         .from('ticket_attachments')
@@ -18,21 +18,15 @@ export function useTicketAttachments(ticketId: string) {
         .order('created_at', { ascending: false })
       
       if (error) {
-        console.error('❌ Error fetching ticket attachments:', error)
+        console.error('Error fetching ticket attachments:', error)
         throw error
       }
       
-      console.log('📎 Raw attachments data:', data)
-      
-      // Gerar URLs públicas para os anexos
+      // Gerar URLs públicas para as imagens
       const attachmentsWithUrls = data?.map(attachment => {
-        console.log('🔗 Generating URL for file_path:', attachment.file_path)
-        
         const { data: urlData } = supabase.storage
           .from('ticket-attachments')
           .getPublicUrl(attachment.file_path)
-        
-        console.log('🌐 Generated public URL:', urlData.publicUrl)
         
         return {
           ...attachment,
@@ -40,20 +34,19 @@ export function useTicketAttachments(ticketId: string) {
         }
       }) || []
       
-      console.log('✅ Attachments with URLs:', attachmentsWithUrls)
+      console.log('Ticket attachments fetched:', attachmentsWithUrls)
       return attachmentsWithUrls
     },
     enabled: !!ticketId,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
   })
 }
 
 export function getAttachmentPublicUrl(filePath: string) {
-  console.log('🔗 Getting public URL for:', filePath)
-  
   const { data } = supabase.storage
     .from('ticket-attachments')
     .getPublicUrl(filePath)
   
-  console.log('🌐 Public URL result:', data.publicUrl)
   return data.publicUrl
 }

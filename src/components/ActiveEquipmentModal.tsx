@@ -2,134 +2,179 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { UserAssignment } from "@/hooks/useUserAssignments"
-import { Search } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { useAssignmentStats } from "@/hooks/useAssignmentStats"
+import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
+import { Search, Calendar, User, Settings } from "lucide-react"
 
 interface ActiveEquipmentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  assignments: UserAssignment[]
 }
 
-export function ActiveEquipmentModal({ open, onOpenChange, assignments }: ActiveEquipmentModalProps) {
+export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModalProps) {
+  const { data, isLoading } = useAssignmentStats()
   const [searchTerm, setSearchTerm] = useState("")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [filterType, setFilterType] = useState("all")
+  const [filterUnit, setFilterUnit] = useState("all")
 
-  const activeAssignments = assignments.filter(a => a.status === "ativo")
+  if (!data) return null
 
+  const activeAssignments = data.activeAssignments || []
+
+  // Filtros
   const filteredAssignments = activeAssignments.filter(assignment => {
-    const matchesSearch = assignment.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.equipment.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.equipment.model?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = typeFilter === "all" || assignment.equipment.type === typeFilter
-    
-    return matchesSearch && matchesType
+    const matchesSearch = 
+      assignment.equipment?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.equipment?.type?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesType = filterType === "all" || assignment.equipment?.type === filterType
+    const matchesUnit = filterUnit === "all" || assignment.user?.unit?.name === filterUnit
+
+    return matchesSearch && matchesType && matchesUnit
   })
 
-  // Obter tipos únicos para o filtro
-  const equipmentTypes = Array.from(new Set(activeAssignments.map(a => a.equipment.type)))
+  // Obter tipos únicos para filtro
+  const uniqueTypes = [...new Set(activeAssignments.map(a => a.equipment?.type).filter(Boolean))]
+  const uniqueUnits = [...new Set(activeAssignments.map(a => a.user?.unit?.name).filter(Boolean))]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] bg-slate-50 border-slate-200 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-slate-700">Equipamentos Ativos</DialogTitle>
-          <DialogDescription className="text-slate-600">
-            Equipamentos que você está utilizando atualmente
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Equipamentos em Uso ({filteredAssignments.length})
+          </DialogTitle>
+          <DialogDescription>
+            Lista detalhada de todos os equipamentos atualmente atribuídos aos usuários
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Buscar por nome, marca ou modelo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 border-slate-300 focus:border-slate-400"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] border-slate-300">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                {equipmentTypes.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Tabela */}
-          <div className="border border-slate-200 rounded-lg">
+        <div className="flex gap-4 mb-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por equipamento, usuário ou tipo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {uniqueTypes.map(type => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterUnit} onValueChange={setFilterUnit}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por unidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as unidades</SelectItem>
+              {uniqueUnits.map(unit => (
+                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
+            </div>
+          ) : filteredAssignments.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Nenhum equipamento em uso encontrado.</p>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-200">
-                  <TableHead className="text-slate-600">Equipamento</TableHead>
-                  <TableHead className="text-slate-600">Tipo</TableHead>
-                  <TableHead className="text-slate-600">Marca/Modelo</TableHead>
-                  <TableHead className="text-slate-600">Serial</TableHead>
-                  <TableHead className="text-slate-600">Data de Início</TableHead>
-                  <TableHead className="text-slate-600">Observações</TableHead>
+                <TableRow>
+                  <TableHead>Equipamento</TableHead>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Unidade</TableHead>
+                  <TableHead>Data de Início</TableHead>
+                  <TableHead>Duração</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssignments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                      {activeAssignments.length === 0 
-                        ? "Você não possui equipamentos ativos no momento"
-                        : "Nenhum equipamento encontrado"
-                      }
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAssignments.map((assignment) => (
-                    <TableRow key={assignment.id} className="border-slate-200">
-                      <TableCell className="font-medium text-slate-700">
-                        {assignment.equipment.name}
+                {filteredAssignments.map((assignment) => {
+                  const startDate = new Date(assignment.start_date)
+                  const daysSinceStart = Math.ceil((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+                  
+                  return (
+                    <TableRow key={assignment.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{assignment.equipment?.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {assignment.equipment?.type}
+                            {assignment.equipment?.brand && assignment.equipment?.model && 
+                              ` - ${assignment.equipment.brand} ${assignment.equipment.model}`
+                            }
+                          </div>
+                          {assignment.equipment?.tombamento && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {assignment.equipment.tombamento}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-slate-600">
-                        <Badge variant="default">
-                          {assignment.equipment.type}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium">{assignment.user?.name}</div>
+                            <div className="text-sm text-muted-foreground">{assignment.user?.email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {assignment.user?.unit?.name || 'Não informado'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.equipment.brand && assignment.equipment.model 
-                          ? `${assignment.equipment.brand} ${assignment.equipment.model}`
-                          : assignment.equipment.brand || assignment.equipment.model || '-'
-                        }
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {startDate.toLocaleDateString('pt-BR')}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-slate-600 font-mono text-sm">
-                        {assignment.equipment.serial_number || '-'}
+                      <TableCell>
+                        <Badge variant={daysSinceStart > 90 ? "destructive" : daysSinceStart > 30 ? "outline" : "default"}>
+                          {daysSinceStart} dias
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">
-                        {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.notes ? (
-                          <div className="max-w-[200px] truncate" title={assignment.notes}>
-                            {assignment.notes}
-                          </div>
-                        ) : '-'}
+                      <TableCell>
+                        <ConfirmEndAssignmentDialog
+                          assignmentId={assignment.id}
+                          equipmentName={assignment.equipment?.name || 'Equipamento'}
+                          userName={assignment.user?.name || 'Usuário'}
+                        >
+                          <Button variant="outline" size="sm">
+                            Finalizar
+                          </Button>
+                        </ConfirmEndAssignmentDialog>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  )
+                })}
               </TableBody>
             </Table>
-          </div>
-          
-          <div className="text-sm text-slate-500 text-center">
-            Mostrando {filteredAssignments.length} de {activeAssignments.length} equipamentos ativos
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
