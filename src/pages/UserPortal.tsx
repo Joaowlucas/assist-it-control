@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImageUpload } from "@/components/ImageUpload"
 import { UserProfileSection } from "@/components/UserProfileSection"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
+import { EquipmentRequestsSection } from "@/components/EquipmentRequestsSection"
 import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useAuth } from "@/hooks/useAuth"

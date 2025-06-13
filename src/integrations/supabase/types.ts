@@ -126,6 +126,69 @@ export type Database = {
           },
         ]
       }
+      equipment_requests: {
+        Row: {
+          admin_comments: string | null
+          created_at: string | null
+          equipment_type: string
+          id: string
+          justification: string
+          priority: string
+          requested_at: string
+          requester_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          specifications: Json
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_comments?: string | null
+          created_at?: string | null
+          equipment_type: string
+          id?: string
+          justification: string
+          priority?: string
+          requested_at?: string
+          requester_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          specifications?: Json
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_comments?: string | null
+          created_at?: string | null
+          equipment_type?: string
+          id?: string
+          justification?: string
+          priority?: string
+          requested_at?: string
+          requester_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          specifications?: Json
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
