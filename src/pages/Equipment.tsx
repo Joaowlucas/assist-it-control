@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,21 +8,24 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ImageIcon, Plus, Calendar, MapPin } from "lucide-react"
+import { ImageIcon, Plus, MapPin } from "lucide-react"
 import { useEquipment, useCreateEquipment } from "@/hooks/useEquipment"
 import { useUnits } from "@/hooks/useUnits"
 import { useUploadEquipmentPhoto } from "@/hooks/useEquipmentPhotos"
 import { useAuth } from "@/hooks/useAuth"
+import { useEquipmentFilters } from "@/hooks/useEquipmentFilters"
 import { ImageUpload } from "@/components/ImageUpload"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
+import { EquipmentFilters } from "@/components/EquipmentFilters"
+import { EquipmentReports } from "@/components/EquipmentReports"
 
 export default function Equipment() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
   const [images, setImages] = useState<File[]>([])
   
-  const { data: equipment, isLoading: loadingEquipment } = useEquipment()
+  const { filters, updateFilter, clearFilters, hasActiveFilters } = useEquipmentFilters()
+  const { data: equipment, isLoading: loadingEquipment } = useEquipment(filters)
   const { data: units } = useUnits()
   const { profile } = useAuth()
   const createEquipment = useCreateEquipment()
@@ -58,19 +60,23 @@ export default function Equipment() {
     const equipmentData = {
       name: formData.get('name') as string,
       type: formData.get('type') as string,
-      brand: formData.get('brand') as string || null,
-      model: formData.get('model') as string || null,
-      serial_number: formData.get('serialNumber') as string || null,
-      location: formData.get('location') as string || null,
-      purchase_date: formData.get('purchaseDate') as string || null,
-      warranty_end_date: formData.get('warrantyExpiry') as string || null,
-      description: formData.get('notes') as string || null,
-      unit_id: formData.get('unitId') as string || null,
-      tombamento: formData.get('tombamento') as string || null,
+      brand: (formData.get('brand') as string) || null,
+      model: (formData.get('model') as string) || null,
+      serial_number: (formData.get('serialNumber') as string) || null,
+      location: (formData.get('location') as string) || null,
+      purchase_date: (formData.get('purchaseDate') as string) || null,
+      warranty_end_date: (formData.get('warrantyExpiry') as string) || null,
+      description: (formData.get('notes') as string) || null,
+      unit_id: (formData.get('unitId') as string) || null,
+      tombamento: (formData.get('tombamento') as string) || null,
+      status: 'disponivel' as const
     }
+
+    console.log('Form data being submitted:', equipmentData)
 
     try {
       const newEquipment = await createEquipment.mutateAsync(equipmentData)
+      console.log('Equipment created, now uploading photos:', images.length)
       
       // Upload photos if any
       if (images.length > 0) {
@@ -112,176 +118,192 @@ export default function Equipment() {
           </p>
         </div>
         
-        {canEdit && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Equipamento
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Adicionar Novo Equipamento</DialogTitle>
-                <DialogDescription>
-                  Cadastre um novo equipamento no inventário
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Nome do Equipamento</Label>
-                      <Input 
-                        id="name" 
-                        name="name" 
-                        placeholder="Ex: Desktop Marketing 01"
-                        required 
-                      />
+        <div className="flex gap-2">
+          <EquipmentReports />
+          
+          {canEdit && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Equipamento
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Adicionar Novo Equipamento</DialogTitle>
+                  <DialogDescription>
+                    Cadastre um novo equipamento no inventário
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="name">Nome do Equipamento</Label>
+                        <Input 
+                          id="name" 
+                          name="name" 
+                          placeholder="Ex: Desktop Marketing 01"
+                          required 
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="tombamento">Tombamento</Label>
+                        <Input 
+                          id="tombamento" 
+                          name="tombamento" 
+                          placeholder="Deixe vazio para gerar automaticamente"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="type">Tipo</Label>
+                        <Select name="type" required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Computador">Computador</SelectItem>
+                            <SelectItem value="Monitor">Monitor</SelectItem>
+                            <SelectItem value="Impressora">Impressora</SelectItem>
+                            <SelectItem value="Notebook">Notebook</SelectItem>
+                            <SelectItem value="Tablet">Tablet</SelectItem>
+                            <SelectItem value="Telefone">Telefone</SelectItem>
+                            <SelectItem value="Outros">Outros</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="unitId">Unidade</Label>
+                        <Select name="unitId">
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a unidade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {units?.map((unit) => (
+                              <SelectItem key={unit.id} value={unit.id}>
+                                {unit.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="brand">Marca</Label>
+                        <Input 
+                          id="brand" 
+                          name="brand" 
+                          placeholder="Ex: Dell, HP, Lenovo"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="model">Modelo</Label>
+                        <Input 
+                          id="model" 
+                          name="model" 
+                          placeholder="Ex: OptiPlex 7090"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="serialNumber">Número de Série</Label>
+                        <Input 
+                          id="serialNumber" 
+                          name="serialNumber" 
+                          placeholder="Número de série do equipamento"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="location">Localização</Label>
+                        <Input 
+                          id="location" 
+                          name="location" 
+                          placeholder="Ex: Marketing - Mesa 15"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="purchaseDate">Data de Compra</Label>
+                        <Input 
+                          id="purchaseDate" 
+                          name="purchaseDate" 
+                          type="date"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="warrantyExpiry">Vencimento da Garantia</Label>
+                        <Input 
+                          id="warrantyExpiry" 
+                          name="warrantyExpiry" 
+                          type="date"
+                        />
+                      </div>
                     </div>
                     
                     <div>
-                      <Label htmlFor="tombamento">Tombamento</Label>
-                      <Input 
-                        id="tombamento" 
-                        name="tombamento" 
-                        placeholder="Deixe vazio para gerar automaticamente"
+                      <Label htmlFor="notes">Descrição/Observações</Label>
+                      <Textarea 
+                        id="notes" 
+                        name="notes" 
+                        placeholder="Descrição e observações sobre o equipamento"
                       />
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="type">Tipo</Label>
-                      <Select name="type" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Computador">Computador</SelectItem>
-                          <SelectItem value="Monitor">Monitor</SelectItem>
-                          <SelectItem value="Impressora">Impressora</SelectItem>
-                          <SelectItem value="Notebook">Notebook</SelectItem>
-                          <SelectItem value="Tablet">Tablet</SelectItem>
-                          <SelectItem value="Telefone">Telefone</SelectItem>
-                          <SelectItem value="Outros">Outros</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="unitId">Unidade</Label>
-                      <Select name="unitId">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a unidade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {units?.map((unit) => (
-                            <SelectItem key={unit.id} value={unit.id}>
-                              {unit.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="brand">Marca</Label>
-                      <Input 
-                        id="brand" 
-                        name="brand" 
-                        placeholder="Ex: Dell, HP, Lenovo"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="model">Modelo</Label>
-                      <Input 
-                        id="model" 
-                        name="model" 
-                        placeholder="Ex: OptiPlex 7090"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="serialNumber">Número de Série</Label>
-                      <Input 
-                        id="serialNumber" 
-                        name="serialNumber" 
-                        placeholder="Número de série do equipamento"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="location">Localização</Label>
-                      <Input 
-                        id="location" 
-                        name="location" 
-                        placeholder="Ex: Marketing - Mesa 15"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="purchaseDate">Data de Compra</Label>
-                      <Input 
-                        id="purchaseDate" 
-                        name="purchaseDate" 
-                        type="date"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="warrantyExpiry">Vencimento da Garantia</Label>
-                      <Input 
-                        id="warrantyExpiry" 
-                        name="warrantyExpiry" 
-                        type="date"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="notes">Descrição/Observações</Label>
-                    <Textarea 
-                      id="notes" 
-                      name="notes" 
-                      placeholder="Descrição e observações sobre o equipamento"
+
+                    <ImageUpload
+                      images={images}
+                      onImagesChange={setImages}
+                      maxImages={5}
                     />
                   </div>
-
-                  <ImageUpload
-                    images={images}
-                    onImagesChange={setImages}
-                    maxImages={5}
-                  />
-                </div>
-                
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createEquipment.isPending}>
-                    {createEquipment.isPending ? 'Criando...' : 'Adicionar Equipamento'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+                  
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={createEquipment.isPending}>
+                      {createEquipment.isPending ? 'Criando...' : 'Adicionar Equipamento'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
+
+      <EquipmentFilters
+        filters={filters}
+        onFilterChange={updateFilter}
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Inventário de Equipamentos</CardTitle>
-          <CardDescription>
-            Lista completa de todos os equipamentos da empresa
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Inventário de Equipamentos</CardTitle>
+              <CardDescription>
+                {equipment?.length || 0} equipamentos encontrados
+                {hasActiveFilters && ' (filtrados)'}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
