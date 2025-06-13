@@ -8,6 +8,7 @@ import { TicketFormDialog, TicketFormData } from "@/components/TicketFormDialog"
 import { useTickets, useCreateTicket } from "@/hooks/useTickets"
 import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
+import { useUpdateTicketAttachments } from "@/hooks/useUpdateTicketAttachments"
 import { TicketFilters } from "@/components/TicketFilters"
 import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
 import { AttachmentIcon } from "@/components/AttachmentIcon"
@@ -37,6 +38,7 @@ export default function Tickets() {
   const createTicket = useCreateTicket()
   const updateStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
+  const { addAttachments } = useUpdateTicketAttachments()
 
   // Filtrar técnicos
   const technicians = profiles.filter(profile => 
@@ -81,14 +83,37 @@ export default function Tickets() {
   }
 
   const handleCreateTicket = async (data: TicketFormData) => {
-    await createTicket.mutateAsync({
-      title: data.title,
-      description: data.description,
-      priority: data.priority,
-      category: data.category,
-      requester_id: data.requester_id!,
-      unit_id: data.unit_id,
-    })
+    console.log('Creating ticket with data:', data)
+    
+    try {
+      // Primeiro criar o ticket básico
+      const ticketData = {
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        category: data.category,
+        requester_id: data.requester_id!,
+        unit_id: data.unit_id,
+      }
+
+      const createdTicket = await createTicket.mutateAsync(ticketData)
+      console.log('Ticket created successfully:', createdTicket)
+
+      // Se há imagens, fazer upload dos anexos
+      if (data.images && data.images.length > 0) {
+        console.log('Uploading attachments for ticket:', createdTicket.id)
+        await addAttachments.mutateAsync({
+          ticketId: createdTicket.id,
+          images: data.images
+        })
+        console.log('Attachments uploaded successfully')
+      }
+
+      return createdTicket
+    } catch (error) {
+      console.error('Error in handleCreateTicket:', error)
+      throw error
+    }
   }
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
@@ -133,6 +158,9 @@ export default function Tickets() {
       </div>
     )
   }
+
+  // Verificar se está carregando criação ou upload de anexos
+  const isCreatingTicket = createTicket.isPending || addAttachments.isPending
 
   return (
     <div className="space-y-4 md:space-y-6 bg-gray-50 min-h-screen p-3 md:p-6">
@@ -422,7 +450,7 @@ export default function Tickets() {
         onOpenChange={setIsCreateDialogOpen}
         mode="admin"
         onSubmit={handleCreateTicket}
-        isLoading={createTicket.isPending}
+        isLoading={isCreatingTicket}
       />
 
       {/* Dialog de Detalhes */}
