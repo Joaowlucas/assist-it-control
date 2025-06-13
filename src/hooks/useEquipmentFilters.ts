@@ -50,14 +50,20 @@ export function useEquipmentTypes() {
   return useQuery({
     queryKey: ['equipment-types'],
     queryFn: async () => {
+      console.log('Fetching equipment types...')
       const { data, error } = await supabase
         .from('equipment')
         .select('type')
         .order('type')
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching equipment types:', error)
+        throw error
+      }
       
+      console.log('Equipment types raw data:', data)
       const uniqueTypes = [...new Set(data.map(item => item.type))].filter(Boolean)
+      console.log('Unique equipment types:', uniqueTypes)
       return uniqueTypes
     }
   })
@@ -67,6 +73,7 @@ export function useAssignedUsers() {
   return useQuery({
     queryKey: ['assigned-users'],
     queryFn: async () => {
+      console.log('Fetching assigned users...')
       const { data, error } = await supabase
         .from('assignments')
         .select(`
@@ -75,7 +82,12 @@ export function useAssignedUsers() {
         `)
         .eq('status', 'ativo')
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching assigned users:', error)
+        throw error
+      }
+      
+      console.log('Assigned users raw data:', data)
       
       const uniqueUsers = data.reduce((acc, assignment) => {
         const userId = assignment.user_id
@@ -86,6 +98,7 @@ export function useAssignedUsers() {
         return acc
       }, [] as Array<{ id: string; name: string }>)
       
+      console.log('Unique assigned users:', uniqueUsers)
       return uniqueUsers
     }
   })

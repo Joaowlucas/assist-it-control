@@ -23,9 +23,9 @@ export function EquipmentFilters({
   onClearFilters, 
   hasActiveFilters 
 }: EquipmentFiltersProps) {
-  const { data: types } = useEquipmentTypes()
-  const { data: units } = useUnits()
-  const { data: assignedUsers } = useAssignedUsers()
+  const { data: types, isLoading: loadingTypes } = useEquipmentTypes()
+  const { data: units, isLoading: loadingUnits } = useUnits()
+  const { data: assignedUsers, isLoading: loadingUsers } = useAssignedUsers()
 
   const statusOptions = [
     { value: 'disponivel', label: 'Disponível' },
@@ -70,7 +70,7 @@ export function EquipmentFilters({
             <Label>Tipo</Label>
             <Select value={filters.type} onValueChange={(value) => onFilterChange('type', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Todos os tipos" />
+                <SelectValue placeholder={loadingTypes ? "Carregando..." : "Todos os tipos"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Todos os tipos</SelectItem>
@@ -87,7 +87,7 @@ export function EquipmentFilters({
             <Label>Unidade</Label>
             <Select value={filters.unitId} onValueChange={(value) => onFilterChange('unitId', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Todas as unidades" />
+                <SelectValue placeholder={loadingUnits ? "Carregando..." : "Todas as unidades"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Todas as unidades</SelectItem>
@@ -121,7 +121,7 @@ export function EquipmentFilters({
             <Label>Usuário</Label>
             <Select value={filters.assignedUserId} onValueChange={(value) => onFilterChange('assignedUserId', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Todos os usuários" />
+                <SelectValue placeholder={loadingUsers ? "Carregando..." : "Todos os usuários"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Todos os usuários</SelectItem>
@@ -164,6 +164,28 @@ export function EquipmentFilters({
                 Status: {statusOptions.find(s => s.value === filters.status)?.label}
                 <button
                   onClick={() => onFilterChange('status', '')}
+                  className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {filters.unitId && units && (
+              <Badge variant="secondary">
+                Unidade: {units.find(u => u.id === filters.unitId)?.name}
+                <button
+                  onClick={() => onFilterChange('unitId', '')}
+                  className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {filters.assignedUserId && assignedUsers && (
+              <Badge variant="secondary">
+                Usuário: {assignedUsers.find(u => u.id === filters.assignedUserId)?.name}
+                <button
+                  onClick={() => onFilterChange('assignedUserId', '')}
                   className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
                 >
                   <X className="h-3 w-3" />

@@ -17,6 +17,8 @@ export function useEquipmentStats() {
   return useQuery({
     queryKey: ['equipment-stats'],
     queryFn: async () => {
+      console.log('Fetching equipment stats...')
+      
       // Get equipment with units
       const { data: equipment, error } = await supabase
         .from('equipment')
@@ -25,53 +27,62 @@ export function useEquipmentStats() {
           unit:units(name)
         `)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching equipment for stats:', error)
+        throw error
+      }
+
+      console.log('Equipment data for stats:', equipment)
 
       const stats: EquipmentStats = {
-        total: equipment.length,
-        available: equipment.filter(e => e.status === 'disponivel').length,
-        inUse: equipment.filter(e => e.status === 'em_uso').length,
-        maintenance: equipment.filter(e => e.status === 'manutencao').length,
-        disposed: equipment.filter(e => e.status === 'descartado').length,
+        total: equipment?.length || 0,
+        available: equipment?.filter(e => e.status === 'disponivel').length || 0,
+        inUse: equipment?.filter(e => e.status === 'em_uso').length || 0,
+        maintenance: equipment?.filter(e => e.status === 'manutencao').length || 0,
+        disposed: equipment?.filter(e => e.status === 'descartado').length || 0,
         byType: [],
         byUnit: [],
         byStatus: []
       }
 
-      // Group by type
-      const typeGroups = equipment.reduce((acc, item) => {
-        acc[item.type] = (acc[item.type] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
+      // Only process groupings if we have equipment
+      if (equipment && equipment.length > 0) {
+        // Group by type
+        const typeGroups = equipment.reduce((acc, item) => {
+          acc[item.type] = (acc[item.type] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
 
-      stats.byType = Object.entries(typeGroups).map(([type, count]) => ({
-        type,
-        count
-      }))
+        stats.byType = Object.entries(typeGroups).map(([type, count]) => ({
+          type,
+          count
+        }))
 
-      // Group by unit
-      const unitGroups = equipment.reduce((acc, item) => {
-        const unitName = item.unit?.name || 'Sem unidade'
-        acc[unitName] = (acc[unitName] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
+        // Group by unit
+        const unitGroups = equipment.reduce((acc, item) => {
+          const unitName = item.unit?.name || 'Sem unidade'
+          acc[unitName] = (acc[unitName] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
 
-      stats.byUnit = Object.entries(unitGroups).map(([unit, count]) => ({
-        unit,
-        count
-      }))
+        stats.byUnit = Object.entries(unitGroups).map(([unit, count]) => ({
+          unit,
+          count
+        }))
 
-      // Group by status
-      const statusGroups = equipment.reduce((acc, item) => {
-        acc[item.status] = (acc[item.status] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
+        // Group by status
+        const statusGroups = equipment.reduce((acc, item) => {
+          acc[item.status] = (acc[item.status] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
 
-      stats.byStatus = Object.entries(statusGroups).map(([status, count]) => ({
-        status,
-        count
-      }))
+        stats.byStatus = Object.entries(statusGroups).map(([status, count]) => ({
+          status,
+          count
+        }))
+      }
 
+      console.log('Calculated equipment stats:', stats)
       return stats
     }
   })
