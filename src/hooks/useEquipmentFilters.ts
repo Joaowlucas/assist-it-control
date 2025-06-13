@@ -71,7 +71,7 @@ export function useAssignedUsers() {
         .from('assignments')
         .select(`
           user_id,
-          profiles!inner(name)
+          profiles!assignments_user_id_fkey(name)
         `)
         .eq('status', 'ativo')
 

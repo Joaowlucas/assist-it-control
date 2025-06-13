@@ -32,7 +32,8 @@ export function useEquipment(filters?: EquipmentFilters) {
       }
       
       if (filters?.status) {
-        query = query.eq('status', filters.status)
+        // Type assertion to ensure compatibility with database enum
+        query = query.eq('status', filters.status as 'disponivel' | 'em_uso' | 'manutencao' | 'descartado')
       }
       
       if (filters?.searchTerm) {
