@@ -13,6 +13,15 @@ interface SystemSettings {
   equipment_email: string
   auto_assign_tickets: boolean
   default_priority: string
+  custom_primary_color: string | null
+  custom_primary_foreground_color: string | null
+  custom_secondary_color: string | null
+  custom_secondary_foreground_color: string | null
+  custom_foreground_color: string | null
+  custom_muted_foreground_color: string | null
+  custom_destructive_color: string | null
+  custom_destructive_foreground_color: string | null
+  enable_custom_colors: boolean
 }
 
 export function useSystemSettings() {

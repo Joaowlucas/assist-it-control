@@ -293,8 +293,17 @@ export type Database = {
           company_logo_url: string | null
           company_name: string
           created_at: string
+          custom_destructive_color: string | null
+          custom_destructive_foreground_color: string | null
+          custom_foreground_color: string | null
+          custom_muted_foreground_color: string | null
+          custom_primary_color: string | null
+          custom_primary_foreground_color: string | null
+          custom_secondary_color: string | null
+          custom_secondary_foreground_color: string | null
           default_priority: string
           department_name: string
+          enable_custom_colors: boolean | null
           equipment_email: string
           id: string
           support_email: string
@@ -306,8 +315,17 @@ export type Database = {
           company_logo_url?: string | null
           company_name?: string
           created_at?: string
+          custom_destructive_color?: string | null
+          custom_destructive_foreground_color?: string | null
+          custom_foreground_color?: string | null
+          custom_muted_foreground_color?: string | null
+          custom_primary_color?: string | null
+          custom_primary_foreground_color?: string | null
+          custom_secondary_color?: string | null
+          custom_secondary_foreground_color?: string | null
           default_priority?: string
           department_name?: string
+          enable_custom_colors?: boolean | null
           equipment_email?: string
           id?: string
           support_email?: string
@@ -319,8 +337,17 @@ export type Database = {
           company_logo_url?: string | null
           company_name?: string
           created_at?: string
+          custom_destructive_color?: string | null
+          custom_destructive_foreground_color?: string | null
+          custom_foreground_color?: string | null
+          custom_muted_foreground_color?: string | null
+          custom_primary_color?: string | null
+          custom_primary_foreground_color?: string | null
+          custom_secondary_color?: string | null
+          custom_secondary_foreground_color?: string | null
           default_priority?: string
           department_name?: string
+          enable_custom_colors?: boolean | null
           equipment_email?: string
           id?: string
           support_email?: string
