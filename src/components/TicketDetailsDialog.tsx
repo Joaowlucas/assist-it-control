@@ -86,42 +86,42 @@ export function TicketDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] bg-gray-50">
-        <DialogHeader className="bg-white rounded-lg p-4 border border-gray-200">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Tag className="h-5 w-5 text-gray-600" />
-            #{ticket.ticket_number} - {ticket.title}
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] bg-gray-50 mx-auto">
+        <DialogHeader className="bg-white rounded-lg p-3 md:p-4 border border-gray-200">
+          <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
+            <Tag className="h-4 md:h-5 w-4 md:w-5 text-gray-600" />
+            <span className="truncate">#{ticket.ticket_number} - {ticket.title}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-1">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 p-1 overflow-y-auto max-h-[calc(90vh-120px)]">
           {/* Coluna Principal - Detalhes e Comentários */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="xl:col-span-2 space-y-4">
             {/* Informações do Ticket */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h3 className="font-semibold text-gray-800 mb-3">Descrição</h3>
-              <p className="text-gray-700 leading-relaxed">{ticket.description}</p>
+            <div className="bg-white rounded-lg p-3 md:p-4 border border-gray-200">
+              <h3 className="font-semibold text-gray-800 mb-3 text-sm md:text-base">Descrição</h3>
+              <p className="text-gray-700 leading-relaxed text-sm md:text-base">{ticket.description}</p>
               
-              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
+                  <User className="h-3 md:h-4 w-3 md:w-4 text-gray-500 flex-shrink-0" />
                   <span className="text-gray-600">Solicitante:</span>
-                  <span className="font-medium">{ticket.requester?.name}</span>
+                  <span className="font-medium truncate">{ticket.requester?.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
+                  <MapPin className="h-3 md:h-4 w-3 md:w-4 text-gray-500 flex-shrink-0" />
                   <span className="text-gray-600">Unidade:</span>
-                  <span className="font-medium">{ticket.unit?.name}</span>
+                  <span className="font-medium truncate">{ticket.unit?.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <Calendar className="h-3 md:h-4 w-3 md:w-4 text-gray-500 flex-shrink-0" />
                   <span className="text-gray-600">Criado em:</span>
                   <span className="font-medium">
                     {format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-gray-500" />
+                  <Tag className="h-3 md:h-4 w-3 md:w-4 text-gray-500 flex-shrink-0" />
                   <span className="text-gray-600">Categoria:</span>
                   <span className="font-medium capitalize">{ticket.category}</span>
                 </div>
@@ -130,51 +130,53 @@ export function TicketDetailsDialog({
 
             {/* Comentários */}
             <div className="bg-white rounded-lg border border-gray-200">
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="font-semibold text-gray-800">Comentários</h3>
+              <div className="p-3 md:p-4 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-800 text-sm md:text-base">Comentários</h3>
               </div>
               
-              <ScrollArea className="h-64 p-4">
-                {commentsLoading ? (
-                  <div className="text-center text-gray-500">Carregando comentários...</div>
-                ) : comments.length === 0 ? (
-                  <div className="text-center text-gray-500">Nenhum comentário ainda</div>
-                ) : (
-                  <div className="space-y-4">
-                    {comments.map((comment: any) => (
-                      <div key={comment.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-800">{comment.user?.name}</span>
-                            {comment.is_internal && (
-                              <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700 border-yellow-200">
-                                Interno
-                              </Badge>
-                            )}
+              <div className="max-h-80 md:max-h-96 overflow-y-auto">
+                <div className="p-3 md:p-4">
+                  {commentsLoading ? (
+                    <div className="text-center text-gray-500 text-sm">Carregando comentários...</div>
+                  ) : comments.length === 0 ? (
+                    <div className="text-center text-gray-500 text-sm">Nenhum comentário ainda</div>
+                  ) : (
+                    <div className="space-y-3 md:space-y-4">
+                      {comments.map((comment: any) => (
+                        <div key={comment.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-800 text-sm">{comment.user?.name}</span>
+                              {comment.is_internal && (
+                                <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700 border-yellow-200">
+                                  Interno
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {format(new Date(comment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            </span>
                           </div>
-                          <span className="text-xs text-gray-500">
-                            {format(new Date(comment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                          </span>
+                          <p className="text-gray-700 text-sm leading-relaxed">{comment.content}</p>
                         </div>
-                        <p className="text-gray-700 text-sm leading-relaxed">{comment.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Adicionar Comentário */}
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="p-3 md:p-4 border-t border-gray-200 bg-gray-50">
                 <div className="space-y-3">
-                  <Label htmlFor="comment">Novo Comentário</Label>
+                  <Label htmlFor="comment" className="text-sm">Novo Comentário</Label>
                   <Textarea
                     id="comment"
                     placeholder="Digite seu comentário..."
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    className="bg-white border-gray-300"
+                    className="bg-white border-gray-300 text-sm min-h-[80px]"
                   />
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -187,7 +189,7 @@ export function TicketDetailsDialog({
                     <Button
                       onClick={handleAddComment}
                       disabled={!newComment.trim() || createComment.isPending}
-                      className="bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200"
+                      className="bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200 w-full sm:w-auto text-sm"
                     >
                       {createComment.isPending ? 'Adicionando...' : 'Adicionar'}
                     </Button>
@@ -200,7 +202,7 @@ export function TicketDetailsDialog({
           {/* Coluna Lateral - Status e Ações */}
           <div className="space-y-4">
             {/* Status e Prioridade */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200 space-y-4">
+            <div className="bg-white rounded-lg p-3 md:p-4 border border-gray-200 space-y-4">
               <div>
                 <Label className="text-sm font-medium text-gray-600">Status</Label>
                 <div className="mt-1">
@@ -221,7 +223,7 @@ export function TicketDetailsDialog({
               <div>
                 <Label className="text-sm font-medium text-gray-600">Prioridade</Label>
                 <div className="mt-1">
-                  <Badge className={`${getPriorityColor(ticket.priority)} capitalize`}>
+                  <Badge className={`${getPriorityColor(ticket.priority)} capitalize text-sm`}>
                     {ticket.priority}
                   </Badge>
                 </div>
@@ -251,25 +253,25 @@ export function TicketDetailsDialog({
             </div>
 
             {/* Informações Adicionais */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200 space-y-3">
-              <h4 className="font-semibold text-gray-800">Informações</h4>
+            <div className="bg-white rounded-lg p-3 md:p-4 border border-gray-200 space-y-3">
+              <h4 className="font-semibold text-gray-800 text-sm">Informações</h4>
               
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-xs md:text-sm">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
+                  <Clock className="h-3 md:h-4 w-3 md:w-4 text-gray-500 flex-shrink-0" />
                   <span className="text-gray-600">Última atualização:</span>
                 </div>
-                <p className="text-gray-700 ml-6">
+                <p className="text-gray-700 ml-5 md:ml-6 text-xs">
                   {format(new Date(ticket.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                 </p>
 
                 {ticket.resolved_at && (
                   <>
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-green-500" />
+                      <AlertCircle className="h-3 md:h-4 w-3 md:w-4 text-green-500 flex-shrink-0" />
                       <span className="text-gray-600">Resolvido em:</span>
                     </div>
-                    <p className="text-gray-700 ml-6">
+                    <p className="text-gray-700 ml-5 md:ml-6 text-xs">
                       {format(new Date(ticket.resolved_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                     </p>
                   </>

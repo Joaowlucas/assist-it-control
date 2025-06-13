@@ -34,8 +34,8 @@ export function TicketFilters({
   technicians = []
 }: TicketFiltersProps) {
   return (
-    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+    <div className="bg-gray-50 p-3 md:p-4 rounded-lg border border-gray-200 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
         {/* Busca por texto */}
         <div className="lg:col-span-2">
           <div className="relative">
