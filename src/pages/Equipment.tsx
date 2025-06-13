@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,18 +8,24 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ImageIcon, Plus, Calendar, MapPin } from "lucide-react"
+import { ImageIcon, Plus, Calendar, MapPin, Edit } from "lucide-react"
 import { useEquipment, useCreateEquipment } from "@/hooks/useEquipment"
 import { useUnits } from "@/hooks/useUnits"
 import { useUploadEquipmentPhoto } from "@/hooks/useEquipmentPhotos"
 import { useAuth } from "@/hooks/useAuth"
 import { ImageUpload } from "@/components/ImageUpload"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
+import { EditEquipmentDialog } from "@/components/EditEquipmentDialog"
+import { Tables } from "@/integrations/supabase/types"
+
+type Equipment = Tables<'equipment'> & {
+  unit?: { name: string } | null
+}
 
 export default function Equipment() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null)
   const [images, setImages] = useState<File[]>([])
   
   const { data: equipment, isLoading: loadingEquipment } = useEquipment()
@@ -337,14 +342,26 @@ export default function Equipment() {
                     {item.unit?.name || '-'}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedEquipment(item.id)}
-                    >
-                      <ImageIcon className="h-4 w-4 mr-1" />
-                      Ver Fotos
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedEquipment(item.id)}
+                      >
+                        <ImageIcon className="h-4 w-4 mr-1" />
+                        Ver Fotos
+                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingEquipment(item)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -370,6 +387,13 @@ export default function Equipment() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog para editar equipamento */}
+      <EditEquipmentDialog
+        equipment={editingEquipment}
+        open={!!editingEquipment}
+        onOpenChange={(open) => !open && setEditingEquipment(null)}
+      />
     </div>
   )
 }

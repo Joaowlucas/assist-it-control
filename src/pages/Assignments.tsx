@@ -3,13 +3,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssignmentManagementSection } from "@/components/AssignmentManagementSection"
 import { EquipmentRequestsManagement } from "@/components/EquipmentRequestsManagement"
+import { ActiveEquipmentModal } from "@/components/ActiveEquipmentModal"
+import { MonthlyReturnsModal } from "@/components/MonthlyReturnsModal"
+import { PendingRequestsModal } from "@/components/PendingRequestsModal"
+import { AllAssignmentsModal } from "@/components/AllAssignmentsModal"
 import { useAssignments } from "@/hooks/useAssignments"
 import { useAdminEquipmentRequests } from "@/hooks/useAdminEquipmentRequests"
 import { Computer, Users, Clock, CheckCircle } from "lucide-react"
+import { useState } from "react"
 
 export default function Assignments() {
   const { data: assignments = [] } = useAssignments()
   const { data: equipmentRequests = [] } = useAdminEquipmentRequests()
+  
+  // Modal states
+  const [activeEquipmentModalOpen, setActiveEquipmentModalOpen] = useState(false)
+  const [monthlyReturnsModalOpen, setMonthlyReturnsModalOpen] = useState(false)
+  const [pendingRequestsModalOpen, setPendingRequestsModalOpen] = useState(false)
+  const [allAssignmentsModalOpen, setAllAssignmentsModalOpen] = useState(false)
 
   const activeAssignments = assignments.filter(a => a.status === 'ativo')
   const finishedAssignments = assignments.filter(a => a.status === 'finalizado')
@@ -28,7 +39,10 @@ export default function Assignments() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setActiveEquipmentModalOpen(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Equipamentos em Uso</CardTitle>
             <Computer className="h-4 w-4 text-muted-foreground" />
@@ -39,7 +53,10 @@ export default function Assignments() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setMonthlyReturnsModalOpen(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Devoluções este Mês</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -50,7 +67,10 @@ export default function Assignments() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setPendingRequestsModalOpen(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Solicitações Pendentes</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -61,7 +81,10 @@ export default function Assignments() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setAllAssignmentsModalOpen(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Atribuições</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -94,6 +117,24 @@ export default function Assignments() {
           <EquipmentRequestsManagement />
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      <ActiveEquipmentModal 
+        open={activeEquipmentModalOpen} 
+        onOpenChange={setActiveEquipmentModalOpen} 
+      />
+      <MonthlyReturnsModal 
+        open={monthlyReturnsModalOpen} 
+        onOpenChange={setMonthlyReturnsModalOpen} 
+      />
+      <PendingRequestsModal 
+        open={pendingRequestsModalOpen} 
+        onOpenChange={setPendingRequestsModalOpen} 
+      />
+      <AllAssignmentsModal 
+        open={allAssignmentsModalOpen} 
+        onOpenChange={setAllAssignmentsModalOpen} 
+      />
     </div>
   )
 }
