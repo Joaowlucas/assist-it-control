@@ -10,145 +10,113 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/hooks/use-toast"
-
-interface UserTicket {
-  id: string
-  title: string
-  description: string
-  priority: "Baixa" | "Média" | "Alta" | "Crítica"
-  status: "Aberto" | "Em Andamento" | "Aguardando" | "Fechado"
-  category: "Hardware" | "Software" | "Rede" | "Acesso" | "Outros"
-  unit: string
-  createdAt: string
-  updatedAt: string
-}
-
-interface UserAssignment {
-  id: string
-  equipmentName: string
-  equipmentType: string
-  startDate: string
-  endDate?: string
-  status: "Ativo" | "Finalizado"
-}
-
-const mockUserTickets: UserTicket[] = [
-  {
-    id: "TK-001",
-    title: "Computador não liga",
-    description: "O computador da estação 15 não está ligando após queda de energia",
-    priority: "Alta",
-    status: "Em Andamento",
-    category: "Hardware",
-    unit: "Matriz São Paulo",
-    createdAt: "2024-06-10",
-    updatedAt: "2024-06-10"
-  },
-  {
-    id: "TK-005",
-    title: "Problema na impressora",
-    description: "A impressora não está funcionando",
-    priority: "Média",
-    status: "Fechado",
-    category: "Hardware",
-    unit: "Matriz São Paulo",
-    createdAt: "2024-06-08",
-    updatedAt: "2024-06-09"
-  }
-]
-
-const mockUserAssignments: UserAssignment[] = [
-  {
-    id: "1",
-    equipmentName: "Notebook Dell Latitude 5520",
-    equipmentType: "Notebook",
-    startDate: "2024-01-15",
-    status: "Ativo"
-  },
-  {
-    id: "2",
-    equipmentName: "Monitor LG 24 polegadas",
-    equipmentType: "Monitor",
-    startDate: "2024-01-15",
-    status: "Ativo"
-  },
-  {
-    id: "3",
-    equipmentName: "Notebook HP EliteBook",
-    equipmentType: "Notebook",
-    startDate: "2023-06-01",
-    endDate: "2024-01-10",
-    status: "Finalizado"
-  }
-]
-
-const units = [
-  { id: "1", name: "Matriz São Paulo" },
-  { id: "2", name: "Filial Rio de Janeiro" }
-]
+import { ImageUpload } from "@/components/ImageUpload"
+import { useUserTickets, useCreateUserTicket } from "@/hooks/useUserTickets"
+import { useUserAssignments } from "@/hooks/useUserAssignments"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function UserPortal() {
-  const [tickets, setTickets] = useState<UserTicket[]>(mockUserTickets)
-  const [assignments] = useState<UserAssignment[]>(mockUserAssignments)
+  const { profile } = useAuth()
+  const { data: tickets = [], isLoading: ticketsLoading } = useUserTickets()
+  const { data: assignments = [], isLoading: assignmentsLoading } = useUserAssignments()
+  const createTicketMutation = useCreateUserTicket()
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const { toast } = useToast()
+  const [images, setImages] = useState<File[]>([])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "Crítica": return "destructive"
-      case "Alta": return "destructive"
-      case "Média": return "default"
-      case "Baixa": return "secondary"
+      case "critica": return "destructive"
+      case "alta": return "destructive"
+      case "media": return "default"
+      case "baixa": return "secondary"
       default: return "default"
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Aberto": return "destructive"
-      case "Em Andamento": return "default"
-      case "Aguardando": return "secondary"
-      case "Fechado": return "outline"
+      case "aberto": return "destructive"
+      case "em_andamento": return "default"
+      case "aguardando": return "secondary"
+      case "fechado": return "outline"
       default: return "default"
     }
   }
 
   const getAssignmentStatusColor = (status: string) => {
     switch (status) {
-      case "Ativo": return "default"
-      case "Finalizado": return "secondary"
+      case "ativo": return "default"
+      case "finalizado": return "secondary"
       default: return "default"
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case "critica": return "Crítica"
+      case "alta": return "Alta"
+      case "media": return "Média"
+      case "baixa": return "Baixa"
+      default: return priority
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "aberto": return "Aberto"
+      case "em_andamento": return "Em Andamento"
+      case "aguardando": return "Aguardando"
+      case "fechado": return "Fechado"
+      default: return status
+    }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case "hardware": return "Hardware"
+      case "software": return "Software"
+      case "rede": return "Rede"
+      case "acesso": return "Acesso"
+      case "outros": return "Outros"
+      default: return category
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
     
-    const newTicket: UserTicket = {
-      id: `TK-${String(tickets.length + 10).padStart(3, '0')}`,
+    const ticketData = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
-      priority: formData.get('priority') as any,
-      status: "Aberto",
-      category: formData.get('category') as any,
-      unit: formData.get('unit') as string,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0]
+      priority: formData.get('priority') as 'baixa' | 'media' | 'alta' | 'critica',
+      category: formData.get('category') as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
+      images: images.length > 0 ? images : undefined
     }
 
-    setTickets([newTicket, ...tickets])
-    setIsDialogOpen(false)
-    toast({
-      title: "Chamado criado com sucesso!",
-      description: `Seu chamado ${newTicket.id} foi criado e está aguardando atendimento.`,
-    })
+    try {
+      await createTicketMutation.mutateAsync(ticketData)
+      setIsDialogOpen(false)
+      setImages([])
+      // Reset form
+      ;(e.target as HTMLFormElement).reset()
+    } catch (error) {
+      console.error('Error creating ticket:', error)
+    }
   }
 
-  const openTickets = tickets.filter(t => t.status !== "Fechado")
-  const closedTickets = tickets.filter(t => t.status === "Fechado")
-  const activeAssignments = assignments.filter(a => a.status === "Ativo")
+  const openTickets = tickets.filter(t => t.status !== "fechado")
+  const closedTickets = tickets.filter(t => t.status === "fechado")
+  const activeAssignments = assignments.filter(a => a.status === "ativo")
+
+  if (ticketsLoading || assignmentsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-slate-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -164,7 +132,7 @@ export default function UserPortal() {
           <DialogTrigger asChild>
             <Button className="bg-slate-600 hover:bg-slate-700 text-white">Novo Chamado</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] bg-slate-50 border-slate-200">
+          <DialogContent className="sm:max-w-[600px] bg-slate-50 border-slate-200 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-slate-700">Criar Novo Chamado</DialogTitle>
               <DialogDescription className="text-slate-600">
@@ -203,10 +171,10 @@ export default function UserPortal() {
                         <SelectValue placeholder="Selecione a prioridade" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Baixa">Baixa</SelectItem>
-                        <SelectItem value="Média">Média</SelectItem>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Crítica">Crítica</SelectItem>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="critica">Crítica</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -218,38 +186,52 @@ export default function UserPortal() {
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Hardware">Hardware</SelectItem>
-                        <SelectItem value="Software">Software</SelectItem>
-                        <SelectItem value="Rede">Rede</SelectItem>
-                        <SelectItem value="Acesso">Acesso</SelectItem>
-                        <SelectItem value="Outros">Outros</SelectItem>
+                        <SelectItem value="hardware">Hardware</SelectItem>
+                        <SelectItem value="software">Software</SelectItem>
+                        <SelectItem value="rede">Rede</SelectItem>
+                        <SelectItem value="acesso">Acesso</SelectItem>
+                        <SelectItem value="outros">Outros</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
+
+                <ImageUpload 
+                  images={images}
+                  onImagesChange={setImages}
+                  maxImages={5}
+                />
                 
                 <div>
-                  <Label htmlFor="unit" className="text-slate-700">Unidade</Label>
-                  <Select name="unit" required>
-                    <SelectTrigger className="border-slate-300">
-                      <SelectValue placeholder="Selecione sua unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.name}>
-                          {unit.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-slate-700">Unidade</Label>
+                  <Input 
+                    value={profile?.unit?.name || 'Unidade não definida'}
+                    disabled
+                    className="bg-slate-100 border-slate-300"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Sua unidade será automaticamente selecionada
+                  </p>
                 </div>
               </div>
               
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="border-slate-300 text-slate-700 hover:bg-slate-100">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)} 
+                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                  disabled={createTicketMutation.isPending}
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" className="bg-slate-600 hover:bg-slate-700 text-white">Criar Chamado</Button>
+                <Button 
+                  type="submit" 
+                  className="bg-slate-600 hover:bg-slate-700 text-white"
+                  disabled={createTicketMutation.isPending}
+                >
+                  {createTicketMutation.isPending ? 'Criando...' : 'Criar Chamado'}
+                </Button>
               </div>
             </form>
           </DialogContent>
@@ -325,7 +307,9 @@ export default function UserPortal() {
                 <TableBody>
                   {tickets.map((ticket) => (
                     <TableRow key={ticket.id} className="border-slate-200">
-                      <TableCell className="font-medium text-slate-700">{ticket.id}</TableCell>
+                      <TableCell className="font-medium text-slate-700">
+                        {ticket.id.substring(0, 8)}
+                      </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium text-slate-700">{ticket.title}</div>
@@ -336,19 +320,21 @@ export default function UserPortal() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-600">{ticket.unit}</TableCell>
-                      <TableCell className="text-slate-600">{ticket.category}</TableCell>
+                      <TableCell className="text-slate-600">{ticket.unit?.name}</TableCell>
+                      <TableCell className="text-slate-600">{getCategoryLabel(ticket.category)}</TableCell>
                       <TableCell>
                         <Badge variant={getPriorityColor(ticket.priority) as any}>
-                          {ticket.priority}
+                          {getPriorityLabel(ticket.priority)}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusColor(ticket.status) as any}>
-                          {ticket.status}
+                          {getStatusLabel(ticket.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">{ticket.createdAt}</TableCell>
+                      <TableCell className="text-slate-600">
+                        {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -371,6 +357,7 @@ export default function UserPortal() {
                   <TableRow className="border-slate-200">
                     <TableHead className="text-slate-600">Equipamento</TableHead>
                     <TableHead className="text-slate-600">Tipo</TableHead>
+                    <TableHead className="text-slate-600">Marca/Modelo</TableHead>
                     <TableHead className="text-slate-600">Data de Início</TableHead>
                     <TableHead className="text-slate-600">Data de Fim</TableHead>
                     <TableHead className="text-slate-600">Status</TableHead>
@@ -379,13 +366,30 @@ export default function UserPortal() {
                 <TableBody>
                   {assignments.map((assignment) => (
                     <TableRow key={assignment.id} className="border-slate-200">
-                      <TableCell className="font-medium text-slate-700">{assignment.equipmentName}</TableCell>
-                      <TableCell className="text-slate-600">{assignment.equipmentType}</TableCell>
-                      <TableCell className="text-slate-600">{assignment.startDate}</TableCell>
-                      <TableCell className="text-slate-600">{assignment.endDate || "-"}</TableCell>
+                      <TableCell className="font-medium text-slate-700">
+                        {assignment.equipment.name}
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        {assignment.equipment.type}
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        {assignment.equipment.brand && assignment.equipment.model 
+                          ? `${assignment.equipment.brand} ${assignment.equipment.model}`
+                          : assignment.equipment.brand || assignment.equipment.model || '-'
+                        }
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        {assignment.end_date 
+                          ? new Date(assignment.end_date).toLocaleDateString('pt-BR') 
+                          : "-"
+                        }
+                      </TableCell>
                       <TableCell>
                         <Badge variant={getAssignmentStatusColor(assignment.status) as any}>
-                          {assignment.status}
+                          {assignment.status === 'ativo' ? 'Ativo' : 'Finalizado'}
                         </Badge>
                       </TableCell>
                     </TableRow>
