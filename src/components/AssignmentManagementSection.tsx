@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useAssignments, useCreateAssignment, useUpdateAssignment } from "@/hooks/useAssignments"
+import { useAssignments, useUpdateAssignment } from "@/hooks/useAssignments"
+import { useCreateAssignment } from "@/hooks/useCreateAssignment"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
 import { useAuth } from "@/hooks/useAuth"
@@ -193,15 +194,26 @@ export function AssignmentManagementSection() {
                       <SelectValue placeholder="Selecione um equipamento" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableEquipment.map((equipment) => (
-                        <SelectItem key={equipment.id} value={equipment.id}>
-                          {equipment.name} - {equipment.type}
-                          {equipment.brand && equipment.model && ` (${equipment.brand} ${equipment.model})`}
-                          {equipment.serial_number && ` - SN: ${equipment.serial_number}`}
+                      {availableEquipment.length === 0 ? (
+                        <SelectItem value="" disabled>
+                          Nenhum equipamento disponível
                         </SelectItem>
-                      ))}
+                      ) : (
+                        availableEquipment.map((equipment) => (
+                          <SelectItem key={equipment.id} value={equipment.id}>
+                            {equipment.name} - {equipment.type}
+                            {equipment.brand && equipment.model && ` (${equipment.brand} ${equipment.model})`}
+                            {equipment.serial_number && ` - SN: ${equipment.serial_number}`}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
+                  {availableEquipment.length === 0 && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Todos os equipamentos estão em uso ou indisponíveis
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -243,10 +255,10 @@ export function AssignmentManagementSection() {
                 </Button>
                 <Button
                   onClick={handleCreateAssignment}
-                  disabled={!selectedUserId || !selectedEquipmentId || createAssignmentMutation.isPending || !user?.id}
+                  disabled={!selectedUserId || !selectedEquipmentId || createAssignmentMutation.isPending || !user?.id || availableEquipment.length === 0}
                   className="bg-slate-600 hover:bg-slate-700"
                 >
-                  Criar Atribuição
+                  {createAssignmentMutation.isPending ? "Criando..." : "Criar Atribuição"}
                 </Button>
               </DialogFooter>
             </DialogContent>
