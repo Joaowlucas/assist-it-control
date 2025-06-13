@@ -19,6 +19,7 @@ export function AttachmentIcon({ count, onClick, className }: AttachmentIconProp
         className
       )}
       onClick={onClick}
+      title={`${count} anexo${count > 1 ? 's' : ''}`}
     >
       <Paperclip className="h-4 w-4" />
       <Badge variant="secondary" className="text-xs">
