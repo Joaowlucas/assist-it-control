@@ -19,7 +19,8 @@ export function useTickets() {
           *,
           requester:profiles!tickets_requester_id_fkey(name, email),
           assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name)
+          unit:units(name),
+          ticket_attachments(count)
         `)
         .order('created_at', { ascending: false })
       
@@ -28,20 +29,11 @@ export function useTickets() {
         throw error
       }
       
-      // Buscar contagem de anexos para cada ticket
-      const ticketsWithAttachments = await Promise.all(
-        (data || []).map(async (ticket) => {
-          const { count } = await supabase
-            .from('ticket_attachments')
-            .select('*', { count: 'exact', head: true })
-            .eq('ticket_id', ticket.id)
-          
-          return {
-            ...ticket,
-            attachments_count: count || 0
-          }
-        })
-      )
+      // Mapear tickets com contagem de anexos
+      const ticketsWithAttachments = (data || []).map((ticket) => ({
+        ...ticket,
+        attachments_count: ticket.ticket_attachments?.length || 0
+      }))
       
       console.log('Tickets fetched:', ticketsWithAttachments)
       return ticketsWithAttachments

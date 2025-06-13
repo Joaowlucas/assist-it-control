@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -33,6 +32,8 @@ export default function UserPortal() {
   const [images, setImages] = useState<File[]>([])
   const [editingTicket, setEditingTicket] = useState<UserTicket | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedTicketForAttachments, setSelectedTicketForAttachments] = useState<UserTicket | null>(null)
+  const [showAttachmentsPreview, setShowAttachmentsPreview] = useState(false)
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -130,6 +131,11 @@ export default function UserPortal() {
 
   const canEditOrDelete = (ticket: UserTicket) => {
     return ticket.status === 'aberto'
+  }
+
+  const handleAttachmentClick = (ticket: UserTicket) => {
+    setSelectedTicketForAttachments(ticket)
+    setShowAttachmentsPreview(true)
   }
 
   const openTickets = tickets.filter(t => t.status !== "fechado")
@@ -327,6 +333,7 @@ export default function UserPortal() {
                     <TableHead className="text-slate-600">Categoria</TableHead>
                     <TableHead className="text-slate-600">Prioridade</TableHead>
                     <TableHead className="text-slate-600">Status</TableHead>
+                    <TableHead className="text-slate-600">Anexos</TableHead>
                     <TableHead className="text-slate-600">Criado em</TableHead>
                     <TableHead className="text-slate-600">Ações</TableHead>
                   </TableRow>
@@ -358,6 +365,13 @@ export default function UserPortal() {
                         <Badge variant={getStatusColor(ticket.status) as any}>
                           {getStatusLabel(ticket.status)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <AttachmentIcon
+                          count={ticket.attachments_count || 0}
+                          onClick={() => handleAttachmentClick(ticket)}
+                          showPreview={true}
+                        />
                       </TableCell>
                       <TableCell className="text-slate-600">
                         {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
@@ -483,6 +497,19 @@ export default function UserPortal() {
           if (!open) setEditingTicket(null)
         }}
       />
+
+      {selectedTicketForAttachments && (
+        <AttachmentsPreview
+          ticketId={selectedTicketForAttachments.id}
+          ticketNumber={selectedTicketForAttachments.ticket_number.toString()}
+          open={showAttachmentsPreview}
+          onOpenChange={(open) => {
+            setShowAttachmentsPreview(open)
+            if (!open) setSelectedTicketForAttachments(null)
+          }}
+          canEdit={canEditOrDelete(selectedTicketForAttachments)}
+        />
+      )}
     </div>
   )
 }

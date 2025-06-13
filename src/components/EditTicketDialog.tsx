@@ -153,12 +153,14 @@ export function EditTicketDialog({ ticket, open, onOpenChange }: EditTicketDialo
                   )}
                 </div>
                 
-                <ImageUpload 
-                  images={newImages}
-                  onImagesChange={setNewImages}
-                  maxImages={5}
-                  label="Adicionar novos anexos"
-                />
+                <div>
+                  <Label className="text-slate-700 text-sm">Adicionar novos anexos</Label>
+                  <ImageUpload 
+                    images={newImages}
+                    onImagesChange={setNewImages}
+                    maxImages={5}
+                  />
+                </div>
                 
                 {newImages.length > 0 && (
                   <p className="text-xs text-slate-500">
