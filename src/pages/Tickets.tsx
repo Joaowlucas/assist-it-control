@@ -15,6 +15,8 @@ import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
 import { TicketFilters } from "@/components/TicketFilters"
 import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
+import { AttachmentIcon } from "@/components/AttachmentIcon"
+import { QuickAttachmentsModal } from "@/components/QuickAttachmentsModal"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
 import { Edit, Plus, Eye, Clock, User, MapPin } from "lucide-react"
 import { format } from 'date-fns'
@@ -24,6 +26,8 @@ export default function Tickets() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [selectedTicketForAttachments, setSelectedTicketForAttachments] = useState<any>(null)
+  const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false)
   
   // Filtros
   const [searchTerm, setSearchTerm] = useState('')
@@ -115,6 +119,11 @@ export default function Tickets() {
   const openTicketDetails = (ticket: any) => {
     setSelectedTicket(ticket)
     setIsDetailsDialogOpen(true)
+  }
+
+  const openAttachmentsModal = (ticket: any) => {
+    setSelectedTicketForAttachments(ticket)
+    setIsAttachmentsModalOpen(true)
   }
 
   const clearFilters = () => {
@@ -347,6 +356,7 @@ export default function Tickets() {
                   <TableHead className="text-gray-700">Prioridade</TableHead>
                   <TableHead className="text-gray-700">Status</TableHead>
                   <TableHead className="text-gray-700">Técnico</TableHead>
+                  <TableHead className="text-gray-700">Anexos</TableHead>
                   <TableHead className="text-gray-700">Criado</TableHead>
                   <TableHead className="text-gray-700">Ações</TableHead>
                 </TableRow>
@@ -422,6 +432,12 @@ export default function Tickets() {
                       </Select>
                     </TableCell>
                     <TableCell>
+                      <AttachmentIcon
+                        count={ticket.attachments_count || 0}
+                        onClick={() => openAttachmentsModal(ticket)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-gray-400" />
                         <span className="text-sm text-gray-600">
@@ -453,7 +469,14 @@ export default function Tickets() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">#{ticket.ticket_number} - {ticket.title}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-gray-900">#{ticket.ticket_number} - {ticket.title}</h3>
+                          <AttachmentIcon
+                            count={ticket.attachments_count || 0}
+                            onClick={() => openAttachmentsModal(ticket)}
+                            className="text-xs"
+                          />
+                        </div>
                         <p className="text-sm text-gray-600 mt-1">
                           {ticket.description.length > 100 
                             ? `${ticket.description.substring(0, 100)}...` 
@@ -516,6 +539,14 @@ export default function Tickets() {
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         technicians={technicians}
+      />
+
+      {/* Modal de Anexos Rápido */}
+      <QuickAttachmentsModal
+        ticketId={selectedTicketForAttachments?.id || ''}
+        ticketNumber={selectedTicketForAttachments?.ticket_number || ''}
+        open={isAttachmentsModalOpen}
+        onOpenChange={setIsAttachmentsModalOpen}
       />
     </div>
   )
