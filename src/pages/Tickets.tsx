@@ -9,234 +9,172 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useToast } from "@/hooks/use-toast"
-import { Edit, Trash2, Plus } from "lucide-react"
-
-interface Ticket {
-  id: string
-  title: string
-  description: string
-  priority: "Baixa" | "Média" | "Alta" | "Crítica"
-  status: "Aberto" | "Em Andamento" | "Aguardando" | "Fechado"
-  category: "Hardware" | "Software" | "Rede" | "Acesso" | "Outros"
-  requesterId: string
-  requesterName: string
-  unit: string
-  assigneeId?: string
-  assigneeName?: string
-  createdAt: string
-  updatedAt: string
-}
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "user" | "technician"
-  unit: string
-}
-
-interface Unit {
-  id: string
-  name: string
-}
-
-const mockUsers: User[] = [
-  { id: "1", name: "João Silva", email: "joao@empresa.com", role: "user", unit: "Matriz São Paulo" },
-  { id: "2", name: "Maria Santos", email: "maria@empresa.com", role: "user", unit: "Filial Rio de Janeiro" },
-  { id: "3", name: "Carlos Tech", email: "carlos@empresa.com", role: "technician", unit: "TI" },
-  { id: "4", name: "Ana Tech", email: "ana@empresa.com", role: "technician", unit: "TI" },
-]
-
-const mockTickets: Ticket[] = [
-  {
-    id: "TK-001",
-    title: "Computador não liga",
-    description: "O computador da estação 15 não está ligando após queda de energia",
-    priority: "Alta",
-    status: "Aberto",
-    category: "Hardware",
-    requesterId: "1",
-    requesterName: "João Silva",
-    unit: "Matriz São Paulo",
-    createdAt: "2024-06-10",
-    updatedAt: "2024-06-10"
-  },
-  {
-    id: "TK-002",
-    title: "Acesso ao sistema ERP",
-    description: "Não consigo acessar o sistema ERP, recebo erro de autenticação",
-    priority: "Média",
-    status: "Em Andamento",
-    category: "Acesso",
-    requesterId: "2",
-    requesterName: "Maria Santos",
-    unit: "Filial Rio de Janeiro",
-    assigneeId: "3",
-    assigneeName: "Carlos Tech",
-    createdAt: "2024-06-09",
-    updatedAt: "2024-06-10"
-  }
-]
-
-const units: Unit[] = [
-  { id: "1", name: "Matriz São Paulo" },
-  { id: "2", name: "Filial Rio de Janeiro" }
-]
+import { useTickets, useCreateTicket } from "@/hooks/useTickets"
+import { useUnits } from "@/hooks/useUnits"
+import { useProfiles } from "@/hooks/useProfiles"
+import { useAuth } from "@/hooks/useAuth"
+import { TicketFilters } from "@/components/TicketFilters"
+import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
+import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
+import { Edit, Plus, Eye, Clock, User, MapPin } from "lucide-react"
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function Tickets() {
-  const [tickets, setTickets] = useState<Ticket[]>(mockTickets)
-  const [users] = useState<User[]>(mockUsers)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null)
-  const { toast } = useToast()
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState<any>(null)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [priorityFilter, setPriorityFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [assigneeFilter, setAssigneeFilter] = useState('all')
 
-  const technicians = users.filter(user => user.role === "technician")
-  const systemUsers = users.filter(user => user.role === "user")
+  const { user } = useAuth()
+  const { data: tickets = [], isLoading: ticketsLoading, error: ticketsError } = useTickets()
+  const { data: units = [] } = useUnits()
+  const { data: profiles = [] } = useProfiles()
+  const createTicket = useCreateTicket()
+  const updateStatus = useUpdateTicketStatus()
+  const assignTicket = useAssignTicket()
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "Crítica": return "bg-red-100 text-red-800 border-red-200"
-      case "Alta": return "bg-orange-100 text-orange-800 border-orange-200"
-      case "Média": return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      case "Baixa": return "bg-green-100 text-green-800 border-green-200"
-      default: return "bg-gray-100 text-gray-800 border-gray-200"
-    }
-  }
+  // Filtrar técnicos
+  const technicians = profiles.filter(profile => 
+    profile.role === 'technician' || profile.role === 'admin'
+  )
+
+  // Filtrar usuários regulares
+  const systemUsers = profiles.filter(profile => profile.role === 'user')
+
+  // Aplicar filtros
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = !searchTerm || 
+      ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.requester?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
+    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter
+    const matchesCategory = categoryFilter === 'all' || ticket.category === categoryFilter
+    const matchesAssignee = assigneeFilter === 'all' || 
+      (assigneeFilter === 'unassigned' && !ticket.assignee_id) ||
+      ticket.assignee_id === assigneeFilter
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesAssignee
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Aberto": return "bg-red-100 text-red-800 border-red-200"
-      case "Em Andamento": return "bg-blue-100 text-blue-800 border-blue-200"
-      case "Aguardando": return "bg-purple-100 text-purple-800 border-purple-200"
-      case "Fechado": return "bg-green-100 text-green-800 border-green-200"
-      default: return "bg-gray-100 text-gray-800 border-gray-200"
+      case 'aberto': return 'bg-red-100 text-red-700 border-red-200'
+      case 'em_andamento': return 'bg-blue-100 text-blue-700 border-blue-200'
+      case 'aguardando': return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'fechado': return 'bg-green-100 text-green-700 border-green-200'
+      default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critica': return 'bg-red-100 text-red-700 border-red-200'
+      case 'alta': return 'bg-orange-100 text-orange-700 border-orange-200'
+      case 'media': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+      case 'baixa': return 'bg-green-100 text-green-700 border-green-200'
+      default: return 'bg-gray-100 text-gray-700 border-gray-200'
+    }
+  }
+
+  const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) return
+
     const formData = new FormData(e.target as HTMLFormElement)
     
-    const requesterId = formData.get('requesterId') as string
-    const requester = systemUsers.find(u => u.id === requesterId)
-    const assigneeId = formData.get('assigneeId') as string
-    const assignee = assigneeId ? technicians.find(t => t.id === assigneeId) : undefined
-
-    const ticketData: Ticket = {
-      id: editingTicket?.id || `TK-${String(tickets.length + 1).padStart(3, '0')}`,
+    await createTicket.mutateAsync({
       title: formData.get('title') as string,
       description: formData.get('description') as string,
       priority: formData.get('priority') as any,
-      status: formData.get('status') as any || "Aberto",
       category: formData.get('category') as any,
-      requesterId: requesterId,
-      requesterName: requester?.name || "",
-      unit: formData.get('unit') as string,
-      assigneeId: assigneeId || undefined,
-      assigneeName: assignee?.name || undefined,
-      createdAt: editingTicket?.createdAt || new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0]
-    }
-
-    if (editingTicket) {
-      setTickets(tickets.map(t => t.id === editingTicket.id ? ticketData : t))
-      toast({
-        title: "Chamado atualizado com sucesso!",
-        description: `Chamado ${ticketData.id} foi atualizado.`,
-      })
-    } else {
-      setTickets([ticketData, ...tickets])
-      toast({
-        title: "Chamado criado com sucesso!",
-        description: `Chamado ${ticketData.id} foi criado e está aguardando atendimento.`,
-      })
-    }
-
-    setIsDialogOpen(false)
-    setEditingTicket(null)
-  }
-
-  const handleEdit = (ticket: Ticket) => {
-    setEditingTicket(ticket)
-    setIsDialogOpen(true)
-  }
-
-  const handleStatusChange = (ticketId: string, newStatus: Ticket['status']) => {
-    setTickets(tickets.map(ticket => 
-      ticket.id === ticketId 
-        ? { ...ticket, status: newStatus, updatedAt: new Date().toISOString().split('T')[0] }
-        : ticket
-    ))
-    toast({
-      title: "Status atualizado!",
-      description: `Status do chamado ${ticketId} alterado para ${newStatus}.`,
+      requester_id: user.id,
+      unit_id: formData.get('unit_id') as string,
     })
+
+    setIsCreateDialogOpen(false)
   }
 
-  const handleAssignTechnician = (ticketId: string, technicianId: string) => {
-    const technician = technicians.find(t => t.id === technicianId)
-    setTickets(tickets.map(ticket => 
-      ticket.id === ticketId 
-        ? { 
-            ...ticket, 
-            assigneeId: technicianId, 
-            assigneeName: technician?.name,
-            status: "Em Andamento",
-            updatedAt: new Date().toISOString().split('T')[0]
-          }
-        : ticket
-    ))
-    toast({
-      title: "Técnico atribuído!",
-      description: `Chamado ${ticketId} atribuído para ${technician?.name}.`,
-    })
+  const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    await updateStatus.mutateAsync({ id: ticketId, status: newStatus as any })
   }
 
-  const openCreateDialog = () => {
-    setEditingTicket(null)
-    setIsDialogOpen(true)
+  const handleAssigneeChange = async (ticketId: string, assigneeId: string) => {
+    const actualAssigneeId = assigneeId === 'unassigned' ? null : assigneeId
+    await assignTicket.mutateAsync({ id: ticketId, assigneeId: actualAssigneeId })
+  }
+
+  const openTicketDetails = (ticket: any) => {
+    setSelectedTicket(ticket)
+    setIsDetailsDialogOpen(true)
+  }
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('all')
+    setPriorityFilter('all')
+    setCategoryFilter('all')
+    setAssigneeFilter('all')
+  }
+
+  if (ticketsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Carregando chamados...</div>
+      </div>
+    )
+  }
+
+  if (ticketsError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Erro ao carregar chamados: {ticketsError.message}</div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gray-50 min-h-screen p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Chamados</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Chamados</h2>
+          <p className="text-gray-600">
             Gerencie todos os chamados de suporte
           </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button 
-              onClick={openCreateDialog}
-              className="bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-200"
-            >
+            <Button className="bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200">
               <Plus className="mr-2 h-4 w-4" />
               Novo Chamado
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] bg-gray-50">
             <DialogHeader>
-              <DialogTitle>
-                {editingTicket ? "Editar Chamado" : "Criar Novo Chamado"}
-              </DialogTitle>
+              <DialogTitle>Criar Novo Chamado</DialogTitle>
               <DialogDescription>
-                {editingTicket ? "Modifique as informações do chamado" : "Preencha as informações do chamado de suporte"}
+                Preencha as informações do chamado de suporte
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4">
+            <form onSubmit={handleCreateTicket} className="space-y-4">
+              <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
                 <div>
                   <Label htmlFor="title">Título</Label>
                   <Input 
                     id="title" 
                     name="title" 
                     placeholder="Descreva brevemente o problema"
-                    defaultValue={editingTicket?.title || ""}
                     required 
+                    className="bg-white border-gray-300"
                   />
                 </div>
                 
@@ -246,129 +184,76 @@ export default function Tickets() {
                     id="description" 
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
-                    defaultValue={editingTicket?.description || ""}
                     required 
+                    className="bg-white border-gray-300"
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="priority">Prioridade</Label>
-                    <Select name="priority" defaultValue={editingTicket?.priority || ""}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a prioridade" />
+                    <Select name="priority" defaultValue="media">
+                      <SelectTrigger className="bg-white border-gray-300">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Baixa">Baixa</SelectItem>
-                        <SelectItem value="Média">Média</SelectItem>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Crítica">Crítica</SelectItem>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="critica">Crítica</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
                   <div>
                     <Label htmlFor="category">Categoria</Label>
-                    <Select name="category" defaultValue={editingTicket?.category || ""}>
-                      <SelectTrigger>
+                    <Select name="category">
+                      <SelectTrigger className="bg-white border-gray-300">
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Hardware">Hardware</SelectItem>
-                        <SelectItem value="Software">Software</SelectItem>
-                        <SelectItem value="Rede">Rede</SelectItem>
-                        <SelectItem value="Acesso">Acesso</SelectItem>
-                        <SelectItem value="Outros">Outros</SelectItem>
+                        <SelectItem value="hardware">Hardware</SelectItem>
+                        <SelectItem value="software">Software</SelectItem>
+                        <SelectItem value="rede">Rede</SelectItem>
+                        <SelectItem value="acesso">Acesso</SelectItem>
+                        <SelectItem value="outros">Outros</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="requesterId">Solicitante</Label>
-                    <Select name="requesterId" defaultValue={editingTicket?.requesterId || ""}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o solicitante" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {systemUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} - {user.unit}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="unit">Unidade</Label>
-                    <Select name="unit" defaultValue={editingTicket?.unit || ""}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a unidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.name}>
-                            {unit.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label htmlFor="unit_id">Unidade</Label>
+                  <Select name="unit_id">
+                    <SelectTrigger className="bg-white border-gray-300">
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                {editingTicket && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="status">Status</Label>
-                      <Select name="status" defaultValue={editingTicket?.status || ""}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Aberto">Aberto</SelectItem>
-                          <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                          <SelectItem value="Aguardando">Aguardando</SelectItem>
-                          <SelectItem value="Fechado">Fechado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="assigneeId">Técnico Responsável</Label>
-                      <Select name="assigneeId" defaultValue={editingTicket?.assigneeId || "none"}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um técnico" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Nenhum</SelectItem>
-                          {technicians.map((tech) => (
-                            <SelectItem key={tech.id} value={tech.id}>
-                              {tech.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
               </div>
               
               <div className="flex justify-end gap-2">
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                  className="bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit"
-                  className="bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
+                  disabled={createTicket.isPending}
+                  className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
                 >
-                  {editingTicket ? "Atualizar" : "Criar"} Chamado
+                  {createTicket.isPending ? 'Criando...' : 'Criar Chamado'}
                 </Button>
               </div>
             </form>
@@ -376,76 +261,156 @@ export default function Tickets() {
         </Dialog>
       </div>
 
-      <Card>
+      {/* Filtros */}
+      <TicketFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        priorityFilter={priorityFilter}
+        onPriorityFilterChange={setPriorityFilter}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        assigneeFilter={assigneeFilter}
+        onAssigneeFilterChange={setAssigneeFilter}
+        onClearFilters={clearFilters}
+        technicians={technicians}
+      />
+
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-300"></div>
+              <span className="text-sm text-gray-600">Abertos</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {tickets.filter(t => t.status === 'aberto').length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-300"></div>
+              <span className="text-sm text-gray-600">Em Andamento</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {tickets.filter(t => t.status === 'em_andamento').length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-purple-300"></div>
+              <span className="text-sm text-gray-600">Aguardando</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {tickets.filter(t => t.status === 'aguardando').length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-300"></div>
+              <span className="text-sm text-gray-600">Fechados</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {tickets.filter(t => t.status === 'fechado').length}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Lista de Chamados */}
+      <Card className="bg-white border-gray-200">
         <CardHeader>
-          <CardTitle>Lista de Chamados</CardTitle>
-          <CardDescription>
-            Todos os chamados de suporte ordenados por data de criação
+          <CardTitle className="text-gray-900">Lista de Chamados</CardTitle>
+          <CardDescription className="text-gray-600">
+            {filteredTickets.length} de {tickets.length} chamados
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead>Solicitante</TableHead>
-                <TableHead>Unidade</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Prioridade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Técnico</TableHead>
-                <TableHead>Ações</TableHead>
+              <TableRow className="border-gray-200">
+                <TableHead className="text-gray-700">#</TableHead>
+                <TableHead className="text-gray-700">Título</TableHead>
+                <TableHead className="text-gray-700">Solicitante</TableHead>
+                <TableHead className="text-gray-700">Unidade</TableHead>
+                <TableHead className="text-gray-700">Categoria</TableHead>
+                <TableHead className="text-gray-700">Prioridade</TableHead>
+                <TableHead className="text-gray-700">Status</TableHead>
+                <TableHead className="text-gray-700">Técnico</TableHead>
+                <TableHead className="text-gray-700">Criado</TableHead>
+                <TableHead className="text-gray-700">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-medium">{ticket.id}</TableCell>
+              {filteredTickets.map((ticket) => (
+                <TableRow key={ticket.id} className="border-gray-200 hover:bg-gray-50">
+                  <TableCell className="font-medium text-gray-900">#{ticket.ticket_number}</TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{ticket.title}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium text-gray-900">{ticket.title}</div>
+                      <div className="text-sm text-gray-600">
                         {ticket.description.length > 50 
                           ? `${ticket.description.substring(0, 50)}...` 
                           : ticket.description}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{ticket.requesterName}</TableCell>
-                  <TableCell>{ticket.unit}</TableCell>
-                  <TableCell>{ticket.category}</TableCell>
                   <TableCell>
-                    <Badge className={getPriorityColor(ticket.priority)}>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-900">{ticket.requester?.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-900">{ticket.unit?.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="capitalize text-gray-900">{ticket.category}</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`${getPriorityColor(ticket.priority)} capitalize`}>
                       {ticket.priority}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Select 
                       value={ticket.status} 
-                      onValueChange={(value) => handleStatusChange(ticket.id, value as Ticket['status'])}
+                      onValueChange={(value) => handleStatusChange(ticket.id, value)}
                     >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
+                      <SelectTrigger className="w-32 bg-white border-gray-300">
+                        <Badge className={`${getStatusColor(ticket.status)} capitalize border-0`}>
+                          {ticket.status.replace('_', ' ')}
+                        </Badge>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Aberto">Aberto</SelectItem>
-                        <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                        <SelectItem value="Aguardando">Aguardando</SelectItem>
-                        <SelectItem value="Fechado">Fechado</SelectItem>
+                        <SelectItem value="aberto">Aberto</SelectItem>
+                        <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                        <SelectItem value="aguardando">Aguardando</SelectItem>
+                        <SelectItem value="fechado">Fechado</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
                   <TableCell>
                     <Select 
-                      value={ticket.assigneeId || "none"} 
-                      onValueChange={(value) => value !== "none" && handleAssignTechnician(ticket.id, value)}
+                      value={ticket.assignee_id || 'unassigned'} 
+                      onValueChange={(value) => handleAssigneeChange(ticket.id, value)}
                     >
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="w-32 bg-white border-gray-300">
                         <SelectValue placeholder="Atribuir" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Nenhum</SelectItem>
+                        <SelectItem value="unassigned">Não atribuído</SelectItem>
                         {technicians.map((tech) => (
                           <SelectItem key={tech.id} value={tech.id}>
                             {tech.name}
@@ -455,23 +420,43 @@ export default function Tickets() {
                     </Select>
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(ticket)}
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">
+                        {format(new Date(ticket.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                      </span>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openTicketDetails(ticket)}
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          
+          {filteredTickets.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              Nenhum chamado encontrado com os filtros aplicados
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Detalhes */}
+      <TicketDetailsDialog
+        ticket={selectedTicket}
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        technicians={technicians}
+      />
     </div>
   )
 }

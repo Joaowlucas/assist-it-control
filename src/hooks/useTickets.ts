@@ -12,6 +12,8 @@ export function useTickets() {
   return useQuery({
     queryKey: ['tickets'],
     queryFn: async () => {
+      console.log('Fetching tickets...')
+      
       const { data, error } = await supabase
         .from('tickets')
         .select(`
@@ -22,8 +24,13 @@ export function useTickets() {
         `)
         .order('created_at', { ascending: false })
       
-      if (error) throw error
-      return data
+      if (error) {
+        console.error('Error fetching tickets:', error)
+        throw error
+      }
+      
+      console.log('Tickets fetched:', data)
+      return data || []
     },
   })
 }
@@ -32,6 +39,8 @@ export function useTicket(id: string) {
   return useQuery({
     queryKey: ['ticket', id],
     queryFn: async () => {
+      console.log('Fetching ticket:', id)
+      
       const { data, error } = await supabase
         .from('tickets')
         .select(`
@@ -47,7 +56,12 @@ export function useTicket(id: string) {
         .eq('id', id)
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching ticket:', error)
+        throw error
+      }
+      
+      console.log('Ticket fetched:', data)
       return data
     },
     enabled: !!id,
@@ -60,23 +74,36 @@ export function useCreateTicket() {
 
   return useMutation({
     mutationFn: async (ticket: TicketInsert) => {
+      console.log('Creating ticket:', ticket)
+      
       const { data, error } = await supabase
         .from('tickets')
         .insert(ticket)
-        .select()
+        .select(`
+          *,
+          requester:profiles!tickets_requester_id_fkey(name, email),
+          assignee:profiles!tickets_assignee_id_fkey(name, email),
+          unit:units(name)
+        `)
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error creating ticket:', error)
+        throw error
+      }
+      
+      console.log('Ticket created:', data)
       return data
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
       toast({
         title: 'Sucesso',
-        description: 'Chamado criado com sucesso',
+        description: `Chamado #${data.ticket_number} criado com sucesso`,
       })
     },
     onError: (error) => {
+      console.error('Error in createTicket mutation:', error)
       toast({
         title: 'Erro',
         description: 'Erro ao criar chamado: ' + error.message,
@@ -92,14 +119,26 @@ export function useUpdateTicket() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: TicketUpdate & { id: string }) => {
+      console.log('Updating ticket:', { id, updates })
+      
       const { data, error } = await supabase
         .from('tickets')
         .update(updates)
         .eq('id', id)
-        .select()
+        .select(`
+          *,
+          requester:profiles!tickets_requester_id_fkey(name, email),
+          assignee:profiles!tickets_assignee_id_fkey(name, email),
+          unit:units(name)
+        `)
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error updating ticket:', error)
+        throw error
+      }
+      
+      console.log('Ticket updated:', data)
       return data
     },
     onSuccess: (data) => {
@@ -111,6 +150,7 @@ export function useUpdateTicket() {
       })
     },
     onError: (error) => {
+      console.error('Error in updateTicket mutation:', error)
       toast({
         title: 'Erro',
         description: 'Erro ao atualizar chamado: ' + error.message,
