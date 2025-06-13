@@ -5,10 +5,10 @@ import { supabase } from '@/integrations/supabase/client'
 interface TechnicianReport {
   id: string
   name: string
-  totalTickets: number
-  resolvedTickets: number
+  totalAssigned: number
+  totalResolved: number
   avgResolutionTime: number
-  resolutionRate: number
+  activeTickets: number
 }
 
 interface UnitReport {
@@ -18,6 +18,7 @@ interface UnitReport {
   openTickets: number
   totalEquipment: number
   availableEquipment: number
+  activeAssignments: number
 }
 
 interface EquipmentReport {
@@ -25,9 +26,9 @@ interface EquipmentReport {
   name: string
   type: string
   status: string
-  assignedTo?: string
+  currentUser?: string
   unit?: string
-  lastMaintenance?: string
+  usageDays?: number
 }
 
 interface TopIssuesReport {
@@ -38,12 +39,10 @@ interface TopIssuesReport {
 }
 
 interface DashboardReports {
-  technicianReports: TechnicianReport[]
+  technicianPerformance: TechnicianReport[]
   unitReports: UnitReport[]
   equipmentReports: EquipmentReport[]
   topIssues: TopIssuesReport[]
-  loading: boolean
-  error: any
 }
 
 export function useDashboardReports() {
@@ -64,9 +63,10 @@ export function useDashboardReports() {
           .select('assignee_id, status, created_at, resolved_at')
         
         // Processar dados dos técnicos
-        const technicianReports: TechnicianReport[] = (techniciansData || []).map(tech => {
+        const technicianPerformance: TechnicianReport[] = (techniciansData || []).map(tech => {
           const techTickets = (ticketsData || []).filter(t => t.assignee_id === tech.id)
           const resolvedTickets = techTickets.filter(t => t.status === 'fechado')
+          const activeTickets = techTickets.filter(t => t.status !== 'fechado')
           
           const avgResolutionTime = resolvedTickets.length > 0 
             ? resolvedTickets.reduce((acc, ticket) => {
@@ -83,10 +83,10 @@ export function useDashboardReports() {
           return {
             id: tech.id,
             name: tech.name,
-            totalTickets: techTickets.length,
-            resolvedTickets: resolvedTickets.length,
+            totalAssigned: techTickets.length,
+            totalResolved: resolvedTickets.length,
             avgResolutionTime: Math.round(avgResolutionTime * 10) / 10,
-            resolutionRate: techTickets.length > 0 ? Math.round((resolvedTickets.length / techTickets.length) * 100) : 0
+            activeTickets: activeTickets.length
           }
         })
         
@@ -100,9 +100,22 @@ export function useDashboardReports() {
             equipment:equipment(id, status)
           `)
         
+        // Buscar atribuições ativas por unidade
+        const { data: assignmentsData } = await supabase
+          .from('assignments')
+          .select(`
+            id,
+            status,
+            equipment:equipment!assignments_equipment_id_fkey(unit_id)
+          `)
+          .eq('status', 'ativo')
+        
         const unitReports: UnitReport[] = (unitsData || []).map(unit => {
           const tickets = unit.tickets || []
           const equipment = unit.equipment || []
+          const activeAssignments = (assignmentsData || []).filter(
+            (assignment: any) => assignment.equipment?.unit_id === unit.id
+          ).length
           
           return {
             id: unit.id,
@@ -110,7 +123,8 @@ export function useDashboardReports() {
             totalTickets: tickets.length,
             openTickets: tickets.filter((t: any) => t.status !== 'fechado').length,
             totalEquipment: equipment.length,
-            availableEquipment: equipment.filter((e: any) => e.status === 'disponivel').length
+            availableEquipment: equipment.filter((e: any) => e.status === 'disponivel').length,
+            activeAssignments
           }
         })
         
@@ -122,24 +136,40 @@ export function useDashboardReports() {
             name,
             type,
             status,
-            unit:units(name),
-            assignments:assignments(
-              user:profiles(name),
-              status
-            )
+            unit:units(name)
           `)
         
+        // Buscar atribuições ativas com usuários
+        const { data: activeAssignmentsWithUsers } = await supabase
+          .from('assignments')
+          .select(`
+            equipment_id,
+            status,
+            start_date,
+            user:profiles!assignments_user_id_fkey(name)
+          `)
+          .eq('status', 'ativo')
+        
         const equipmentReports: EquipmentReport[] = (equipmentData || []).map(eq => {
-          const activeAssignment = eq.assignments?.find((a: any) => a.status === 'ativo')
+          const activeAssignment = (activeAssignmentsWithUsers || []).find(
+            (a: any) => a.equipment_id === eq.id
+          )
+          
+          let usageDays: number | undefined
+          if (activeAssignment?.start_date) {
+            const startDate = new Date(activeAssignment.start_date)
+            const today = new Date()
+            usageDays = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+          }
           
           return {
             id: eq.id,
             name: eq.name,
             type: eq.type,
             status: eq.status,
-            assignedTo: activeAssignment?.user?.name,
+            currentUser: activeAssignment?.user?.name,
             unit: eq.unit?.name,
-            lastMaintenance: undefined // Pode ser implementado depois
+            usageDays
           }
         })
         
@@ -185,23 +215,19 @@ export function useDashboardReports() {
         }).sort((a, b) => b.count - a.count)
         
         return {
-          technicianReports,
+          technicianPerformance,
           unitReports,
           equipmentReports,
-          topIssues,
-          loading: false,
-          error: null
+          topIssues
         }
         
       } catch (error) {
         console.error('Error fetching dashboard reports:', error)
         return {
-          technicianReports: [],
+          technicianPerformance: [],
           unitReports: [],
           equipmentReports: [],
-          topIssues: [],
-          loading: false,
-          error
+          topIssues: []
         }
       }
     },
