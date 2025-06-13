@@ -167,6 +167,45 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          auto_assign_tickets: boolean
+          company_name: string
+          created_at: string
+          default_priority: string
+          department_name: string
+          equipment_email: string
+          id: string
+          support_email: string
+          ticket_email: string
+          updated_at: string
+        }
+        Insert: {
+          auto_assign_tickets?: boolean
+          company_name?: string
+          created_at?: string
+          default_priority?: string
+          department_name?: string
+          equipment_email?: string
+          id?: string
+          support_email?: string
+          ticket_email?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_assign_tickets?: boolean
+          company_name?: string
+          created_at?: string
+          default_priority?: string
+          department_name?: string
+          equipment_email?: string
+          id?: string
+          support_email?: string
+          ticket_email?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ticket_comments: {
         Row: {
           content: string
