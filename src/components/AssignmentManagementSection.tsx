@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +12,8 @@ import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
 import { useAuth } from "@/hooks/useAuth"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Calendar } from "lucide-react"
+import { Plus, Edit } from "lucide-react"
+import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
 
 export function AssignmentManagementSection() {
   const { data: assignments = [], isLoading } = useAssignments()
@@ -63,7 +63,6 @@ export function AssignmentManagementSection() {
         notes: notes || undefined
       }
 
-      // Only update start_date if it's different
       if (startDate !== editingAssignment.start_date) {
         updates.start_date = startDate
       }
@@ -409,14 +408,19 @@ export function AssignmentManagementSection() {
                             <Edit className="h-4 w-4 mr-1" />
                             Editar
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEndAssignment(assignment.id)}
-                            disabled={updateAssignmentMutation.isPending}
+                          <ConfirmEndAssignmentDialog
+                            assignmentId={assignment.id}
+                            equipmentName={assignment.equipment?.name || 'Equipamento'}
+                            userName={assignment.user?.name || 'Usuário'}
                           >
-                            Finalizar
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              Finalizar
+                            </Button>
+                          </ConfirmEndAssignmentDialog>
                         </>
                       )}
                     </div>
