@@ -1,5 +1,5 @@
 
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 
@@ -26,44 +26,40 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: async (userData: CreateUserData) => {
-      // Verificar se email já existe
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', userData.email)
-        .single()
+      console.log('Creating user with data:', userData)
 
-      if (existingUser) {
-        throw new Error('Email já está em uso')
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('Você precisa estar logado para criar usuários')
       }
 
-      // Criar usuário via Supabase Admin API
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: userData.password,
-        user_metadata: {
-          name: userData.name
+      // Call the edge function to create user
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: userData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
         },
-        email_confirm: true
       })
 
-      if (authError) throw authError
+      console.log('Edge function response:', { data, error })
 
-      // Atualizar perfil com role e unit_id
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            name: userData.name,
-            role: userData.role,
-            unit_id: userData.unit_id
-          })
-          .eq('id', authData.user.id)
-
-        if (profileError) throw profileError
+      if (error) {
+        console.error('Edge function error:', error)
+        throw new Error(error.message || 'Erro ao criar usuário')
       }
 
-      return authData.user
+      if (data?.error) {
+        console.error('Edge function returned error:', data.error)
+        throw new Error(data.error)
+      }
+
+      if (!data?.success) {
+        throw new Error('Falha ao criar usuário')
+      }
+
+      return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] })
@@ -73,6 +69,7 @@ export function useCreateUser() {
       })
     },
     onError: (error: any) => {
+      console.error('Create user error:', error)
       toast({
         title: 'Erro ao criar usuário',
         description: error.message || 'Erro ao criar o usuário.',
