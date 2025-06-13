@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
@@ -19,8 +20,7 @@ export function useTickets() {
           *,
           requester:profiles!tickets_requester_id_fkey(name, email),
           assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name),
-          attachments:ticket_attachments(id, file_name)
+          unit:units(name)
         `)
         .order('created_at', { ascending: false })
       
@@ -32,8 +32,6 @@ export function useTickets() {
       console.log('Tickets fetched:', data)
       return data || []
     },
-    staleTime: 1 * 60 * 1000, // 1 minuto
-    gcTime: 5 * 60 * 1000, // 5 minutos
   })
 }
 
@@ -71,7 +69,6 @@ export function useTicket(id: string) {
       return data
     },
     enabled: !!id,
-    staleTime: 2 * 60 * 1000, // 2 minutos
   })
 }
 

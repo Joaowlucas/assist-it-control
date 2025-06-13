@@ -38,8 +38,6 @@ export function useTicketAttachments(ticketId: string) {
       return attachmentsWithUrls
     },
     enabled: !!ticketId,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
   })
 }
 
