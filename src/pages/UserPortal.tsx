@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -415,6 +414,8 @@ export default function UserPortal() {
         </TabsContent>
         
         <TabsContent value="assignments" className="space-y-4">
+          <EquipmentRequestsSection />
+          
           <Card className="bg-slate-100/50 border-slate-200">
             <CardHeader>
               <CardTitle className="text-slate-700">Histórico de Equipamentos</CardTitle>
