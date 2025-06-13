@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -6,16 +7,12 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSettings"
-import { useColorCustomization } from "@/hooks/useColorCustomization"
 import { useUnits } from "@/hooks/useUnits"
 import { useCreateUnit, useDeleteUnit } from "@/hooks/useUnitManagement"
-import { Loader2, Trash2, Palette, RotateCcw } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload"
-import { ColorPicker } from "@/components/ColorPicker"
-import { ColorPreview } from "@/components/ColorPreview"
 
 export default function Settings() {
   const { toast } = useToast()
@@ -24,7 +21,6 @@ export default function Settings() {
   const updateSettings = useUpdateSystemSettings()
   const createUnit = useCreateUnit()
   const deleteUnit = useDeleteUnit()
-  const { settings: colorSettings, updateColors, resetColors, isUpdating } = useColorCustomization()
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -35,18 +31,6 @@ export default function Settings() {
     equipment_email: '',
     auto_assign_tickets: true,
     default_priority: 'media'
-  })
-
-  const [colorData, setColorData] = useState({
-    enable_custom_colors: false,
-    custom_primary_color: '#0f172a',
-    custom_primary_foreground_color: '#f8fafc',
-    custom_secondary_color: '#f1f5f9',
-    custom_secondary_foreground_color: '#0f172a',
-    custom_foreground_color: '#020617',
-    custom_muted_foreground_color: '#64748b',
-    custom_destructive_color: '#dc2626',
-    custom_destructive_foreground_color: '#fef2f2'
   })
 
   // Atualizar form data quando as configurações carregarem
@@ -64,23 +48,6 @@ export default function Settings() {
     }
   })
 
-  // Atualizar color data quando as configurações carregarem
-  useState(() => {
-    if (colorSettings) {
-      setColorData({
-        enable_custom_colors: colorSettings.enable_custom_colors || false,
-        custom_primary_color: colorSettings.custom_primary_color || '#0f172a',
-        custom_primary_foreground_color: colorSettings.custom_primary_foreground_color || '#f8fafc',
-        custom_secondary_color: colorSettings.custom_secondary_color || '#f1f5f9',
-        custom_secondary_foreground_color: colorSettings.custom_secondary_foreground_color || '#0f172a',
-        custom_foreground_color: colorSettings.custom_foreground_color || '#020617',
-        custom_muted_foreground_color: colorSettings.custom_muted_foreground_color || '#64748b',
-        custom_destructive_color: colorSettings.custom_destructive_color || '#dc2626',
-        custom_destructive_foreground_color: colorSettings.custom_destructive_foreground_color || '#fef2f2'
-      })
-    }
-  })
-
   const handleSave = () => {
     if (systemSettings) {
       updateSettings.mutate({
@@ -88,25 +55,6 @@ export default function Settings() {
         ...formData
       })
     }
-  }
-
-  const handleSaveColors = () => {
-    updateColors(colorData)
-  }
-
-  const handleResetColors = () => {
-    resetColors()
-    setColorData({
-      enable_custom_colors: false,
-      custom_primary_color: '#0f172a',
-      custom_primary_foreground_color: '#f8fafc',
-      custom_secondary_color: '#f1f5f9',
-      custom_secondary_foreground_color: '#0f172a',
-      custom_foreground_color: '#020617',
-      custom_muted_foreground_color: '#64748b',
-      custom_destructive_color: '#dc2626',
-      custom_destructive_foreground_color: '#fef2f2'
-    })
   }
 
   const handleSubmitUnit = (e: React.FormEvent) => {
@@ -161,121 +109,6 @@ export default function Settings() {
                 </p>
                 <CompanyLogoUpload />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              <div>
-                <CardTitle>Personalização de Cores</CardTitle>
-                <CardDescription>
-                  Customize as cores das fontes e botões do sistema
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleResetColors}
-                disabled={isUpdating}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Resetar
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={colorData.enable_custom_colors}
-                onCheckedChange={(checked) => 
-                  setColorData(prev => ({ ...prev, enable_custom_colors: checked }))
-                }
-              />
-              <Label>Habilitar cores personalizadas</Label>
-            </div>
-
-            {colorData.enable_custom_colors && (
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold">Cores de Texto</h4>
-                  
-                  <ColorPicker
-                    label="Texto Principal"
-                    value={colorData.custom_foreground_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_foreground_color: color }))}
-                    defaultColor="#020617"
-                  />
-                  
-                  <ColorPicker
-                    label="Texto Secundário"
-                    value={colorData.custom_muted_foreground_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_muted_foreground_color: color }))}
-                    defaultColor="#64748b"
-                  />
-
-                  <h4 className="text-sm font-semibold mt-6">Cores de Botões</h4>
-                  
-                  <ColorPicker
-                    label="Botão Primário"
-                    value={colorData.custom_primary_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_primary_color: color }))}
-                    defaultColor="#0f172a"
-                  />
-                  
-                  <ColorPicker
-                    label="Texto Botão Primário"
-                    value={colorData.custom_primary_foreground_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_primary_foreground_color: color }))}
-                    defaultColor="#f8fafc"
-                  />
-
-                  <ColorPicker
-                    label="Botão Secundário"
-                    value={colorData.custom_secondary_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_secondary_color: color }))}
-                    defaultColor="#f1f5f9"
-                  />
-                  
-                  <ColorPicker
-                    label="Texto Botão Secundário"
-                    value={colorData.custom_secondary_foreground_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_secondary_foreground_color: color }))}
-                    defaultColor="#0f172a"
-                  />
-
-                  <ColorPicker
-                    label="Botão Destrutivo"
-                    value={colorData.custom_destructive_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_destructive_color: color }))}
-                    defaultColor="#dc2626"
-                  />
-                  
-                  <ColorPicker
-                    label="Texto Botão Destrutivo"
-                    value={colorData.custom_destructive_foreground_color}
-                    onChange={(color) => setColorData(prev => ({ ...prev, custom_destructive_foreground_color: color }))}
-                    defaultColor="#fef2f2"
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <ColorPreview isEnabled={colorData.enable_custom_colors} />
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end">
-              <Button 
-                onClick={handleSaveColors}
-                disabled={isUpdating}
-              >
-                {isUpdating ? "Salvando..." : "Salvar Cores"}
-              </Button>
             </div>
           </CardContent>
         </Card>
