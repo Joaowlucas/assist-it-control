@@ -10,8 +10,8 @@ export function useActiveAssignments() {
         .from('assignments')
         .select(`
           *,
-          user:user_id(id, name, email),
-          equipment:equipment_id(id, name, type, brand, model, tombamento)
+          user:profiles!assignments_user_id_fkey(id, name, email),
+          equipment:equipment!assignments_equipment_id_fkey(id, name, type, brand, model, tombamento)
         `)
         .eq('status', 'ativo')
         .order('start_date', { ascending: false })
@@ -34,8 +34,8 @@ export function useMonthlyReturns() {
         .from('assignments')
         .select(`
           *,
-          user:user_id(id, name, email),
-          equipment:equipment_id(id, name, type, brand, model, tombamento)
+          user:profiles!assignments_user_id_fkey(id, name, email),
+          equipment:equipment!assignments_equipment_id_fkey(id, name, type, brand, model, tombamento)
         `)
         .eq('status', 'finalizado')
         .gte('end_date', startOfMonth.toISOString().split('T')[0])
