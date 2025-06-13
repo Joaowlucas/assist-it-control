@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,23 +9,31 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ImageIcon, Plus, Calendar, MapPin } from "lucide-react"
-import { useEquipment, useCreateEquipment } from "@/hooks/useEquipment"
+import { ImageIcon, Plus, Calendar, MapPin, Edit } from "lucide-react"
+import { useEquipment, useCreateEquipment, useUpdateEquipment } from "@/hooks/useEquipment"
 import { useUnits } from "@/hooks/useUnits"
 import { useUploadEquipmentPhoto } from "@/hooks/useEquipmentPhotos"
 import { useAuth } from "@/hooks/useAuth"
 import { ImageUpload } from "@/components/ImageUpload"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
+import { Tables } from "@/integrations/supabase/types"
+
+type Equipment = Tables<'equipment'> & {
+  unit?: { name: string } | null
+}
 
 export default function Equipment() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null)
   const [images, setImages] = useState<File[]>([])
   
   const { data: equipment, isLoading: loadingEquipment } = useEquipment()
   const { data: units } = useUnits()
   const { profile } = useAuth()
   const createEquipment = useCreateEquipment()
+  const updateEquipment = useUpdateEquipment()
   const uploadPhoto = useUploadEquipmentPhoto()
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'technician'
@@ -49,6 +56,11 @@ export default function Equipment() {
       case "descartado": return "Descartado"
       default: return status
     }
+  }
+
+  const handleEdit = (item: Equipment) => {
+    setEditingEquipment(item)
+    setIsEditDialogOpen(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,6 +103,37 @@ export default function Equipment() {
       form.reset()
     } catch (error) {
       console.error('Error creating equipment:', error)
+    }
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingEquipment) return
+
+    const formData = new FormData(e.target as HTMLFormElement)
+    
+    const equipmentData = {
+      id: editingEquipment.id,
+      name: formData.get('name') as string,
+      type: formData.get('type') as string,
+      brand: formData.get('brand') as string || null,
+      model: formData.get('model') as string || null,
+      serial_number: formData.get('serialNumber') as string || null,
+      location: formData.get('location') as string || null,
+      purchase_date: formData.get('purchaseDate') as string || null,
+      warranty_end_date: formData.get('warrantyExpiry') as string || null,
+      description: formData.get('notes') as string || null,
+      unit_id: formData.get('unitId') as string || null,
+      tombamento: formData.get('tombamento') as string || null,
+      status: formData.get('status') as any,
+    }
+
+    try {
+      await updateEquipment.mutateAsync(equipmentData)
+      setIsEditDialogOpen(false)
+      setEditingEquipment(null)
+    } catch (error) {
+      console.error('Error updating equipment:', error)
     }
   }
 
@@ -337,14 +380,26 @@ export default function Equipment() {
                     {item.unit?.name || '-'}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedEquipment(item.id)}
-                    >
-                      <ImageIcon className="h-4 w-4 mr-1" />
-                      Ver Fotos
-                    </Button>
+                    <div className="flex gap-2">
+                      {canEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedEquipment(item.id)}
+                      >
+                        <ImageIcon className="h-4 w-4 mr-1" />
+                        Ver Fotos
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -352,6 +407,175 @@ export default function Equipment() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog para editar equipamento */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Equipamento</DialogTitle>
+            <DialogDescription>
+              Altere as informações do equipamento
+            </DialogDescription>
+          </DialogHeader>
+          {editingEquipment && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-name">Nome do Equipamento</Label>
+                    <Input 
+                      id="edit-name" 
+                      name="name" 
+                      defaultValue={editingEquipment.name}
+                      required 
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-tombamento">Tombamento</Label>
+                    <Input 
+                      id="edit-tombamento" 
+                      name="tombamento" 
+                      defaultValue={editingEquipment.tombamento || ''}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-type">Tipo</Label>
+                    <Select name="type" defaultValue={editingEquipment.type} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Computador">Computador</SelectItem>
+                        <SelectItem value="Monitor">Monitor</SelectItem>
+                        <SelectItem value="Impressora">Impressora</SelectItem>
+                        <SelectItem value="Notebook">Notebook</SelectItem>
+                        <SelectItem value="Tablet">Tablet</SelectItem>
+                        <SelectItem value="Telefone">Telefone</SelectItem>
+                        <SelectItem value="Outros">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-unitId">Unidade</Label>
+                    <Select name="unitId" defaultValue={editingEquipment.unit_id || ''}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units?.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-brand">Marca</Label>
+                    <Input 
+                      id="edit-brand" 
+                      name="brand" 
+                      defaultValue={editingEquipment.brand || ''}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-model">Modelo</Label>
+                    <Input 
+                      id="edit-model" 
+                      name="model" 
+                      defaultValue={editingEquipment.model || ''}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-serialNumber">Número de Série</Label>
+                    <Input 
+                      id="edit-serialNumber" 
+                      name="serialNumber" 
+                      defaultValue={editingEquipment.serial_number || ''}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-location">Localização</Label>
+                    <Input 
+                      id="edit-location" 
+                      name="location" 
+                      defaultValue={editingEquipment.location || ''}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="edit-status">Status</Label>
+                    <Select name="status" defaultValue={editingEquipment.status} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="disponivel">Disponível</SelectItem>
+                        <SelectItem value="em_uso">Em Uso</SelectItem>
+                        <SelectItem value="manutencao">Manutenção</SelectItem>
+                        <SelectItem value="descartado">Descartado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-purchaseDate">Data de Compra</Label>
+                    <Input 
+                      id="edit-purchaseDate" 
+                      name="purchaseDate" 
+                      type="date"
+                      defaultValue={editingEquipment.purchase_date || ''}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-warrantyExpiry">Vencimento da Garantia</Label>
+                    <Input 
+                      id="edit-warrantyExpiry" 
+                      name="warrantyExpiry" 
+                      type="date"
+                      defaultValue={editingEquipment.warranty_end_date || ''}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="edit-notes">Descrição/Observações</Label>
+                  <Textarea 
+                    id="edit-notes" 
+                    name="notes" 
+                    defaultValue={editingEquipment.description || ''}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={updateEquipment.isPending}>
+                  {updateEquipment.isPending ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog para visualizar fotos do equipamento */}
       <Dialog open={!!selectedEquipment} onOpenChange={() => setSelectedEquipment(null)}>
