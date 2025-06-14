@@ -18,7 +18,7 @@ interface EditTicketDialogProps {
 
 export function EditTicketDialog({ ticket, open, onOpenChange }: EditTicketDialogProps) {
   const updateTicketMutation = useUpdateUserTicket()
-  const { data: attachments = [], isLoading: attachmentsLoading } = useTicketAttachments(ticket?.id || '')
+  const { data: attachments = [], isLoading: attachmentsLoading, error: attachmentsError } = useTicketAttachments(ticket?.id || '')
   
   const [formData, setFormData] = useState({
     title: '',
@@ -26,6 +26,10 @@ export function EditTicketDialog({ ticket, open, onOpenChange }: EditTicketDialo
     priority: 'media' as 'baixa' | 'media' | 'alta' | 'critica',
     category: 'outros' as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
   })
+
+  console.log('EditTicketDialog - ticket:', ticket?.id)
+  console.log('EditTicketDialog - attachments:', attachments)
+  console.log('EditTicketDialog - attachmentsError:', attachmentsError)
 
   // Atualizar form data quando o ticket mudar
   useEffect(() => {
@@ -144,6 +148,10 @@ export function EditTicketDialog({ ticket, open, onOpenChange }: EditTicketDialo
             <div className="mt-3">
               {attachmentsLoading ? (
                 <div className="text-center text-slate-500 py-4">Carregando anexos...</div>
+              ) : attachmentsError ? (
+                <div className="text-center text-red-500 py-4">
+                  Erro ao carregar anexos: {attachmentsError.message}
+                </div>
               ) : (
                 <TicketAttachmentManager
                   ticketId={ticket.id}

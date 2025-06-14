@@ -8,6 +8,11 @@ export function useTicketAttachments(ticketId: string) {
     queryFn: async () => {
       console.log('Fetching ticket attachments for:', ticketId)
       
+      if (!ticketId) {
+        console.log('No ticketId provided')
+        return []
+      }
+      
       const { data, error } = await supabase
         .from('ticket_attachments')
         .select(`
@@ -22,11 +27,15 @@ export function useTicketAttachments(ticketId: string) {
         throw error
       }
       
+      console.log('Raw attachments data:', data)
+      
       // Gerar URLs públicas para as imagens
       const attachmentsWithUrls = data?.map(attachment => {
         const { data: urlData } = supabase.storage
           .from('ticket-attachments')
           .getPublicUrl(attachment.file_path)
+        
+        console.log('Generated URL for', attachment.file_name, ':', urlData.publicUrl)
         
         return {
           ...attachment,
@@ -34,10 +43,12 @@ export function useTicketAttachments(ticketId: string) {
         }
       }) || []
       
-      console.log('Ticket attachments fetched:', attachmentsWithUrls)
+      console.log('Ticket attachments with URLs:', attachmentsWithUrls)
       return attachmentsWithUrls
     },
     enabled: !!ticketId,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    refetchOnWindowFocus: false,
   })
 }
 

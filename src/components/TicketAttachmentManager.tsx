@@ -33,6 +33,9 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
   const addAttachmentMutation = useAddTicketAttachment()
   const removeAttachmentMutation = useRemoveTicketAttachment()
 
+  console.log('TicketAttachmentManager - ticketId:', ticketId)
+  console.log('TicketAttachmentManager - existingAttachments:', existingAttachments)
+
   const isImageFile = (mimeType?: string) => {
     return mimeType?.startsWith('image/')
   }
@@ -48,6 +51,7 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
   const handleAddAttachments = async () => {
     if (newImages.length === 0) return
 
+    console.log('Adding attachments for ticket:', ticketId)
     try {
       await addAttachmentMutation.mutateAsync({
         ticketId,
@@ -60,6 +64,7 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
   }
 
   const handleRemoveAttachment = async (attachment: Attachment) => {
+    console.log('Removing attachment:', attachment.id)
     try {
       await removeAttachmentMutation.mutateAsync({
         attachmentId: attachment.id,
@@ -75,7 +80,7 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
       {/* Anexos Existentes */}
       {existingAttachments.length > 0 && (
         <div>
-          <Label className="text-slate-700 text-sm font-medium">Anexos Atuais</Label>
+          <Label className="text-slate-700 text-sm font-medium">Anexos Atuais ({existingAttachments.length})</Label>
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {existingAttachments.map((attachment) => (
               <div key={attachment.id} className="relative border border-slate-200 rounded-lg p-3 bg-slate-50">
@@ -86,6 +91,10 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
                       alt={attachment.file_name}
                       className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => setSelectedImage(attachment.public_url)}
+                      onError={(e) => {
+                        console.error('Error loading image:', attachment.public_url)
+                        e.currentTarget.style.display = 'none'
+                      }}
                     />
                     <div className="flex items-center justify-between">
                       <Button
@@ -133,6 +142,9 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
                       {formatFileSize(attachment.file_size)}
                     </div>
                   )}
+                  <div className="text-gray-400">
+                    Por: {attachment.uploader?.name || 'Usuário'}
+                  </div>
                 </div>
 
                 <AlertDialog>
@@ -203,6 +215,9 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
                 src={selectedImage}
                 alt="Anexo"
                 className="w-full h-auto max-h-[80vh] object-contain rounded"
+                onError={(e) => {
+                  console.error('Error loading full size image:', selectedImage)
+                }}
               />
               <Button
                 variant="ghost"

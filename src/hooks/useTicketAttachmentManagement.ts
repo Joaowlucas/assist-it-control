@@ -24,14 +24,21 @@ export function useAddTicketAttachment() {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
         const filePath = `${profile.id}/${fileName}`
 
+        console.log('Uploading file:', file.name, 'to path:', filePath)
+
         const { error: uploadError } = await supabase.storage
           .from('ticket-attachments')
-          .upload(filePath, file)
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          })
 
         if (uploadError) {
           console.error('Error uploading file:', uploadError)
           throw uploadError
         }
+
+        console.log('File uploaded successfully, creating database record')
 
         // Criar registro do anexo
         const { data: attachment, error: attachmentError } = await supabase
@@ -52,14 +59,18 @@ export function useAddTicketAttachment() {
           throw attachmentError
         }
 
+        console.log('Attachment record created:', attachment)
         uploadedAttachments.push(attachment)
       }
 
       return uploadedAttachments
     },
     onSuccess: () => {
+      // Invalidar todas as queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['ticket-attachments'] })
       queryClient.invalidateQueries({ queryKey: ['user-tickets'] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      
       toast({
         title: 'Sucesso',
         description: 'Anexos adicionados com sucesso',
@@ -84,17 +95,7 @@ export function useRemoveTicketAttachment() {
     mutationFn: async ({ attachmentId, filePath }: { attachmentId: string, filePath: string }) => {
       console.log('Removing attachment:', attachmentId, filePath)
 
-      // Remover arquivo do storage
-      const { error: storageError } = await supabase.storage
-        .from('ticket-attachments')
-        .remove([filePath])
-
-      if (storageError) {
-        console.error('Error removing file from storage:', storageError)
-        // Continuar mesmo se houver erro no storage, pois o arquivo pode já ter sido removido
-      }
-
-      // Remover registro do banco
+      // Remover registro do banco primeiro
       const { error: dbError } = await supabase
         .from('ticket_attachments')
         .delete()
@@ -104,11 +105,25 @@ export function useRemoveTicketAttachment() {
         console.error('Error removing attachment record:', dbError)
         throw dbError
       }
+
+      // Remover arquivo do storage
+      const { error: storageError } = await supabase.storage
+        .from('ticket-attachments')
+        .remove([filePath])
+
+      if (storageError) {
+        console.error('Error removing file from storage:', storageError)
+        // Não falhar se o arquivo não existir no storage
+      }
+
+      console.log('Attachment removed successfully')
     },
     onSuccess: () => {
+      // Invalidar todas as queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['ticket-attachments'] })
       queryClient.invalidateQueries({ queryKey: ['user-tickets'] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      queryClient.invalidateQueries({ queryKey: ['ticket-attachments'] })
+      
       toast({
         title: 'Sucesso',
         description: 'Anexo removido com sucesso',
