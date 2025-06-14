@@ -98,6 +98,9 @@ export function useDashboardStats() {
         resolutionTimeTrend: -15 // Mock para tempo de resolução
       }
     },
-    refetchInterval: 30000, // Atualizar a cada 30 segundos
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos 
+    refetchInterval: false, // Não refetch automático
+    refetchOnWindowFocus: false, // Não refetch ao focar janela
   })
 }

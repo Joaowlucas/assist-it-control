@@ -19,7 +19,26 @@ import UserPortal from "./pages/UserPortal";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      gcTime: 10 * 60 * 1000, // 10 minutos
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      retry: (failureCount, error) => {
+        // Não retry para erros 4xx
+        if (error && 'status' in error && typeof error.status === 'number') {
+          if (error.status >= 400 && error.status < 500) return false
+        }
+        return failureCount < 2
+      },
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

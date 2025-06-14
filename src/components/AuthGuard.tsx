@@ -12,6 +12,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
+  // Only show loading during initial auth check
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">

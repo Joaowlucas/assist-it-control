@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useState, memo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,8 +13,8 @@ import { useAdminEquipmentRequests, useApproveEquipmentRequest, useRejectEquipme
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react"
 
-export function EquipmentRequestsManagement() {
-  const { data: requests = [], isLoading } = useAdminEquipmentRequests()
+const EquipmentRequestsManagement = memo(function EquipmentRequestsManagement() {
+  const { data: requests = [], isLoading, isStale } = useAdminEquipmentRequests()
   const { data: availableEquipment = [] } = useAvailableEquipment()
   const approveRequest = useApproveEquipmentRequest()
   const rejectRequest = useRejectEquipmentRequest()
@@ -40,16 +40,6 @@ export function EquipmentRequestsManagement() {
       case "critica": return <AlertTriangle className="h-4 w-4" />
       case "alta": return <AlertTriangle className="h-4 w-4" />
       default: return <Clock className="h-4 w-4" />
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pendente": return "default"
-      case "aprovado": return "default"
-      case "rejeitado": return "destructive"
-      case "entregue": return "default"
-      default: return "secondary"
     }
   }
 
@@ -99,7 +89,8 @@ export function EquipmentRequestsManagement() {
     setIsRejectDialogOpen(true)
   }
 
-  if (isLoading) {
+  // Apenas mostrar skeleton se não há dados e está carregando
+  if (isLoading && !requests.length) {
     return (
       <Card>
         <CardHeader>
@@ -133,7 +124,7 @@ export function EquipmentRequestsManagement() {
 
   return (
     <>
-      <Card>
+      <Card className={isStale ? 'opacity-95' : ''}>
         <CardHeader>
           <CardTitle>Solicitações de Equipamentos</CardTitle>
           <CardDescription>
@@ -323,4 +314,6 @@ export function EquipmentRequestsManagement() {
       </Dialog>
     </>
   )
-}
+})
+
+export { EquipmentRequestsManagement }

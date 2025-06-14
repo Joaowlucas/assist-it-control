@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Computer, Users, FileText, Calendar, TrendingUp, TrendingDown, Eye } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDashboardStats } from "@/hooks/useDashboardStats"
+import { memo } from "react"
 
 interface DashboardStatsProps {
   onOpenTicketsClick?: () => void
@@ -10,10 +11,11 @@ interface DashboardStatsProps {
   onUsersClick?: () => void
 }
 
-export function DashboardStats({ onOpenTicketsClick, onEquipmentClick, onUsersClick }: DashboardStatsProps) {
-  const { data: stats, isLoading, error } = useDashboardStats()
+const DashboardStats = memo(function DashboardStats({ onOpenTicketsClick, onEquipmentClick, onUsersClick }: DashboardStatsProps) {
+  const { data: stats, isLoading, error, isStale } = useDashboardStats()
 
-  if (isLoading) {
+  // Apenas mostrar skeleton se não há dados e está carregando
+  if (isLoading && !stats) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
@@ -55,7 +57,7 @@ export function DashboardStats({ onOpenTicketsClick, onEquipmentClick, onUsersCl
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-4 ${isStale ? 'opacity-95' : ''}`}>
       <Card 
         className={onOpenTicketsClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
         onClick={onOpenTicketsClick}
@@ -148,4 +150,6 @@ export function DashboardStats({ onOpenTicketsClick, onEquipmentClick, onUsersCl
       </Card>
     </div>
   )
-}
+})
+
+export { DashboardStats }
