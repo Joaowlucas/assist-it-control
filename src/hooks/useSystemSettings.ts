@@ -51,22 +51,12 @@ export function useSystemSettings() {
   return useQuery({
     queryKey: ['system-settings'],
     queryFn: async () => {
-      console.log('Fetching system settings...')
-      
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
         .single()
       
-      if (error) {
-        console.error('Error fetching system settings:', error)
-        throw error
-      }
-      
-      console.log('System settings loaded:', { 
-        company_name: data.company_name, 
-        has_logo: !!data.company_logo_url 
-      })
+      if (error) throw error
       
       // Cache os dados após buscar
       setCachedSettings(data as SystemSettings)
@@ -78,7 +68,6 @@ export function useSystemSettings() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     initialData: cachedData, // Usar dados do cache como inicial
-    retry: 3, // Tentar novamente em caso de erro
   })
 }
 

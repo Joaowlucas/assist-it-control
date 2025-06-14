@@ -19,9 +19,8 @@ export default function Login() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Só mostrar loading se estamos carregando autenticação E temos usuário/perfil
-  // Isso evita o loading após logout
-  if (authLoading && (user || profile)) {
+  // Se está carregando autenticação E não temos dados ainda, mostrar loading
+  if (authLoading && !user && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -60,14 +59,14 @@ export default function Login() {
     }
   }
 
-  // Renderizar logo sempre, independente do estado de autenticação
+  // Renderizar logo imediatamente se disponível
   const renderLogo = () => {
     if (systemSettings?.company_logo_url) {
       return (
         <img 
           src={systemSettings.company_logo_url} 
           alt="Logo da Empresa" 
-          className="h-16 w-auto object-contain mx-auto"
+          className="h-16 w-auto object-contain"
           onError={(e) => {
             e.currentTarget.style.display = 'none'
           }}
@@ -76,11 +75,11 @@ export default function Login() {
     }
     
     if (settingsLoading) {
-      return <Skeleton className="h-16 w-16 rounded mx-auto" />
+      return <Skeleton className="h-16 w-16 rounded" />
     }
     
     return (
-      <div className="h-16 w-16 bg-muted rounded flex items-center justify-center mx-auto">
+      <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
         <span className="text-2xl font-bold text-muted-foreground">
           {systemSettings?.company_name?.charAt(0) || 'S'}
         </span>
@@ -95,9 +94,7 @@ export default function Login() {
           <div className="flex justify-center mb-4">
             {renderLogo()}
           </div>
-          <CardTitle>
-            {systemSettings?.company_name || 'Sistema de Suporte TI'}
-          </CardTitle>
+          <CardTitle>Sistema de Suporte TI</CardTitle>
           <CardDescription>
             Faça login para acessar o sistema
           </CardDescription>
