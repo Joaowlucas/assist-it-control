@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -7,44 +6,129 @@ import { supabase } from '@/integrations/supabase/client'
 
 export function useEquipmentPDF() {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const { toast } = useToast()
 
-  const generateEquipmentPDF = async (equipmentId: string, tombamento: string) => {
+  const fetchEquipmentData = async (equipmentId: string) => {
+    // Buscar dados completos do equipamento
+    const { data: equipment, error: equipmentError } = await supabase
+      .from('equipment')
+      .select(`
+        *,
+        unit:units(name)
+      `)
+      .eq('id', equipmentId)
+      .single()
+
+    if (equipmentError) throw equipmentError
+
+    // Buscar fotos do equipamento
+    const { data: photos, error: photosError } = await supabase
+      .from('equipment_photos')
+      .select('*')
+      .eq('equipment_id', equipmentId)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true })
+
+    if (photosError) console.warn('Erro ao buscar fotos:', photosError)
+
+    // Buscar configurações do sistema
+    const { data: systemSettings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('*')
+      .single()
+
+    if (settingsError) throw settingsError
+
+    return { equipment, photos: photos || [], systemSettings }
+  }
+
+  const previewEquipmentPDF = async (equipmentId: string, tombamento: string) => {
+    setIsLoadingPreview(true)
+    
+    try {
+      const data = await fetchEquipmentData(equipmentId)
+      return data
+    } catch (error: any) {
+      console.error('Erro ao carregar dados para pré-visualização:', error)
+      toast({
+        title: 'Erro ao carregar pré-visualização',
+        description: error.message || 'Ocorreu um erro ao carregar os dados.',
+        variant: 'destructive',
+      })
+      throw error
+    } finally {
+      setIsLoadingPreview(false)
+    }
+  }
+
+  const printFromPreview = async (equipment: any, photos: any[], systemSettings: any) => {
+    try {
+      // Criar o mesmo conteúdo HTML usado para PDF
+      const printContent = createEquipmentPrintHTML(equipment, photos, systemSettings)
+      
+      // Criar elemento temporário para impressão
+      const printWindow = window.open('', '_blank')
+      if (!printWindow) {
+        throw new Error('Não foi possível abrir a janela de impressão')
+      }
+
+      // Escrever o conteúdo na nova janela
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Equipamento ${equipment.tombamento}</title>
+            <style>
+              @media print {
+                body { margin: 0; }
+                .no-print { display: none !important; }
+              }
+              @media screen {
+                body { padding: 20px; background: #f5f5f5; }
+                .print-container { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="print-container">
+              ${printContent}
+            </div>
+          </body>
+        </html>
+      `)
+      
+      printWindow.document.close()
+      
+      // Aguardar imagens carregarem antes de imprimir
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print()
+          printWindow.close()
+        }, 1000)
+      }
+
+      toast({
+        title: 'Preparando impressão',
+        description: 'O documento está sendo preparado para impressão.',
+      })
+
+    } catch (error: any) {
+      console.error('Erro ao imprimir:', error)
+      toast({
+        title: 'Erro ao imprimir',
+        description: error.message || 'Ocorreu um erro ao preparar a impressão.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const downloadPDFFromPreview = async (equipment: any, photos: any[], systemSettings: any, tombamento: string) => {
     setIsGenerating(true)
     
     try {
-      // Buscar dados completos do equipamento
-      const { data: equipment, error: equipmentError } = await supabase
-        .from('equipment')
-        .select(`
-          *,
-          unit:units(name)
-        `)
-        .eq('id', equipmentId)
-        .single()
-
-      if (equipmentError) throw equipmentError
-
-      // Buscar fotos do equipamento
-      const { data: photos, error: photosError } = await supabase
-        .from('equipment_photos')
-        .select('*')
-        .eq('equipment_id', equipmentId)
-        .order('is_primary', { ascending: false })
-        .order('created_at', { ascending: true })
-
-      if (photosError) console.warn('Erro ao buscar fotos:', photosError)
-
-      // Buscar configurações do sistema
-      const { data: systemSettings, error: settingsError } = await supabase
-        .from('system_settings')
-        .select('*')
-        .single()
-
-      if (settingsError) throw settingsError
-
       // Criar conteúdo HTML para o PDF
-      const printContent = createEquipmentPrintHTML(equipment, photos || [], systemSettings)
+      const printContent = createEquipmentPrintHTML(equipment, photos, systemSettings)
       
       // Criar elemento temporário
       const tempElement = document.createElement('div')
@@ -64,7 +148,8 @@ export function useEquipmentPDF() {
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        width: 800
+        width: 800,
+        height: tempElement.scrollHeight
       })
 
       // Criar PDF
@@ -74,20 +159,27 @@ export function useEquipmentPDF() {
       const imgWidth = 210 // A4 width in mm
       const pageHeight = 295 // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
+      
+      // Verificar se precisa de múltiplas páginas
+      if (imgHeight <= pageHeight) {
+        // Conteúdo cabe em uma página
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+      } else {
+        // Conteúdo precisa de múltiplas páginas
+        let heightLeft = imgHeight
+        let position = 0
 
-      let position = 0
-
-      // Adicionar primeira página
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      // Adicionar páginas adicionais se necessário
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
+        // Primeira página
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
+
+        // Páginas adicionais
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight
+          pdf.addPage()
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+          heightLeft -= pageHeight
+        }
       }
 
       // Fazer download
@@ -102,6 +194,24 @@ export function useEquipmentPDF() {
         description: `O arquivo ${fileName} foi baixado.`,
       })
 
+    } catch (error: any) {
+      console.error('Erro ao gerar PDF:', error)
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: error.message || 'Ocorreu um erro ao gerar o PDF.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const generateEquipmentPDF = async (equipmentId: string, tombamento: string) => {
+    setIsGenerating(true)
+    
+    try {
+      const { equipment, photos, systemSettings } = await fetchEquipmentData(equipmentId)
+      await downloadPDFFromPreview(equipment, photos, systemSettings, tombamento)
     } catch (error: any) {
       console.error('Erro ao gerar PDF:', error)
       toast({
@@ -245,6 +355,10 @@ export function useEquipmentPDF() {
 
   return {
     generateEquipmentPDF,
-    isGenerating
+    previewEquipmentPDF,
+    downloadPDFFromPreview,
+    printFromPreview,
+    isGenerating,
+    isLoadingPreview
   }
 }

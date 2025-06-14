@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ImageIcon, Plus, Calendar, MapPin, Edit, Printer } from "lucide-react"
+import { ImageIcon, Plus, Calendar, MapPin, Edit, FileText, Printer } from "lucide-react"
 import { useEquipment, useCreateEquipment, useUpdateEquipment } from "@/hooks/useEquipment"
 import { useUnits } from "@/hooks/useUnits"
 import { useUploadEquipmentPhoto } from "@/hooks/useEquipmentPhotos"
@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useEquipmentPDF } from "@/hooks/useEquipmentPDF"
 import { ImageUpload } from "@/components/ImageUpload"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
+import { EquipmentPDFPreviewDialog } from "@/components/EquipmentPDFPreviewDialog"
 import { Tables } from "@/integrations/supabase/types"
 
 type Equipment = Tables<'equipment'> & {
@@ -29,6 +30,13 @@ export default function Equipment() {
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null)
   const [images, setImages] = useState<File[]>([])
+  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false)
+  const [previewData, setPreviewData] = useState<{
+    equipment: any
+    photos: any[]
+    systemSettings: any
+    tombamento: string
+  } | null>(null)
   
   const { data: equipment, isLoading: loadingEquipment } = useEquipment()
   const { data: units } = useUnits()
@@ -36,7 +44,7 @@ export default function Equipment() {
   const createEquipment = useCreateEquipment()
   const updateEquipment = useUpdateEquipment()
   const uploadPhoto = useUploadEquipmentPhoto()
-  const { generateEquipmentPDF, isGenerating } = useEquipmentPDF()
+  const { previewEquipmentPDF, isLoadingPreview } = useEquipmentPDF()
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'technician'
 
@@ -65,11 +73,19 @@ export default function Equipment() {
     setIsEditDialogOpen(true)
   }
 
-  const handlePrint = async (item: Equipment) => {
-    if (!item.tombamento) {
-      console.warn('Equipamento sem tombamento, usando ID')
+  const handlePreviewPDF = async (item: Equipment) => {
+    try {
+      const data = await previewEquipmentPDF(item.id, item.tombamento || item.id)
+      setPreviewData({
+        equipment: data.equipment,
+        photos: data.photos,
+        systemSettings: data.systemSettings,
+        tombamento: item.tombamento || item.id
+      })
+      setIsPDFPreviewOpen(true)
+    } catch (error) {
+      console.error('Erro ao carregar pré-visualização:', error)
     }
-    await generateEquipmentPDF(item.id, item.tombamento || item.id)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -408,17 +424,15 @@ export default function Equipment() {
                         <ImageIcon className="h-4 w-4 mr-1" />
                         Ver Fotos
                       </Button>
-                      {canEdit && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePrint(item)}
-                          disabled={isGenerating}
-                        >
-                          <Printer className="h-4 w-4 mr-1" />
-                          {isGenerating ? 'Gerando...' : 'Imprimir'}
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePreviewPDF(item)}
+                        disabled={isLoadingPreview}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        {isLoadingPreview ? 'Carregando...' : 'Visualizar PDF'}
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -614,6 +628,18 @@ export default function Equipment() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de pré-visualização do PDF */}
+      {previewData && (
+        <EquipmentPDFPreviewDialog
+          open={isPDFPreviewOpen}
+          onOpenChange={setIsPDFPreviewOpen}
+          equipment={previewData.equipment}
+          photos={previewData.photos}
+          systemSettings={previewData.systemSettings}
+          tombamento={previewData.tombamento}
+        />
+      )}
     </div>
   )
 }
