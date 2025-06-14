@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useUpdateUser } from '@/hooks/useUserManagement'
 import { useUnits } from '@/hooks/useUnits'
+import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
 import { Tables } from '@/integrations/supabase/types'
 import { Loader2 } from 'lucide-react'
 
@@ -24,36 +26,62 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     email: '',
     role: 'user' as 'admin' | 'technician' | 'user',
     unit_id: 'none',
+    unit_ids: [] as string[],
     status: 'ativo'
   })
 
   const updateUser = useUpdateUser()
   const { data: units } = useUnits()
+  const { data: technicianUnits } = useTechnicianUnits(user?.id)
 
   useEffect(() => {
     if (user) {
+      // Buscar unidades do técnico se for técnico
+      const currentUnitIds = technicianUnits?.map(tu => tu.unit_id) || []
+      
       setFormData({
         name: user.name,
         email: user.email,
         role: user.role,
         unit_id: user.unit_id || 'none',
+        unit_ids: user.role === 'technician' ? currentUnitIds : [],
         status: user.status
       })
     }
-  }, [user])
+  }, [user, technicianUnits])
+
+  const handleUnitToggle = (unitId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      unit_ids: checked 
+        ? [...prev.unit_ids, unitId]
+        : prev.unit_ids.filter(id => id !== unitId)
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
 
-    updateUser.mutate({
+    // Validação para técnicos
+    if (formData.role === 'technician' && formData.unit_ids.length === 0) {
+      return
+    }
+
+    const updateData = {
       id: user.id,
       name: formData.name,
       email: formData.email,
       role: formData.role,
-      unit_id: formData.unit_id === 'none' ? null : formData.unit_id,
-      status: formData.status
-    }, {
+      status: formData.status,
+      // Para técnicos, usar unit_ids; para outros, usar unit_id
+      ...(formData.role === 'technician' 
+        ? { unit_ids: formData.unit_ids }
+        : { unit_id: formData.unit_id === 'none' ? null : formData.unit_id }
+      )
+    }
+
+    updateUser.mutate(updateData, {
       onSuccess: () => {
         onOpenChange(false)
       }
@@ -97,7 +125,13 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
             <Select 
               value={formData.role} 
               onValueChange={(value: 'admin' | 'technician' | 'user') => 
-                setFormData(prev => ({ ...prev, role: value }))
+                setFormData(prev => ({ 
+                  ...prev, 
+                  role: value,
+                  // Limpar unidades ao mudar role
+                  unit_ids: value === 'technician' ? prev.unit_ids : [],
+                  unit_id: value !== 'technician' ? prev.unit_id : 'none'
+                }))
               }
             >
               <SelectTrigger>
@@ -111,25 +145,50 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
             </Select>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="edit-unit">Unidade</Label>
-            <Select 
-              value={formData.unit_id} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma unidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma unidade</SelectItem>
+          {formData.role === 'technician' ? (
+            <div className="space-y-2">
+              <Label>Unidades do Técnico</Label>
+              <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto border rounded p-2">
                 {units?.map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </SelectItem>
+                  <div key={unit.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`unit-${unit.id}`}
+                      checked={formData.unit_ids.includes(unit.id)}
+                      onCheckedChange={(checked) => handleUnitToggle(unit.id, checked as boolean)}
+                    />
+                    <Label htmlFor={`unit-${unit.id}`} className="text-sm">
+                      {unit.name}
+                    </Label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+              {formData.unit_ids.length === 0 && (
+                <p className="text-sm text-destructive">
+                  Técnicos devem ter pelo menos uma unidade atribuída
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="edit-unit">Unidade</Label>
+              <Select 
+                value={formData.unit_id} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma unidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma unidade</SelectItem>
+                  {units?.map((unit) => (
+                    <SelectItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="edit-status">Status</Label>
@@ -151,7 +210,11 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button type="submit" disabled={updateUser.isPending} className="flex-1">
+            <Button 
+              type="submit" 
+              disabled={updateUser.isPending || (formData.role === 'technician' && formData.unit_ids.length === 0)} 
+              className="flex-1"
+            >
               {updateUser.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

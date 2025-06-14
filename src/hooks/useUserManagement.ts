@@ -1,6 +1,8 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { useUpdateTechnicianUnits } from '@/hooks/useTechnicianUnits'
 
 interface CreateUserData {
   name: string
@@ -17,6 +19,7 @@ interface UpdateUserData {
   email?: string
   role?: 'admin' | 'technician' | 'user'
   unit_id?: string | null
+  unit_ids?: string[]
   status?: string
 }
 
@@ -83,9 +86,10 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const updateTechnicianUnits = useUpdateTechnicianUnits()
 
   return useMutation({
-    mutationFn: async ({ id, ...updateData }: UpdateUserData) => {
+    mutationFn: async ({ id, unit_ids, ...updateData }: UpdateUserData) => {
       // Se está atualizando email, verificar se já existe
       if (updateData.email) {
         const { data: existingUser } = await supabase
@@ -100,9 +104,13 @@ export function useUpdateUser() {
         }
       }
 
+      // Atualizar perfil (sem unit_ids que é específico para técnicos)
+      const profileData = { ...updateData }
+      delete (profileData as any).unit_ids
+
       const { data, error } = await supabase
         .from('profiles')
-        .update(updateData)
+        .update(profileData)
         .eq('id', id)
         .select(`
           *,
@@ -111,10 +119,21 @@ export function useUpdateUser() {
         .single()
 
       if (error) throw error
+
+      // Se for técnico e tiver unit_ids, atualizar unidades do técnico
+      if (updateData.role === 'technician' && unit_ids) {
+        await updateTechnicianUnits.mutateAsync({
+          technicianId: id,
+          unitIds: unit_ids
+        })
+      }
+
       return data
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] })
+      queryClient.invalidateQueries({ queryKey: ['technician-units'] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
       toast({
         title: 'Usuário atualizado!',
         description: `${data.name} foi atualizado com sucesso.`,
