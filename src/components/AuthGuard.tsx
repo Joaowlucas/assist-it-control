@@ -41,8 +41,12 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
         return <Navigate to="/user-portal" replace />
       }
     } else if (profile.role !== requiredRole) {
-      // Se é admin ou técnico tentando acessar área de usuário, redireciona para dashboard
-      if ((profile.role === 'admin' || profile.role === 'technician') && requiredRole === 'user') {
+      // Se é admin tentando acessar área de usuário, redireciona para dashboard
+      if (profile.role === 'admin' && requiredRole === 'user') {
+        return <Navigate to="/" replace />
+      }
+      // Se é técnico tentando acessar área de usuário, redireciona para dashboard
+      if (profile.role === 'technician' && requiredRole === 'user') {
         return <Navigate to="/" replace />
       }
       // Se é usuário tentando acessar área de admin/técnico, redireciona para portal do usuário

@@ -26,12 +26,6 @@ serve(async (req) => {
       }
     )
 
-    // Create regular client for user verification
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
-
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -44,10 +38,11 @@ serve(async (req) => {
       )
     }
 
-    // Verify the user's session
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
+    // Extract token from Bearer header
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Verify the user's session using admin client
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
 
     if (authError || !user) {
       console.error('Auth error:', authError)
@@ -61,7 +56,7 @@ serve(async (req) => {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -79,9 +74,9 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { name, email, password, role, unit_id } = await req.json()
+    const { name, email, password, role, unit_id, unit_ids } = await req.json()
 
-    console.log('Creating user with data:', { name, email, role, unit_id })
+    console.log('Creating user with data:', { name, email, role, unit_id, unit_ids })
 
     // Validate required fields
     if (!name || !email || !password || !role) {
@@ -95,7 +90,7 @@ serve(async (req) => {
     }
 
     // Check if email already exists
-    const { data: existingUser, error: checkError } = await supabaseAdmin
+    const { data: existingUser } = await supabaseAdmin
       .from('profiles')
       .select('email')
       .eq('email', email)
@@ -141,7 +136,7 @@ serve(async (req) => {
         .update({
           name: name,
           role: role,
-          unit_id: unit_id === 'none' ? null : unit_id
+          unit_id: role === 'technician' ? null : (unit_id === 'none' ? null : unit_id)
         })
         .eq('id', authData.user.id)
         .select()
@@ -158,6 +153,31 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         )
+      }
+
+      // Se é técnico e tem unidades selecionadas, criar relacionamentos
+      if (role === 'technician' && unit_ids && Array.isArray(unit_ids) && unit_ids.length > 0) {
+        const technicianUnits = unit_ids.map(unitId => ({
+          technician_id: authData.user.id,
+          unit_id: unitId
+        }))
+
+        const { error: unitsError } = await supabaseAdmin
+          .from('technician_units')
+          .insert(technicianUnits)
+
+        if (unitsError) {
+          console.error('Error creating technician units:', unitsError)
+          // Clean up: delete the auth user if technician units creation failed
+          await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+          return new Response(
+            JSON.stringify({ error: 'Failed to assign units to technician' }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
       }
 
       console.log('Profile updated successfully:', profileData)

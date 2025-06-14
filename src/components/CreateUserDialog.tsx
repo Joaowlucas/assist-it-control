@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useCreateUser } from '@/hooks/useUserManagement'
 import { useUnits } from '@/hooks/useUnits'
 import { Plus, Loader2 } from 'lucide-react'
@@ -17,7 +18,8 @@ export function CreateUserDialog() {
     password: '',
     confirmPassword: '',
     role: 'user' as 'admin' | 'technician' | 'user',
-    unit_id: 'none'
+    unit_id: 'none',
+    unit_ids: [] as string[]
   })
   
   const createUser = useCreateUser()
@@ -36,13 +38,22 @@ export function CreateUserDialog() {
       return
     }
 
-    createUser.mutate({
+    // Validar seleção de unidades para técnicos
+    if (formData.role === 'technician' && formData.unit_ids.length === 0) {
+      alert('Técnicos devem ter pelo menos uma unidade atribuída')
+      return
+    }
+
+    const userData = {
       name: formData.name,
       email: formData.email,
       password: formData.password,
       role: formData.role,
-      unit_id: formData.unit_id === 'none' ? null : formData.unit_id
-    }, {
+      unit_id: formData.role === 'technician' ? null : (formData.unit_id === 'none' ? null : formData.unit_id),
+      unit_ids: formData.role === 'technician' ? formData.unit_ids : undefined
+    }
+
+    createUser.mutate(userData, {
       onSuccess: () => {
         setFormData({
           name: '',
@@ -50,11 +61,30 @@ export function CreateUserDialog() {
           password: '',
           confirmPassword: '',
           role: 'user',
-          unit_id: 'none'
+          unit_id: 'none',
+          unit_ids: []
         })
         setOpen(false)
       }
     })
+  }
+
+  const handleUnitToggle = (unitId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      unit_ids: checked 
+        ? [...prev.unit_ids, unitId]
+        : prev.unit_ids.filter(id => id !== unitId)
+    }))
+  }
+
+  const handleRoleChange = (role: 'admin' | 'technician' | 'user') => {
+    setFormData(prev => ({
+      ...prev,
+      role,
+      unit_id: role === 'technician' ? 'none' : prev.unit_id,
+      unit_ids: role === 'technician' ? prev.unit_ids : []
+    }))
   }
 
   return (
@@ -65,7 +95,7 @@ export function CreateUserDialog() {
           Adicionar Usuário
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Novo Usuário</DialogTitle>
           <DialogDescription>
@@ -121,7 +151,7 @@ export function CreateUserDialog() {
           
           <div className="space-y-2">
             <Label htmlFor="role">Função</Label>
-            <Select value={formData.role} onValueChange={(value: 'admin' | 'technician' | 'user') => setFormData(prev => ({ ...prev, role: value }))}>
+            <Select value={formData.role} onValueChange={handleRoleChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma função" />
               </SelectTrigger>
@@ -133,22 +163,47 @@ export function CreateUserDialog() {
             </Select>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="unit">Unidade</Label>
-            <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma unidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma unidade</SelectItem>
+          {formData.role === 'technician' ? (
+            <div className="space-y-2">
+              <Label>Unidades (Selecione uma ou mais)</Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
                 {units?.map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </SelectItem>
+                  <div key={unit.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`unit-${unit.id}`}
+                      checked={formData.unit_ids.includes(unit.id)}
+                      onCheckedChange={(checked) => handleUnitToggle(unit.id, !!checked)}
+                    />
+                    <Label htmlFor={`unit-${unit.id}`} className="text-sm">
+                      {unit.name}
+                    </Label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+              {formData.unit_ids.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Técnicos devem ter pelo menos uma unidade selecionada
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="unit">Unidade</Label>
+              <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma unidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma unidade</SelectItem>
+                  {units?.map((unit) => (
+                    <SelectItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <Button type="submit" className="w-full" disabled={createUser.isPending}>
             {createUser.isPending ? (
