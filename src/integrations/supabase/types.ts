@@ -356,6 +356,42 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_units: {
+        Row: {
+          created_at: string | null
+          id: string
+          technician_id: string
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          technician_id: string
+          unit_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          technician_id?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_units_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_attachments: {
         Row: {
           created_at: string
@@ -560,6 +596,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_technician_units: {
+        Args: { technician_id: string }
+        Returns: {
+          unit_id: string
+          unit_name: string
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -567,6 +610,10 @@ export type Database = {
       reject_equipment_request: {
         Args: { request_id: string; admin_comments?: string }
         Returns: undefined
+      }
+      technician_has_unit_access: {
+        Args: { technician_id: string; unit_id: string }
+        Returns: boolean
       }
     }
     Enums: {
