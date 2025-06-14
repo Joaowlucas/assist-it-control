@@ -12,6 +12,7 @@ import { useTicketAttachments } from "@/hooks/useTicketAttachments"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
 import { useTicketPDF } from "@/hooks/useTicketPDF"
 import { useAuth } from "@/hooks/useAuth"
+import { TicketPDFPreviewDialog } from "@/components/TicketPDFPreviewDialog"
 import { Calendar, User, MapPin, Tag, AlertCircle, Clock, FileImage, Download, Eye, Printer } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -32,6 +33,8 @@ export function TicketDetailsDialog({
   const [newComment, setNewComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [showPDFPreview, setShowPDFPreview] = useState(false)
+  const [previewData, setPreviewData] = useState<{ ticket: any; systemSettings: any } | null>(null)
   
   const { user } = useAuth()
   const { data: comments = [], isLoading: commentsLoading } = useTicketComments(ticket?.id)
@@ -39,7 +42,7 @@ export function TicketDetailsDialog({
   const createComment = useCreateTicketComment()
   const updateStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
-  const { generateTicketPDF, isGenerating } = useTicketPDF()
+  const { previewTicketPDF, isLoadingPreview } = useTicketPDF()
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -98,9 +101,16 @@ export function TicketDetailsDialog({
     await assignTicket.mutateAsync({ id: ticket.id, assigneeId: actualAssigneeId })
   }
 
-  const handlePrintPDF = async () => {
+  const handlePDFPreview = async () => {
     if (!ticket) return
-    await generateTicketPDF(ticket.id, ticket.ticket_number)
+    
+    try {
+      const data = await previewTicketPDF(ticket.id, ticket.ticket_number)
+      setPreviewData(data)
+      setShowPDFPreview(true)
+    } catch (error) {
+      console.error('Erro ao carregar pré-visualização:', error)
+    }
   }
 
   if (!ticket) return null
@@ -118,13 +128,13 @@ export function TicketDetailsDialog({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handlePrintPDF}
-                disabled={isGenerating}
+                onClick={handlePDFPreview}
+                disabled={isLoadingPreview}
                 className="ml-2 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
-                title="Imprimir/Salvar em PDF"
+                title="Pré-visualizar PDF"
               >
-                <Printer className="h-4 w-4" />
-                {isGenerating ? 'Gerando...' : 'PDF'}
+                <Eye className="h-4 w-4 mr-1" />
+                {isLoadingPreview ? 'Carregando...' : 'Pré-visualizar'}
               </Button>
             </DialogTitle>
           </DialogHeader>
@@ -417,6 +427,17 @@ export function TicketDetailsDialog({
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Modal de pré-visualização do PDF */}
+      {previewData && (
+        <TicketPDFPreviewDialog
+          open={showPDFPreview}
+          onOpenChange={setShowPDFPreview}
+          ticket={previewData.ticket}
+          systemSettings={previewData.systemSettings}
+          ticketNumber={ticket.ticket_number}
+        />
       )}
     </>
   )

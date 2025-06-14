@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -7,59 +6,83 @@ import { supabase } from '@/integrations/supabase/client'
 
 export function useTicketPDF() {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const { toast } = useToast()
 
-  const generateTicketPDF = async (ticketId: string, ticketNumber: string) => {
+  const fetchTicketData = async (ticketId: string) => {
+    // Buscar dados completos do chamado
+    const { data: ticket, error: ticketError } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        requester:profiles!tickets_requester_id_fkey(name, email),
+        assignee:profiles!tickets_assignee_id_fkey(name, email),
+        unit:units(name),
+        comments:ticket_comments(
+          *,
+          user:profiles(name, email)
+        ),
+        attachments:ticket_attachments(
+          *,
+          uploader:profiles(name, email)
+        )
+      `)
+      .eq('id', ticketId)
+      .single()
+
+    if (ticketError) throw ticketError
+
+    // Buscar configurações do sistema
+    const { data: systemSettings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('*')
+      .single()
+
+    if (settingsError) throw settingsError
+
+    // Adicionar URLs públicas aos anexos
+    const ticketWithUrls = {
+      ...ticket,
+      attachments: ticket.attachments?.map((attachment: any) => {
+        const { data: urlData } = supabase.storage
+          .from('ticket-attachments')
+          .getPublicUrl(attachment.file_path)
+        
+        return {
+          ...attachment,
+          public_url: urlData.publicUrl
+        }
+      }) || []
+    }
+
+    return { ticket: ticketWithUrls, systemSettings }
+  }
+
+  const previewTicketPDF = async (ticketId: string, ticketNumber: string) => {
+    setIsLoadingPreview(true)
+    
+    try {
+      const data = await fetchTicketData(ticketId)
+      return data
+    } catch (error: any) {
+      console.error('Erro ao carregar dados para pré-visualização:', error)
+      toast({
+        title: 'Erro ao carregar pré-visualização',
+        description: error.message || 'Ocorreu um erro ao carregar os dados.',
+        variant: 'destructive',
+      })
+      throw error
+    } finally {
+      setIsLoadingPreview(false)
+    }
+  }
+
+  const downloadPDFFromPreview = async (ticket: any, systemSettings: any, ticketNumber: string) => {
     setIsGenerating(true)
     
     try {
-      // Buscar dados completos do chamado
-      const { data: ticket, error: ticketError } = await supabase
-        .from('tickets')
-        .select(`
-          *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name),
-          comments:ticket_comments(
-            *,
-            user:profiles(name, email)
-          ),
-          attachments:ticket_attachments(
-            *,
-            uploader:profiles(name, email)
-          )
-        `)
-        .eq('id', ticketId)
-        .single()
-
-      if (ticketError) throw ticketError
-
-      // Buscar configurações do sistema
-      const { data: systemSettings, error: settingsError } = await supabase
-        .from('system_settings')
-        .select('*')
-        .single()
-
-      if (settingsError) throw settingsError
-
-      // Adicionar URLs públicas aos anexos
-      const ticketWithUrls = {
-        ...ticket,
-        attachments: ticket.attachments?.map((attachment: any) => {
-          const { data: urlData } = supabase.storage
-            .from('ticket-attachments')
-            .getPublicUrl(attachment.file_path)
-          
-          return {
-            ...attachment,
-            public_url: urlData.publicUrl
-          }
-        }) || []
-      }
-
       // Criar conteúdo HTML para o PDF
-      const printContent = createPrintHTML(ticketWithUrls, systemSettings)
+      const printContent = createPrintHTML(ticket, systemSettings)
       
       // Criar elemento temporário
       const tempElement = document.createElement('div')
@@ -117,6 +140,24 @@ export function useTicketPDF() {
         description: `O arquivo ${fileName} foi baixado.`,
       })
 
+    } catch (error: any) {
+      console.error('Erro ao gerar PDF:', error)
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: error.message || 'Ocorreu um erro ao gerar o PDF.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const generateTicketPDF = async (ticketId: string, ticketNumber: string) => {
+    setIsGenerating(true)
+    
+    try {
+      const { ticket, systemSettings } = await fetchTicketData(ticketId)
+      await downloadPDFFromPreview(ticket, systemSettings, ticketNumber)
     } catch (error: any) {
       console.error('Erro ao gerar PDF:', error)
       toast({
@@ -270,6 +311,9 @@ export function useTicketPDF() {
 
   return {
     generateTicketPDF,
-    isGenerating
+    previewTicketPDF,
+    downloadPDFFromPreview,
+    isGenerating,
+    isLoadingPreview
   }
 }
