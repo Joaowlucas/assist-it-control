@@ -2,16 +2,24 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "./useAuth"
+import { useTechnicianUnits } from "./useTechnicianUnits"
 import { toast } from "@/hooks/use-toast"
 import { EquipmentRequest } from "./useEquipmentRequests"
 
 export function useAdminEquipmentRequests() {
   const { profile } = useAuth()
+  const { data: technicianUnits } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
   
   return useQuery({
-    queryKey: ['admin-equipment-requests'],
+    queryKey: ['admin-equipment-requests', profile?.id, profile?.role, technicianUnits],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('Fetching admin equipment requests data...')
+      
+      // Get unit filter for technicians
+      const shouldFilterByUnits = profile?.role === 'technician' && technicianUnits
+      const allowedUnitIds = shouldFilterByUnits ? technicianUnits.map(tu => tu.unit_id) : []
+
+      let query = supabase
         .from('equipment_requests')
         .select(`
           *,
@@ -24,7 +32,26 @@ export function useAdminEquipmentRequests() {
             name
           )
         `)
-        .order('created_at', { ascending: false })
+
+      // Apply unit filter for technicians - filter by requester's unit
+      if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+        // We need to filter equipment requests where the requester belongs to the technician's units
+        // This requires a subquery approach since we're joining with profiles
+        const { data: allowedRequesterIds } = await supabase
+          .from('profiles')
+          .select('id')
+          .in('unit_id', allowedUnitIds)
+        
+        if (allowedRequesterIds && allowedRequesterIds.length > 0) {
+          const requesterIds = allowedRequesterIds.map(profile => profile.id)
+          query = query.in('requester_id', requesterIds)
+        } else {
+          // If no requesters found in technician's units, return empty result
+          return []
+        }
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
       return data as EquipmentRequest[]
