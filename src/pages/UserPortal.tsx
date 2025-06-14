@@ -14,10 +14,11 @@ import { ImageUpload } from "@/components/ImageUpload"
 import { UserProfileSection } from "@/components/UserProfileSection"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
 import { EquipmentRequestsSection } from "@/components/EquipmentRequestsSection"
+import { OpenTicketsModal, ClosedTicketsModal, ActiveEquipmentModal, AllAssignmentsModal } from "@/components/UserPortalModals"
 import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useAuth } from "@/hooks/useAuth"
-import { Edit, Trash2 } from "lucide-react"
+import { Edit, Trash2, Eye } from "lucide-react"
 
 export default function UserPortal() {
   const { profile } = useAuth()
@@ -30,6 +31,12 @@ export default function UserPortal() {
   const [images, setImages] = useState<File[]>([])
   const [editingTicket, setEditingTicket] = useState<UserTicket | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+
+  // Estados para os modais
+  const [openTicketsModalOpen, setOpenTicketsModalOpen] = useState(false)
+  const [closedTicketsModalOpen, setClosedTicketsModalOpen] = useState(false)
+  const [activeEquipmentModalOpen, setActiveEquipmentModalOpen] = useState(false)
+  const [allAssignmentsModalOpen, setAllAssignmentsModalOpen] = useState(false)
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -261,45 +268,54 @@ export default function UserPortal() {
         </Dialog>
       </div>
 
-      {/* Dashboard Cards */}
+      {/* Dashboard Cards com Modais */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-slate-100/70 border-slate-200">
+        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setOpenTicketsModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Chamados Abertos</CardTitle>
+            <Eye className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{openTickets.length}</div>
+            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-slate-100/70 border-slate-200">
+        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setClosedTicketsModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Chamados Fechados</CardTitle>
+            <Eye className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{closedTickets.length}</div>
+            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-slate-100/70 border-slate-200">
+        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setActiveEquipmentModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Equipamentos Ativos</CardTitle>
+            <Eye className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{activeAssignments.length}</div>
+            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-slate-100/70 border-slate-200">
+        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setAllAssignmentsModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-700">Total de Atribuições</CardTitle>
+            <Eye className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">{assignments.length}</div>
+            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Tabs section */}
       <Tabs defaultValue="tickets" className="space-y-4">
         <TabsList className="bg-slate-200 border-slate-300">
           <TabsTrigger value="tickets" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Chamados</TabsTrigger>
@@ -471,6 +487,31 @@ export default function UserPortal() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modais */}
+      <OpenTicketsModal
+        open={openTicketsModalOpen}
+        onOpenChange={setOpenTicketsModalOpen}
+        tickets={openTickets}
+      />
+
+      <ClosedTicketsModal
+        open={closedTicketsModalOpen}
+        onOpenChange={setClosedTicketsModalOpen}
+        tickets={closedTickets}
+      />
+
+      <ActiveEquipmentModal
+        open={activeEquipmentModalOpen}
+        onOpenChange={setActiveEquipmentModalOpen}
+        assignments={activeAssignments}
+      />
+
+      <AllAssignmentsModal
+        open={allAssignmentsModalOpen}
+        onOpenChange={setAllAssignmentsModalOpen}
+        assignments={assignments}
+      />
 
       <EditTicketDialog
         ticket={editingTicket}

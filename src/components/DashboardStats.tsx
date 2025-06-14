@@ -1,9 +1,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Computer, Users, FileText, Calendar, TrendingUp, TrendingDown } from "lucide-react"
+import { Computer, Users, FileText, Calendar, TrendingUp, TrendingDown, Eye } from "lucide-react"
 import { useDashboardStats } from "@/hooks/useDashboardStats"
 
-export function DashboardStats() {
+interface DashboardStatsProps {
+  onOpenTicketsClick?: () => void
+  onEquipmentClick?: () => void
+  onUsersClick?: () => void
+}
+
+export function DashboardStats({ onOpenTicketsClick, onEquipmentClick, onUsersClick }: DashboardStatsProps) {
   const { data: stats, isLoading, error } = useDashboardStats()
 
   if (isLoading) {
@@ -51,12 +57,18 @@ export function DashboardStats() {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+      <Card 
+        className={onOpenTicketsClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+        onClick={onOpenTicketsClick}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             Chamados Abertos
           </CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
+          <div className="flex gap-1">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            {onOpenTicketsClick && <Eye className="h-4 w-4 text-muted-foreground" />}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-blue-600">{stats.openTickets}</div>
@@ -64,15 +76,24 @@ export function DashboardStats() {
             {getTrendIcon(stats.ticketsTrend)}
             {stats.ticketsTrend > 0 ? '+' : ''}{stats.ticketsTrend}% em relação ao mês passado
           </p>
+          {onOpenTicketsClick && (
+            <p className="text-xs text-muted-foreground mt-1">Clique para ver detalhes</p>
+          )}
         </CardContent>
       </Card>
 
-      <Card>
+      <Card 
+        className={onEquipmentClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+        onClick={onEquipmentClick}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             Equipamentos Disponíveis
           </CardTitle>
-          <Computer className="h-4 w-4 text-muted-foreground" />
+          <div className="flex gap-1">
+            <Computer className="h-4 w-4 text-muted-foreground" />
+            {onEquipmentClick && <Eye className="h-4 w-4 text-muted-foreground" />}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">{stats.availableEquipment}</div>
@@ -80,15 +101,24 @@ export function DashboardStats() {
             {getTrendIcon(stats.equipmentTrend)}
             {stats.equipmentTrend > 0 ? '+' : ''}{stats.equipmentTrend} equipamentos este mês
           </p>
+          {onEquipmentClick && (
+            <p className="text-xs text-muted-foreground mt-1">Clique para ver detalhes</p>
+          )}
         </CardContent>
       </Card>
 
-      <Card>
+      <Card 
+        className={onUsersClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+        onClick={onUsersClick}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             Usuários Ativos
           </CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <div className="flex gap-1">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            {onUsersClick && <Eye className="h-4 w-4 text-muted-foreground" />}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-purple-600">{stats.totalUsers}</div>
@@ -96,6 +126,9 @@ export function DashboardStats() {
             {getTrendIcon(stats.usersTrend)}
             {stats.usersTrend > 0 ? '+' : ''}{stats.usersTrend} novos usuários este mês
           </p>
+          {onUsersClick && (
+            <p className="text-xs text-muted-foreground mt-1">Clique para ver detalhes</p>
+          )}
         </CardContent>
       </Card>
 
