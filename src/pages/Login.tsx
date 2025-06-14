@@ -8,19 +8,32 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Login() {
-  const { user, profile, signIn, loading } = useAuth()
-  const { data: systemSettings } = useSystemSettings()
+  const { user, profile, signIn, loading: authLoading } = useAuth()
+  const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  if (loading) {
+  // Se está carregando autenticação, mostrar loading
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-4">
+            <Skeleton className="h-16 w-16 mx-auto rounded" />
+            <Skeleton className="h-6 w-48 mx-auto" />
+            <Skeleton className="h-4 w-32 mx-auto" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -52,15 +65,27 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          {systemSettings?.company_logo_url && (
-            <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-4">
+            {settingsLoading ? (
+              <Skeleton className="h-16 w-16 rounded" />
+            ) : systemSettings?.company_logo_url ? (
               <img 
                 src={systemSettings.company_logo_url} 
                 alt="Logo da Empresa" 
                 className="h-16 w-auto object-contain"
+                onError={(e) => {
+                  // Se erro ao carregar imagem, esconder elemento
+                  e.currentTarget.style.display = 'none'
+                }}
               />
-            </div>
-          )}
+            ) : (
+              <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
+                <span className="text-2xl font-bold text-muted-foreground">
+                  {systemSettings?.company_name?.charAt(0) || 'S'}
+                </span>
+              </div>
+            )}
+          </div>
           <CardTitle>Sistema de Suporte TI</CardTitle>
           <CardDescription>
             Faça login para acessar o sistema
@@ -76,6 +101,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -86,6 +112,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             {error && (

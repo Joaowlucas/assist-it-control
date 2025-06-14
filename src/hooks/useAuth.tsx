@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const fetchingProfile = useRef(false)
   const mounted = useRef(true)
+  const initialLoadComplete = useRef(false)
 
   const fetchProfile = useCallback(async (userId: string) => {
     if (fetchingProfile.current || !mounted.current) return
@@ -60,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     mounted.current = true
-    let initialLoadComplete = false
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -75,8 +75,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null)
       }
       
-      initialLoadComplete = true
-      setLoading(false)
+      // Reduzir tempo de loading inicial
+      if (!initialLoadComplete.current) {
+        initialLoadComplete.current = true
+        setLoading(false)
+      }
     })
 
     // Listen for auth changes
@@ -96,7 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null)
       }
       
-      if (initialLoadComplete) {
+      // Loading completo após primeira inicialização
+      if (initialLoadComplete.current) {
         setLoading(false)
       }
     })

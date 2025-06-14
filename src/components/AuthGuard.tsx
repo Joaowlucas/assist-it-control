@@ -12,8 +12,8 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
-  // Only show loading during initial auth check
-  if (loading) {
+  // Mostrar loading apenas se não temos dados e está carregando
+  if (loading && !user && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-4">
@@ -25,7 +25,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     )
   }
 
-  // Prevent redirect loops by checking current path
+  // Se não há usuário ou perfil, redirecionar para login
   if (!user || !profile) {
     if (location.pathname !== '/login') {
       return <Navigate to="/login" state={{ from: location }} replace />
@@ -33,8 +33,9 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     return <>{children}</>
   }
 
+  // Verificar permissões de role
   if (requiredRole) {
-    // admin_tech means both admin and technician can access
+    // admin_tech significa que tanto admin quanto technician podem acessar
     if (requiredRole === "admin_tech") {
       if (profile.role !== "admin" && profile.role !== "technician") {
         if (location.pathname !== '/user-portal') {

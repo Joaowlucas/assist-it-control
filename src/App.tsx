@@ -23,9 +23,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutos
-      gcTime: 10 * 60 * 1000, // 10 minutos
+      gcTime: 15 * 60 * 1000, // 15 minutos
       refetchOnWindowFocus: false,
-      refetchOnMount: true,
+      refetchOnMount: 'always',
+      refetchOnReconnect: 'always',
       retry: (failureCount, error) => {
         // Não retry para erros 4xx
         if (error && 'status' in error && typeof error.status === 'number') {
@@ -33,12 +34,27 @@ const queryClient = new QueryClient({
         }
         return failureCount < 2
       },
+      // Cache mais agressivo para dados estáticos
+      queryKeyHashFn: (queryKey) => {
+        const key = JSON.stringify(queryKey)
+        // System settings são dados estáticos, cache por mais tempo
+        if (key.includes('system-settings')) {
+          return `static-${key}`
+        }
+        return key
+      },
     },
     mutations: {
       retry: 1,
     },
   },
 });
+
+// Prefetch system settings para evitar loading desnecessário
+queryClient.prefetchQuery({
+  queryKey: ['system-settings'],
+  staleTime: 30 * 60 * 1000, // 30 minutos
+})
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
