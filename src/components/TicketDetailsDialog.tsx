@@ -10,8 +10,9 @@ import { Separator } from "@/components/ui/separator"
 import { useTicketComments, useCreateTicketComment } from "@/hooks/useTicketComments"
 import { useTicketAttachments } from "@/hooks/useTicketAttachments"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
+import { useTicketPDF } from "@/hooks/useTicketPDF"
 import { useAuth } from "@/hooks/useAuth"
-import { Calendar, User, MapPin, Tag, AlertCircle, Clock, FileImage, Download, Eye } from "lucide-react"
+import { Calendar, User, MapPin, Tag, AlertCircle, Clock, FileImage, Download, Eye, Printer } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -38,6 +39,7 @@ export function TicketDetailsDialog({
   const createComment = useCreateTicketComment()
   const updateStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
+  const { generateTicketPDF, isGenerating } = useTicketPDF()
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -96,6 +98,11 @@ export function TicketDetailsDialog({
     await assignTicket.mutateAsync({ id: ticket.id, assigneeId: actualAssigneeId })
   }
 
+  const handlePrintPDF = async () => {
+    if (!ticket) return
+    await generateTicketPDF(ticket.id, ticket.ticket_number)
+  }
+
   if (!ticket) return null
 
   return (
@@ -103,9 +110,22 @@ export function TicketDetailsDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] bg-gray-50 mx-auto">
           <DialogHeader className="bg-white rounded-lg p-3 md:p-4 border border-gray-200">
-            <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
-              <Tag className="h-4 md:h-5 w-4 md:w-5 text-gray-600" />
-              <span className="truncate">#{ticket.ticket_number} - {ticket.title}</span>
+            <DialogTitle className="flex items-center justify-between text-base md:text-lg">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 md:h-5 w-4 md:w-5 text-gray-600" />
+                <span className="truncate">#{ticket.ticket_number} - {ticket.title}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintPDF}
+                disabled={isGenerating}
+                className="ml-2 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                title="Imprimir/Salvar em PDF"
+              >
+                <Printer className="h-4 w-4" />
+                {isGenerating ? 'Gerando...' : 'PDF'}
+              </Button>
             </DialogTitle>
           </DialogHeader>
 
