@@ -9,10 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ImageUpload } from "@/components/ImageUpload"
 import { useTickets, useCreateTicket } from "@/hooks/useTickets"
+import { useCreateUserTicket } from "@/hooks/useUserTickets"
 import { useUnits } from "@/hooks/useUnits"
 import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
+import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
 import { TicketFilters } from "@/components/TicketFilters"
 import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
@@ -24,6 +27,7 @@ export default function Tickets() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [attachmentImages, setAttachmentImages] = useState<File[]>([])
   
   // Filtros
   const [searchTerm, setSearchTerm] = useState('')
@@ -32,13 +36,19 @@ export default function Tickets() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [assigneeFilter, setAssigneeFilter] = useState('all')
 
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { data: tickets = [], isLoading: ticketsLoading, error: ticketsError } = useTickets()
-  const { data: units = [] } = useUnits()
+  const { data: allUnits = [] } = useUnits()
+  const { data: technicianUnits = [] } = useTechnicianUnits(profile?.id)
   const { data: profiles = [] } = useProfiles()
-  const createTicket = useCreateTicket()
+  const createUserTicket = useCreateUserTicket()
   const updateStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
+
+  // Determinar unidades disponíveis baseado no papel do usuário
+  const availableUnits = profile?.role === 'admin' 
+    ? allUnits 
+    : technicianUnits.map(tu => ({ id: tu.unit_id, name: tu.unit?.name || '' }))
 
   // Filtrar técnicos
   const technicians = profiles.filter(profile => 
@@ -91,16 +101,22 @@ export default function Tickets() {
 
     const formData = new FormData(e.target as HTMLFormElement)
     
-    await createTicket.mutateAsync({
+    const ticketData = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
       priority: formData.get('priority') as any,
       category: formData.get('category') as any,
       requester_id: user.id,
       unit_id: formData.get('unit_id') as string,
+    }
+
+    await createUserTicket.mutateAsync({
+      ...ticketData,
+      attachments: attachmentImages
     })
 
     setIsCreateDialogOpen(false)
+    setAttachmentImages([])
   }
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
@@ -158,42 +174,42 @@ export default function Tickets() {
               Novo Chamado
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] bg-gray-50 mx-4">
+          <DialogContent className="sm:max-w-[700px] bg-gray-50 mx-4 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Novo Chamado</DialogTitle>
               <DialogDescription>
                 Preencha as informações do chamado de suporte
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateTicket} className="space-y-4">
-              <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
+            <form onSubmit={handleCreateTicket} className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="title">Título</Label>
+                  <Label htmlFor="title" className="text-slate-700">Título</Label>
                   <Input 
                     id="title" 
                     name="title" 
                     placeholder="Descreva brevemente o problema"
                     required 
-                    className="bg-white border-gray-300"
+                    className="border-slate-300 focus:border-slate-400"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="description">Descrição</Label>
+                  <Label htmlFor="description" className="text-slate-700">Descrição</Label>
                   <Textarea 
                     id="description" 
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
                     required 
-                    className="bg-white border-gray-300"
+                    className="border-slate-300 focus:border-slate-400 min-h-[100px]"
                   />
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="priority">Prioridade</Label>
+                    <Label htmlFor="priority" className="text-slate-700">Prioridade</Label>
                     <Select name="priority" defaultValue="media">
-                      <SelectTrigger className="bg-white border-gray-300">
+                      <SelectTrigger className="border-slate-300">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -206,9 +222,9 @@ export default function Tickets() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="category">Categoria</Label>
+                    <Label htmlFor="category" className="text-slate-700">Categoria</Label>
                     <Select name="category">
-                      <SelectTrigger className="bg-white border-gray-300">
+                      <SelectTrigger className="border-slate-300">
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
@@ -223,13 +239,15 @@ export default function Tickets() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="unit_id">Unidade</Label>
+                  <Label htmlFor="unit_id" className="text-slate-700">
+                    Unidade {profile?.role === 'admin' ? '(Todas disponíveis)' : '(Suas unidades atribuídas)'}
+                  </Label>
                   <Select name="unit_id">
-                    <SelectTrigger className="bg-white border-gray-300">
+                    <SelectTrigger className="border-slate-300">
                       <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {units.map((unit) => (
+                      {availableUnits.map((unit) => (
                         <SelectItem key={unit.id} value={unit.id}>
                           {unit.name}
                         </SelectItem>
@@ -237,23 +255,36 @@ export default function Tickets() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Upload de Anexos */}
+                <div className="border-t border-slate-200 pt-4">
+                  <ImageUpload
+                    images={attachmentImages}
+                    onImagesChange={setAttachmentImages}
+                    maxImages={5}
+                  />
+                </div>
               </div>
               
-              <div className="flex flex-col sm:flex-row justify-end gap-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t border-slate-200">
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => setIsCreateDialogOpen(false)}
-                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                  onClick={() => {
+                    setIsCreateDialogOpen(false)
+                    setAttachmentImages([])
+                  }}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                  disabled={createUserTicket.isPending}
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit"
-                  disabled={createTicket.isPending}
-                  className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                  disabled={createUserTicket.isPending}
+                  className="bg-slate-600 hover:bg-slate-700 text-white"
                 >
-                  {createTicket.isPending ? 'Criando...' : 'Criar Chamado'}
+                  {createUserTicket.isPending ? 'Criando...' : 'Criar Chamado'}
                 </Button>
               </div>
             </form>
