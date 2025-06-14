@@ -1,6 +1,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
 
 interface TechnicianReport {
   id: string
@@ -46,21 +48,50 @@ interface DashboardReports {
 }
 
 export function useDashboardReports() {
+  const { profile } = useAuth()
+  const { data: technicianUnits } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
+
   return useQuery({
-    queryKey: ['dashboard-reports'],
+    queryKey: ['dashboard-reports', profile?.id, profile?.role, technicianUnits],
     queryFn: async (): Promise<DashboardReports> => {
       console.log('Fetching dashboard reports...')
       
       try {
+        // Get unit filter for technicians
+        const shouldFilterByUnits = profile?.role === 'technician' && technicianUnits
+        const allowedUnitIds = shouldFilterByUnits ? technicianUnits.map(tu => tu.unit_id) : []
+        
         // Buscar relatório de técnicos
-        const { data: techniciansData } = await supabase
+        let techniciansQuery = supabase
           .from('profiles')
-          .select('id, name')
+          .select('id, name, unit_id')
           .in('role', ['technician', 'admin'])
         
-        const { data: ticketsData } = await supabase
+        // Para técnicos, mostrar apenas colegas das mesmas unidades
+        if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+          // Buscar outros técnicos que trabalham nas mesmas unidades
+          const { data: sameUnitTechnicians } = await supabase
+            .from('technician_units')
+            .select('technician_id')
+            .in('unit_id', allowedUnitIds)
+          
+          const technicianIds = sameUnitTechnicians?.map(tu => tu.technician_id) || []
+          if (technicianIds.length > 0) {
+            techniciansQuery = techniciansQuery.in('id', technicianIds)
+          }
+        }
+        
+        const { data: techniciansData } = await techniciansQuery
+        
+        let ticketsQuery = supabase
           .from('tickets')
-          .select('assignee_id, status, created_at, resolved_at')
+          .select('assignee_id, status, created_at, resolved_at, unit_id')
+        
+        if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+          ticketsQuery = ticketsQuery.in('unit_id', allowedUnitIds)
+        }
+        
+        const { data: ticketsData } = await ticketsQuery
         
         // Processar dados dos técnicos
         const technicianPerformance: TechnicianReport[] = (techniciansData || []).map(tech => {
@@ -91,7 +122,7 @@ export function useDashboardReports() {
         })
         
         // Buscar relatório de unidades
-        const { data: unitsData } = await supabase
+        let unitsQuery = supabase
           .from('units')
           .select(`
             id, 
@@ -100,8 +131,15 @@ export function useDashboardReports() {
             equipment:equipment(id, status)
           `)
         
+        // Para técnicos, mostrar apenas suas unidades
+        if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+          unitsQuery = unitsQuery.in('id', allowedUnitIds)
+        }
+        
+        const { data: unitsData } = await unitsQuery
+        
         // Buscar atribuições ativas por unidade
-        const { data: assignmentsData } = await supabase
+        let assignmentsQuery = supabase
           .from('assignments')
           .select(`
             id,
@@ -109,6 +147,8 @@ export function useDashboardReports() {
             equipment:equipment!assignments_equipment_id_fkey(unit_id)
           `)
           .eq('status', 'ativo')
+        
+        const { data: assignmentsData } = await assignmentsQuery
         
         const unitReports: UnitReport[] = (unitsData || []).map(unit => {
           const tickets = unit.tickets || []
@@ -129,15 +169,22 @@ export function useDashboardReports() {
         })
         
         // Buscar relatório de equipamentos
-        const { data: equipmentData } = await supabase
+        let equipmentQuery = supabase
           .from('equipment')
           .select(`
             id,
             name,
             type,
             status,
+            unit_id,
             unit:units(name)
           `)
+        
+        if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+          equipmentQuery = equipmentQuery.in('unit_id', allowedUnitIds)
+        }
+        
+        const { data: equipmentData } = await equipmentQuery
         
         // Buscar atribuições ativas com usuários
         const { data: activeAssignmentsWithUsers } = await supabase
@@ -174,9 +221,15 @@ export function useDashboardReports() {
         })
         
         // Buscar top issues
-        const { data: issuesData } = await supabase
+        let issuesQuery = supabase
           .from('tickets')
-          .select('category, priority, created_at, resolved_at')
+          .select('category, priority, created_at, resolved_at, unit_id')
+        
+        if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+          issuesQuery = issuesQuery.in('unit_id', allowedUnitIds)
+        }
+        
+        const { data: issuesData } = await issuesQuery
         
         const categoryGroups = (issuesData || []).reduce((acc: any, ticket) => {
           if (!acc[ticket.category]) {
@@ -232,5 +285,6 @@ export function useDashboardReports() {
       }
     },
     refetchInterval: 60000, // Atualizar a cada minuto
+    enabled: !!profile, // Only run when profile is loaded
   })
 }

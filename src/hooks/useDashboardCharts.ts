@@ -1,6 +1,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
 
 interface ChartData {
   ticketsByMonth: Array<{ month: string; abertos: number; fechados: number }>
@@ -11,24 +13,43 @@ interface ChartData {
 }
 
 export function useDashboardCharts() {
+  const { profile } = useAuth()
+  const { data: technicianUnits } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
+
   return useQuery({
-    queryKey: ['dashboard-charts'],
+    queryKey: ['dashboard-charts', profile?.id, profile?.role, technicianUnits],
     queryFn: async (): Promise<ChartData> => {
       console.log('Fetching dashboard charts data...')
+      
+      // Get unit filter for technicians
+      const shouldFilterByUnits = profile?.role === 'technician' && technicianUnits
+      const allowedUnitIds = shouldFilterByUnits ? technicianUnits.map(tu => tu.unit_id) : []
       
       // Buscar tickets dos últimos 6 meses
       const sixMonthsAgo = new Date()
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
       
-      const { data: ticketsData } = await supabase
+      let ticketsQuery = supabase
         .from('tickets')
-        .select('id, status, priority, category, created_at, resolved_at')
+        .select('id, status, priority, category, created_at, resolved_at, unit_id')
         .gte('created_at', sixMonthsAgo.toISOString())
       
+      if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+        ticketsQuery = ticketsQuery.in('unit_id', allowedUnitIds)
+      }
+      
+      const { data: ticketsData } = await ticketsQuery
+      
       // Buscar equipamentos
-      const { data: equipmentData } = await supabase
+      let equipmentQuery = supabase
         .from('equipment')
-        .select('id, status')
+        .select('id, status, unit_id')
+      
+      if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+        equipmentQuery = equipmentQuery.in('unit_id', allowedUnitIds)
+      }
+      
+      const { data: equipmentData } = await equipmentQuery
       
       // Processar dados de tickets por mês
       const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -120,5 +141,6 @@ export function useDashboardCharts() {
       }
     },
     refetchInterval: 60000, // Atualizar a cada minuto
+    enabled: !!profile, // Only run when profile is loaded
   })
 }
