@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -7,34 +6,117 @@ import { supabase } from '@/integrations/supabase/client'
 
 export function useAssignmentPDF() {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const { toast } = useToast()
 
-  const generateAssignmentPDF = async (assignmentId: string, equipmentName: string, userName: string) => {
+  const fetchAssignmentData = async (assignmentId: string) => {
+    // Buscar dados completos da atribuição
+    const { data: assignment, error: assignmentError } = await supabase
+      .from('assignments')
+      .select(`
+        *,
+        equipment:equipment(id, name, type, brand, model, serial_number, tombamento, unit:units(name)),
+        user:profiles!assignments_user_id_fkey(id, name, email, unit:units(name)),
+        assigned_by_user:profiles!assignments_assigned_by_fkey(id, name, email)
+      `)
+      .eq('id', assignmentId)
+      .single()
+
+    if (assignmentError) throw assignmentError
+
+    // Buscar configurações do sistema
+    const { data: systemSettings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('*')
+      .single()
+
+    if (settingsError) throw settingsError
+
+    return { assignment, systemSettings }
+  }
+
+  const previewAssignmentPDF = async (assignmentId: string, equipmentName: string, userName: string) => {
+    setIsLoadingPreview(true)
+    
+    try {
+      const data = await fetchAssignmentData(assignmentId)
+      return data
+    } catch (error: any) {
+      console.error('Erro ao carregar dados para pré-visualização:', error)
+      toast({
+        title: 'Erro ao carregar pré-visualização',
+        description: error.message || 'Ocorreu um erro ao carregar os dados.',
+        variant: 'destructive',
+      })
+      throw error
+    } finally {
+      setIsLoadingPreview(false)
+    }
+  }
+
+  const printFromPreview = async (assignment: any, systemSettings: any) => {
+    try {
+      // Criar o mesmo conteúdo HTML usado para PDF
+      const printContent = createAssignmentPrintHTML(assignment, systemSettings)
+      
+      // Criar elemento temporário para impressão
+      const tempElement = document.createElement('div')
+      tempElement.innerHTML = printContent
+      tempElement.style.position = 'absolute'
+      tempElement.style.left = '-9999px'
+      tempElement.style.width = '800px'
+      tempElement.style.backgroundColor = 'white'
+      document.body.appendChild(tempElement)
+
+      // Aguardar um momento para renderização
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Criar CSS específico para impressão
+      const printCSS = `
+        @media print {
+          body * { visibility: hidden; }
+          .print-content, .print-content * { visibility: visible; }
+          .print-content { position: absolute; left: 0; top: 0; width: 100%; }
+          @page { margin: 0.5in; }
+        }
+      `
+
+      // Adicionar classe CSS
+      tempElement.className = 'print-content'
+
+      // Criar style element
+      const styleElement = document.createElement('style')
+      styleElement.textContent = printCSS
+      document.head.appendChild(styleElement)
+
+      // Imprimir
+      window.print()
+
+      // Limpar após impressão
+      setTimeout(() => {
+        document.body.removeChild(tempElement)
+        document.head.removeChild(styleElement)
+      }, 1000)
+
+      toast({
+        title: 'Preparando impressão',
+        description: 'O documento está sendo preparado para impressão.',
+      })
+
+    } catch (error: any) {
+      console.error('Erro ao imprimir:', error)
+      toast({
+        title: 'Erro ao imprimir',
+        description: error.message || 'Ocorreu um erro ao preparar a impressão.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const downloadPDFFromPreview = async (assignment: any, systemSettings: any, equipmentName: string, userName: string) => {
     setIsGenerating(true)
     
     try {
-      // Buscar dados completos da atribuição
-      const { data: assignment, error: assignmentError } = await supabase
-        .from('assignments')
-        .select(`
-          *,
-          equipment:equipment(id, name, type, brand, model, serial_number, tombamento, unit:units(name)),
-          user:profiles!assignments_user_id_fkey(id, name, email, unit:units(name)),
-          assigned_by_user:profiles!assignments_assigned_by_fkey(id, name, email)
-        `)
-        .eq('id', assignmentId)
-        .single()
-
-      if (assignmentError) throw assignmentError
-
-      // Buscar configurações do sistema
-      const { data: systemSettings, error: settingsError } = await supabase
-        .from('system_settings')
-        .select('*')
-        .single()
-
-      if (settingsError) throw settingsError
-
       // Criar conteúdo HTML para o PDF
       const printContent = createAssignmentPrintHTML(assignment, systemSettings)
       
@@ -66,20 +148,27 @@ export function useAssignmentPDF() {
       const imgWidth = 210 // A4 width in mm
       const pageHeight = 295 // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
 
-      let position = 0
+      // Verificar se precisa de múltiplas páginas
+      if (imgHeight <= pageHeight) {
+        // Conteúdo cabe em uma página
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+      } else {
+        // Conteúdo precisa de múltiplas páginas
+        let heightLeft = imgHeight
+        let position = 0
 
-      // Adicionar primeira página
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      // Adicionar páginas adicionais se necessário
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
+        // Primeira página
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
+
+        // Páginas adicionais
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight
+          pdf.addPage()
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+          heightLeft -= pageHeight
+        }
       }
 
       // Fazer download
@@ -94,6 +183,24 @@ export function useAssignmentPDF() {
         description: `O arquivo ${fileName} foi baixado.`,
       })
 
+    } catch (error: any) {
+      console.error('Erro ao gerar PDF:', error)
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: error.message || 'Ocorreu um erro ao gerar o PDF.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const generateAssignmentPDF = async (assignmentId: string, equipmentName: string, userName: string) => {
+    setIsGenerating(true)
+    
+    try {
+      const { assignment, systemSettings } = await fetchAssignmentData(assignmentId)
+      await downloadPDFFromPreview(assignment, systemSettings, equipmentName, userName)
     } catch (error: any) {
       console.error('Erro ao gerar PDF:', error)
       toast({
@@ -230,6 +337,10 @@ export function useAssignmentPDF() {
 
   return {
     generateAssignmentPDF,
-    isGenerating
+    previewAssignmentPDF,
+    downloadPDFFromPreview,
+    printFromPreview,
+    isGenerating,
+    isLoadingPreview
   }
 }
