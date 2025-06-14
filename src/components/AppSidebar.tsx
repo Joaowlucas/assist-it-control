@@ -111,13 +111,19 @@ export function AppSidebar() {
     }
   }
 
-  const renderProfileDropdown = () => {
-    if (profile?.role === 'admin') {
-      return <AdminProfileDropdown />
-    } else if (profile?.role === 'technician') {
-      return <TechnicianProfileDropdown />
-    } else {
-      return <UserProfileDropdown />
+  // Função para renderizar apenas UM componente de perfil baseado no role
+  const renderSingleProfileDropdown = () => {
+    if (!profile) return null
+    
+    switch (profile.role) {
+      case 'admin':
+        return <AdminProfileDropdown />
+      case 'technician':
+        return <TechnicianProfileDropdown />
+      case 'user':
+        return <UserProfileDropdown />
+      default:
+        return <UserProfileDropdown />
     }
   }
 
@@ -151,9 +157,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer com perfil do usuário - apenas um componente */}
+      {/* Footer com APENAS UM componente de perfil */}
       <div className="border-t p-4">
-        {renderProfileDropdown()}
+        {renderSingleProfileDropdown()}
       </div>
     </Sidebar>
   )

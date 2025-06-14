@@ -19,8 +19,9 @@ export default function Login() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Se está carregando autenticação E não temos dados ainda, mostrar loading
-  if (authLoading && !user && !profile) {
+  // Só mostrar loading se estamos carregando autenticação E temos usuário/perfil
+  // Isso evita o loading após logout
+  if (authLoading && (user || profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -59,7 +60,7 @@ export default function Login() {
     }
   }
 
-  // Renderizar logo imediatamente se disponível
+  // Renderizar logo sempre, independente do estado de autenticação
   const renderLogo = () => {
     if (systemSettings?.company_logo_url) {
       return (
