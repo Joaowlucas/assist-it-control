@@ -1,6 +1,6 @@
 
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
 import { Button } from '@/components/ui/button'
@@ -13,13 +13,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function Login() {
   const { user, profile, signIn, loading: authLoading } = useAuth()
   const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings()
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Se está carregando autenticação, mostrar loading
-  if (authLoading) {
+  // Se está carregando autenticação E não temos dados ainda, mostrar loading
+  if (authLoading && !user && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -39,12 +40,9 @@ export default function Login() {
   }
 
   if (user && profile) {
-    // Redirect based on user role
-    if (profile.role === 'user') {
-      return <Navigate to="/user-portal" replace />
-    } else {
-      return <Navigate to="/" replace />
-    }
+    // Verificar se há uma rota de origem no state
+    const from = location.state?.from?.pathname || (profile.role === 'user' ? '/user-portal' : '/')
+    return <Navigate to={from} replace />
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,30 +59,40 @@ export default function Login() {
     }
   }
 
+  // Renderizar logo imediatamente se disponível
+  const renderLogo = () => {
+    if (systemSettings?.company_logo_url) {
+      return (
+        <img 
+          src={systemSettings.company_logo_url} 
+          alt="Logo da Empresa" 
+          className="h-16 w-auto object-contain"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      )
+    }
+    
+    if (settingsLoading) {
+      return <Skeleton className="h-16 w-16 rounded" />
+    }
+    
+    return (
+      <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
+        <span className="text-2xl font-bold text-muted-foreground">
+          {systemSettings?.company_name?.charAt(0) || 'S'}
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            {settingsLoading ? (
-              <Skeleton className="h-16 w-16 rounded" />
-            ) : systemSettings?.company_logo_url ? (
-              <img 
-                src={systemSettings.company_logo_url} 
-                alt="Logo da Empresa" 
-                className="h-16 w-auto object-contain"
-                onError={(e) => {
-                  // Se erro ao carregar imagem, esconder elemento
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
-            ) : (
-              <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
-                <span className="text-2xl font-bold text-muted-foreground">
-                  {systemSettings?.company_name?.charAt(0) || 'S'}
-                </span>
-              </div>
-            )}
+            {renderLogo()}
           </div>
           <CardTitle>Sistema de Suporte TI</CardTitle>
           <CardDescription>

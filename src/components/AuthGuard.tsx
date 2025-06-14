@@ -12,7 +12,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
-  // Mostrar loading apenas se não temos dados e está carregando
+  // Mostrar loading apenas se realmente necessário
   if (loading && !user && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -25,7 +25,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     )
   }
 
-  // Se não há usuário ou perfil, redirecionar para login
+  // Se não há usuário ou perfil, redirecionar para login preservando a rota atual
   if (!user || !profile) {
     if (location.pathname !== '/login') {
       return <Navigate to="/login" state={{ from: location }} replace />
@@ -38,22 +38,16 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     // admin_tech significa que tanto admin quanto technician podem acessar
     if (requiredRole === "admin_tech") {
       if (profile.role !== "admin" && profile.role !== "technician") {
-        if (location.pathname !== '/user-portal') {
-          return <Navigate to="/user-portal" replace />
-        }
+        return <Navigate to="/user-portal" replace />
       }
     } else if (profile.role !== requiredRole) {
       // Se é admin ou técnico tentando acessar área de usuário, redireciona para dashboard
       if ((profile.role === 'admin' || profile.role === 'technician') && requiredRole === 'user') {
-        if (location.pathname !== '/') {
-          return <Navigate to="/" replace />
-        }
+        return <Navigate to="/" replace />
       }
       // Se é usuário tentando acessar área de admin/técnico, redireciona para portal do usuário
       if (profile.role === 'user' && (requiredRole === 'admin' || requiredRole === 'technician')) {
-        if (location.pathname !== '/user-portal') {
-          return <Navigate to="/user-portal" replace />
-        }
+        return <Navigate to="/user-portal" replace />
       }
     }
   }

@@ -15,7 +15,39 @@ interface SystemSettings {
   default_priority: string
 }
 
+// Cache localStorage para system settings
+const SETTINGS_CACHE_KEY = 'system_settings_cache'
+const CACHE_DURATION = 60 * 60 * 1000 // 1 hora
+
+function getCachedSettings(): SystemSettings | null {
+  try {
+    const cached = localStorage.getItem(SETTINGS_CACHE_KEY)
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached)
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data
+      }
+    }
+  } catch (error) {
+    console.error('Error reading cached settings:', error)
+  }
+  return null
+}
+
+function setCachedSettings(data: SystemSettings) {
+  try {
+    localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }))
+  } catch (error) {
+    console.error('Error caching settings:', error)
+  }
+}
+
 export function useSystemSettings() {
+  const cachedData = getCachedSettings()
+  
   return useQuery({
     queryKey: ['system-settings'],
     queryFn: async () => {
@@ -25,13 +57,17 @@ export function useSystemSettings() {
         .single()
       
       if (error) throw error
+      
+      // Cache os dados após buscar
+      setCachedSettings(data as SystemSettings)
       return data as SystemSettings
     },
-    staleTime: 30 * 60 * 1000, // 30 minutos - dados raramente mudam
-    gcTime: 60 * 60 * 1000, // 1 hora
-    refetchOnMount: false,
+    staleTime: 60 * 60 * 1000, // 1 hora
+    gcTime: 24 * 60 * 60 * 1000, // 24 horas
+    refetchOnMount: !cachedData, // Só refetch se não tiver cache
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    initialData: cachedData, // Usar dados do cache como inicial
   })
 }
 
@@ -49,10 +85,13 @@ export function useUpdateSystemSettings() {
         .single()
 
       if (error) throw error
+      
+      // Atualizar cache após update
+      setCachedSettings(data as SystemSettings)
       return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['system-settings'] })
+    onSuccess: (data) => {
+      queryClient.setQueryData(['system-settings'], data)
       toast({
         title: "Configurações salvas!",
         description: "As configurações foram atualizadas com sucesso.",

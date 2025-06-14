@@ -75,10 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null)
       }
       
-      // Reduzir tempo de loading inicial
+      // Reduzir tempo de loading inicial drasticamente
       if (!initialLoadComplete.current) {
         initialLoadComplete.current = true
-        setLoading(false)
+        setTimeout(() => setLoading(false), 100) // Mínimo delay para evitar flash
       }
     })
 

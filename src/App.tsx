@@ -28,20 +28,10 @@ const queryClient = new QueryClient({
       refetchOnMount: 'always',
       refetchOnReconnect: 'always',
       retry: (failureCount, error) => {
-        // Não retry para erros 4xx
         if (error && 'status' in error && typeof error.status === 'number') {
           if (error.status >= 400 && error.status < 500) return false
         }
         return failureCount < 2
-      },
-      // Cache mais agressivo para dados estáticos
-      queryKeyHashFn: (queryKey) => {
-        const key = JSON.stringify(queryKey)
-        // System settings são dados estáticos, cache por mais tempo
-        if (key.includes('system-settings')) {
-          return `static-${key}`
-        }
-        return key
       },
     },
     mutations: {
@@ -50,10 +40,10 @@ const queryClient = new QueryClient({
   },
 });
 
-// Prefetch system settings para evitar loading desnecessário
+// Prefetch system settings para garantir que estejam disponíveis
 queryClient.prefetchQuery({
   queryKey: ['system-settings'],
-  staleTime: 30 * 60 * 1000, // 30 minutos
+  staleTime: 60 * 60 * 1000, // 1 hora
 })
 
 const App = () => (
