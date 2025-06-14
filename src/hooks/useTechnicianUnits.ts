@@ -18,6 +18,7 @@ export function useTechnicianUnits(technicianId?: string) {
     queryFn: async () => {
       if (!technicianId) return []
       
+      console.log('Fetching technician units for:', technicianId)
       const { data, error } = await supabase
         .from('technician_units')
         .select(`
@@ -30,6 +31,9 @@ export function useTechnicianUnits(technicianId?: string) {
       return data as TechnicianUnit[]
     },
     enabled: !!technicianId,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: true, // Refetch quando voltar ao foco
+    refetchOnReconnect: true,
   })
 }
 
@@ -51,8 +55,16 @@ export function useCreateTechnicianUnits() {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Invalidar dados relacionados às unidades do técnico
       queryClient.invalidateQueries({ queryKey: ['technician-units'] })
+      queryClient.invalidateQueries({ queryKey: ['equipment'] })
+      queryClient.invalidateQueries({ queryKey: ['assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['available-equipment'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-equipment-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-charts'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-reports'] })
     },
     onError: (error: any) => {
       toast({
@@ -91,8 +103,17 @@ export function useUpdateTechnicianUnits() {
         return data
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['technician-units'] })
+    onSuccess: (_, variables) => {
+      // Invalidar todas as queries que dependem das unidades do técnico
+      queryClient.invalidateQueries({ queryKey: ['technician-units', variables.technicianId] })
+      queryClient.invalidateQueries({ queryKey: ['equipment'] })
+      queryClient.invalidateQueries({ queryKey: ['assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['available-equipment'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-equipment-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-charts'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-reports'] })
+      
       toast({
         title: 'Unidades atualizadas!',
         description: 'As unidades do técnico foram atualizadas com sucesso.',

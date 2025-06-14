@@ -17,7 +17,7 @@ interface SystemSettings {
 
 // Cache localStorage para system settings
 const SETTINGS_CACHE_KEY = 'system_settings_cache'
-const CACHE_DURATION = 60 * 60 * 1000 // 1 hora
+const CACHE_DURATION = 30 * 60 * 1000 // Reduzido para 30 minutos
 
 function getCachedSettings(): SystemSettings | null {
   try {
@@ -27,9 +27,12 @@ function getCachedSettings(): SystemSettings | null {
       if (Date.now() - timestamp < CACHE_DURATION) {
         return data
       }
+      // Se o cache expirou, remove do localStorage
+      localStorage.removeItem(SETTINGS_CACHE_KEY)
     }
   } catch (error) {
     console.error('Error reading cached settings:', error)
+    localStorage.removeItem(SETTINGS_CACHE_KEY)
   }
   return null
 }
@@ -51,6 +54,7 @@ export function useSystemSettings() {
   return useQuery({
     queryKey: ['system-settings'],
     queryFn: async () => {
+      console.log('Fetching system settings from database...')
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
@@ -62,11 +66,11 @@ export function useSystemSettings() {
       setCachedSettings(data as SystemSettings)
       return data as SystemSettings
     },
-    staleTime: 60 * 60 * 1000, // 1 hora
+    staleTime: 30 * 60 * 1000, // 30 minutos
     gcTime: 24 * 60 * 60 * 1000, // 24 horas
-    refetchOnMount: !cachedData, // Só refetch se não tiver cache
+    refetchOnMount: !cachedData, // Só refetch se não tiver cache válido
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true, // Ativado para reconectar
     initialData: cachedData, // Usar dados do cache como inicial
   })
 }
@@ -92,6 +96,8 @@ export function useUpdateSystemSettings() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['system-settings'], data)
+      // Invalidar todas as queries que dependem das configurações
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] })
       toast({
         title: "Configurações salvas!",
         description: "As configurações foram atualizadas com sucesso.",

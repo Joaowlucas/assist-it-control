@@ -37,7 +37,7 @@ const technicianItems = [
 export function AppSidebar() {
   const { state } = useSidebar()
   const location = useLocation()
-  const { data: systemSettings } = useSystemSettings()
+  const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings()
   const { profile } = useAuth()
   const currentPath = location.pathname
 
@@ -56,6 +56,24 @@ export function AppSidebar() {
     isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
 
   const renderHeader = () => {
+    // Mostrar placeholder enquanto carrega
+    if (settingsLoading) {
+      if (state === "collapsed") {
+        return (
+          <div className="flex justify-center">
+            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        )
+      } else {
+        return (
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        )
+      }
+    }
+
     if (systemSettings?.company_logo_url) {
       if (state === "collapsed") {
         return (
@@ -64,6 +82,12 @@ export function AppSidebar() {
               src={systemSettings.company_logo_url} 
               alt="Logo" 
               className="h-8 w-8 object-contain"
+              onError={(e) => {
+                console.error('Erro ao carregar logo:', systemSettings.company_logo_url)
+                // Fallback para texto se a imagem falhar
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
             />
           </div>
         )
@@ -74,6 +98,11 @@ export function AppSidebar() {
               src={systemSettings.company_logo_url} 
               alt="Logo da Empresa" 
               className="h-8 w-8 object-contain"
+              onError={(e) => {
+                console.error('Erro ao carregar logo:', systemSettings.company_logo_url)
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
             />
             <span className="font-bold text-lg">
               {systemSettings.company_name || "IT Support"}
@@ -85,10 +114,12 @@ export function AppSidebar() {
       return (
         <>
           <h2 className={`font-bold text-lg ${state === "collapsed" ? "hidden" : "block"}`}>
-            IT Support
+            {systemSettings?.company_name || "IT Support"}
           </h2>
           {state === "collapsed" && (
-            <div className="text-center font-bold text-sm">IT</div>
+            <div className="text-center font-bold text-sm">
+              {systemSettings?.company_name ? systemSettings.company_name.substring(0, 2).toUpperCase() : "IT"}
+            </div>
           )}
         </>
       )
