@@ -17,6 +17,7 @@ import { EquipmentRequestsSection } from "@/components/EquipmentRequestsSection"
 import { OpenTicketsModal, ClosedTicketsModal, ActiveEquipmentModal, AllAssignmentsModal } from "@/components/UserPortalModals"
 import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
+import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
 import { useAuth } from "@/hooks/useAuth"
 import { Edit, Trash2, Eye } from "lucide-react"
 
@@ -24,6 +25,7 @@ export default function UserPortal() {
   const { profile } = useAuth()
   const { data: tickets = [], isLoading: ticketsLoading } = useUserTickets()
   const { data: assignments = [], isLoading: assignmentsLoading } = useUserAssignments()
+  const { data: technicianUnits = [] } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
   const createTicketMutation = useCreateUserTicket()
   const deleteTicketMutation = useDeleteUserTicket()
   
@@ -31,6 +33,7 @@ export default function UserPortal() {
   const [images, setImages] = useState<File[]>([])
   const [editingTicket, setEditingTicket] = useState<UserTicket | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedUnitId, setSelectedUnitId] = useState<string>("")
 
   // Estados para os modais
   const [openTicketsModalOpen, setOpenTicketsModalOpen] = useState(false)
@@ -101,11 +104,20 @@ export default function UserPortal() {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
     
+    // Para técnicos, usar a unidade selecionada, para usuários normais usar sua unidade
+    const unitId = profile?.role === 'technician' ? selectedUnitId : profile?.unit_id
+    
+    if (!unitId) {
+      console.error('Unidade não selecionada')
+      return
+    }
+    
     const ticketData = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
       priority: formData.get('priority') as 'baixa' | 'media' | 'alta' | 'critica',
       category: formData.get('category') as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
+      unit_id: unitId,
       images: images.length > 0 ? images : undefined
     }
 
@@ -113,6 +125,7 @@ export default function UserPortal() {
       await createTicketMutation.mutateAsync(ticketData)
       setIsDialogOpen(false)
       setImages([])
+      setSelectedUnitId("")
       ;(e.target as HTMLFormElement).reset()
     } catch (error) {
       console.error('Error creating ticket:', error)
@@ -139,6 +152,10 @@ export default function UserPortal() {
   const openTickets = tickets.filter(t => t.status !== "fechado")
   const closedTickets = tickets.filter(t => t.status === "fechado")
   const activeAssignments = assignments.filter(a => a.status === "ativo")
+
+  // Verificar se é técnico e tem unidades atribuídas
+  const isTechnician = profile?.role === 'technician'
+  const availableUnits = isTechnician ? technicianUnits : []
 
   if (ticketsLoading || assignmentsLoading) {
     return (
@@ -234,13 +251,31 @@ export default function UserPortal() {
                 
                 <div>
                   <Label className="text-slate-700">Unidade</Label>
-                  <Input 
-                    value={profile?.unit?.name || 'Unidade não definida'}
-                    disabled
-                    className="bg-slate-100 border-slate-300"
-                  />
+                  {isTechnician && availableUnits.length > 0 ? (
+                    <Select value={selectedUnitId} onValueChange={setSelectedUnitId} required>
+                      <SelectTrigger className="border-slate-300">
+                        <SelectValue placeholder="Selecione a unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableUnits.map((unit) => (
+                          <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                            {unit.unit?.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      value={profile?.unit?.name || 'Unidade não definida'}
+                      disabled
+                      className="bg-slate-100 border-slate-300"
+                    />
+                  )}
                   <p className="text-xs text-slate-500 mt-1">
-                    Sua unidade será automaticamente selecionada
+                    {isTechnician 
+                      ? 'Selecione a unidade onde o problema está ocorrendo'
+                      : 'Sua unidade será automaticamente selecionada'
+                    }
                   </p>
                 </div>
               </div>
@@ -258,7 +293,7 @@ export default function UserPortal() {
                 <Button 
                   type="submit" 
                   className="bg-slate-600 hover:bg-slate-700 text-white"
-                  disabled={createTicketMutation.isPending}
+                  disabled={createTicketMutation.isPending || (isTechnician && !selectedUnitId)}
                 >
                   {createTicketMutation.isPending ? 'Criando...' : 'Criar Chamado'}
                 </Button>
