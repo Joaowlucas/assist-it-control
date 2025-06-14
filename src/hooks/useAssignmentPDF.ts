@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -56,47 +57,79 @@ export function useAssignmentPDF() {
 
   const printFromPreview = async (assignment: any, systemSettings: any) => {
     try {
-      // Criar o mesmo conteúdo HTML usado para PDF
+      // Criar o conteúdo HTML para impressão
       const printContent = createAssignmentPrintHTML(assignment, systemSettings)
       
-      // Criar elemento temporário para impressão
-      const tempElement = document.createElement('div')
-      tempElement.innerHTML = printContent
-      tempElement.style.position = 'absolute'
-      tempElement.style.left = '-9999px'
-      tempElement.style.width = '800px'
-      tempElement.style.backgroundColor = 'white'
-      document.body.appendChild(tempElement)
+      // Criar uma nova janela para impressão
+      const printWindow = window.open('', '_blank', 'width=800,height=600')
+      
+      if (!printWindow) {
+        toast({
+          title: 'Erro ao abrir janela de impressão',
+          description: 'Por favor, permita pop-ups para este site e tente novamente.',
+          variant: 'destructive',
+        })
+        return
+      }
 
-      // Aguardar um momento para renderização
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Escrever o conteúdo HTML completo na nova janela
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Relatório de Atribuição</title>
+          <style>
+            @page {
+              margin: 0.5in;
+              size: A4;
+            }
+            
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+                color: #000;
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              
+              * {
+                box-sizing: border-box;
+              }
+            }
+            
+            body {
+              margin: 0;
+              padding: 20px;
+              font-family: Arial, sans-serif;
+              color: #000;
+              background: white;
+              line-height: 1.4;
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+        </html>
+      `)
+      
+      printWindow.document.close()
 
-      // Criar CSS específico para impressão
-      const printCSS = `
-        @media print {
-          body * { visibility: hidden; }
-          .print-content, .print-content * { visibility: visible; }
-          .print-content { position: absolute; left: 0; top: 0; width: 100%; }
-          @page { margin: 0.5in; }
-        }
-      `
-
-      // Adicionar classe CSS
-      tempElement.className = 'print-content'
-
-      // Criar style element
-      const styleElement = document.createElement('style')
-      styleElement.textContent = printCSS
-      document.head.appendChild(styleElement)
-
-      // Imprimir
-      window.print()
-
-      // Limpar após impressão
-      setTimeout(() => {
-        document.body.removeChild(tempElement)
-        document.head.removeChild(styleElement)
-      }, 1000)
+      // Aguardar o carregamento completo
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print()
+          
+          // Fechar a janela após a impressão
+          setTimeout(() => {
+            printWindow.close()
+          }, 1000)
+        }, 500)
+      }
 
       toast({
         title: 'Preparando impressão',
@@ -253,7 +286,7 @@ export function useAssignmentPDF() {
     const duration = calculateDuration(assignment.start_date, assignment.end_date)
 
     return `
-      <div style="font-family: Arial, sans-serif; padding: 32px; background: white; max-width: 800px;">
+      <div style="font-family: Arial, sans-serif; padding: 32px; background: white; max-width: 800px; margin: 0 auto;">
         <!-- Header -->
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 2px solid #d1d5db;">
           <div style="display: flex; align-items: center; gap: 16px;">
