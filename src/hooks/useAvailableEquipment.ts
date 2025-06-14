@@ -1,6 +1,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
 
 export interface AvailableEquipment {
   id: string
@@ -18,10 +20,19 @@ export interface AvailableEquipment {
 }
 
 export function useAvailableEquipment() {
+  const { profile } = useAuth()
+  const { data: technicianUnits } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
+
   return useQuery({
-    queryKey: ['available-equipment'],
+    queryKey: ['available-equipment', profile?.id, profile?.role, technicianUnits],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('Fetching available equipment data...')
+      
+      // Get unit filter for technicians
+      const shouldFilterByUnits = profile?.role === 'technician' && technicianUnits
+      const allowedUnitIds = shouldFilterByUnits ? technicianUnits.map(tu => tu.unit_id) : []
+
+      let query = supabase
         .from('equipment')
         .select(`
           id,
@@ -36,19 +47,35 @@ export function useAvailableEquipment() {
           unit:units(name)
         `)
         .eq('status', 'disponivel')
-        .order('name', { ascending: true })
+
+      // Apply unit filter for technicians
+      if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+        query = query.in('unit_id', allowedUnitIds)
+      }
+
+      const { data, error } = await query.order('name', { ascending: true })
 
       if (error) throw error
       return data as AvailableEquipment[]
     },
+    enabled: !!profile, // Only run when profile is loaded
   })
 }
 
 export function useEquipmentByType(equipmentType: string) {
+  const { profile } = useAuth()
+  const { data: technicianUnits } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
+
   return useQuery({
-    queryKey: ['equipment-by-type', equipmentType],
+    queryKey: ['equipment-by-type', equipmentType, profile?.id, profile?.role, technicianUnits],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('Fetching equipment by type data...')
+      
+      // Get unit filter for technicians
+      const shouldFilterByUnits = profile?.role === 'technician' && technicianUnits
+      const allowedUnitIds = shouldFilterByUnits ? technicianUnits.map(tu => tu.unit_id) : []
+
+      let query = supabase
         .from('equipment')
         .select(`
           id,
@@ -64,11 +91,17 @@ export function useEquipmentByType(equipmentType: string) {
         `)
         .eq('status', 'disponivel')
         .ilike('type', `%${equipmentType}%`)
-        .order('name', { ascending: true })
+
+      // Apply unit filter for technicians
+      if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+        query = query.in('unit_id', allowedUnitIds)
+      }
+
+      const { data, error } = await query.order('name', { ascending: true })
 
       if (error) throw error
       return data as AvailableEquipment[]
     },
-    enabled: !!equipmentType,
+    enabled: !!equipmentType && !!profile,
   })
 }

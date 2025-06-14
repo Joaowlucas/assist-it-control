@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
 
 type Equipment = Tables<'equipment'> & {
   unit?: { name: string } | null
@@ -11,20 +13,36 @@ type EquipmentInsert = TablesInsert<'equipment'>
 type EquipmentUpdate = TablesUpdate<'equipment'>
 
 export function useEquipment() {
+  const { profile } = useAuth()
+  const { data: technicianUnits } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
+
   return useQuery({
-    queryKey: ['equipment'],
+    queryKey: ['equipment', profile?.id, profile?.role, technicianUnits],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('Fetching equipment data...')
+      
+      // Get unit filter for technicians
+      const shouldFilterByUnits = profile?.role === 'technician' && technicianUnits
+      const allowedUnitIds = shouldFilterByUnits ? technicianUnits.map(tu => tu.unit_id) : []
+
+      let query = supabase
         .from('equipment')
         .select(`
           *,
           unit:units(name)
         `)
-        .order('tombamento', { ascending: true })
+
+      // Apply unit filter for technicians
+      if (shouldFilterByUnits && allowedUnitIds.length > 0) {
+        query = query.in('unit_id', allowedUnitIds)
+      }
+
+      const { data, error } = await query.order('tombamento', { ascending: true })
       
       if (error) throw error
       return data as Equipment[]
     },
+    enabled: !!profile, // Only run when profile is loaded
   })
 }
 
