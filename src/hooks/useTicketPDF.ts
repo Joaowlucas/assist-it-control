@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -82,52 +83,59 @@ export function useTicketPDF() {
       // Criar o mesmo conteúdo HTML usado para PDF
       const printContent = createPrintHTML(ticket, systemSettings)
       
-      // Criar elemento temporário para impressão
-      const printWindow = window.open('', '_blank')
-      if (!printWindow) {
-        throw new Error('Não foi possível abrir a janela de impressão')
-      }
+      // Criar elemento temporário invisível na página atual
+      const tempElement = document.createElement('div')
+      tempElement.innerHTML = `
+        <div id="print-content" style="display: none;">
+          ${printContent}
+        </div>
+      `
+      document.body.appendChild(tempElement)
 
-      // Escrever o conteúdo na nova janela
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Chamado #${ticket.ticket_number}</title>
-            <style>
-              @media print {
-                body { margin: 0; }
-                .no-print { display: none !important; }
-                .page-break { page-break-before: always; }
-              }
-              @media screen {
-                body { padding: 20px; background: #f5f5f5; }
-                .print-container { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="print-container">
-              ${printContent}
-            </div>
-          </body>
-        </html>
-      `)
-      
-      printWindow.document.close()
-      
-      // Aguardar imagens carregarem antes de imprimir
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print()
-          printWindow.close()
-        }, 1000)
-      }
+      // Aplicar estilos de impressão
+      const printStyles = document.createElement('style')
+      printStyles.innerHTML = `
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #print-content, #print-content * {
+            visibility: visible !important;
+          }
+          #print-content {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            display: block !important;
+          }
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `
+      document.head.appendChild(printStyles)
 
       toast({
         title: 'Preparando impressão',
         description: 'O documento está sendo preparado para impressão.',
       })
+
+      // Aguardar um pouco para garantir que o conteúdo foi renderizado
+      setTimeout(() => {
+        // Imprimir
+        window.print()
+        
+        // Limpar após impressão
+        setTimeout(() => {
+          document.body.removeChild(tempElement)
+          document.head.removeChild(printStyles)
+        }, 1000)
+      }, 500)
 
     } catch (error: any) {
       console.error('Erro ao imprimir:', error)
@@ -321,7 +329,7 @@ export function useTicketPDF() {
                 <div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 8px;">
                   ${attachment.mime_type?.startsWith('image/') ? `
                     <img src="${attachment.public_url}" alt="${attachment.file_name}" 
-                         style="width: 100%; height: 128px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" />
+                         style="width: 100%; height: 200px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" />
                   ` : `
                     <div style="text-align: center; padding: 16px;">
                       <p style="font-weight: 500; color: #374151; margin: 0;">${attachment.file_name}</p>
