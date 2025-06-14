@@ -5,8 +5,8 @@ import { Label } from '@/components/ui/label'
 import { ImageUpload } from '@/components/ImageUpload'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useAddTicketAttachment, useRemoveTicketAttachment } from '@/hooks/useTicketAttachmentManagement'
-import { X, FileImage, Download, Eye, ZoomIn } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { X, FileImage, Download, Eye } from 'lucide-react'
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 
 interface Attachment {
   id: string
@@ -86,21 +86,16 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
               <div key={attachment.id} className="relative border border-slate-200 rounded-lg p-3 bg-slate-50">
                 {isImageFile(attachment.mime_type) ? (
                   <div className="space-y-2">
-                    <div className="relative group">
-                      <img
-                        src={attachment.public_url}
-                        alt={attachment.file_name}
-                        className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => setSelectedImage(attachment.public_url)}
-                        onError={(e) => {
-                          console.error('Error loading image:', attachment.public_url)
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded flex items-center justify-center">
-                        <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
+                    <img
+                      src={attachment.public_url}
+                      alt={attachment.file_name}
+                      className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setSelectedImage(attachment.public_url)}
+                      onError={(e) => {
+                        console.error('Error loading image:', attachment.public_url)
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
                     <div className="flex items-center justify-between">
                       <Button
                         type="button"
@@ -211,44 +206,27 @@ export function TicketAttachmentManager({ ticketId, existingAttachments }: Ticke
         )}
       </div>
 
-      {/* Modal de visualização de imagem em tela cheia */}
+      {/* Modal de visualização de imagem */}
       {selectedImage && (
         <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-          <DialogContent className="max-w-[98vw] w-[98vw] max-h-[98vh] h-[98vh] p-0 bg-black/95">
-            <DialogHeader className="absolute top-0 left-0 right-0 z-10 bg-black/50 text-white p-4">
-              <DialogTitle className="text-white flex items-center justify-between">
-                <span>Visualização do Anexo</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(selectedImage, '_blank')}
-                    className="text-white hover:bg-white/20"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Baixar Original
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedImage(null)}
-                    className="text-white hover:bg-white/20"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="w-full h-full flex items-center justify-center p-4">
+          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-2">
+            <div className="relative">
               <img
                 src={selectedImage}
-                alt="Anexo em tela cheia"
-                className="max-w-full max-h-full object-contain"
-                style={{ maxHeight: 'calc(100vh - 100px)' }}
+                alt="Anexo"
+                className="w-full h-auto max-h-[80vh] object-contain rounded"
                 onError={(e) => {
                   console.error('Error loading full size image:', selectedImage)
                 }}
               />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(selectedImage, '_blank')}
+                className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
