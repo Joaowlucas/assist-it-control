@@ -11,22 +11,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ImageUpload } from "@/components/ImageUpload"
 import { useTickets, useCreateTicket } from "@/hooks/useTickets"
-import { useCreateUserTicket } from "@/hooks/useUserTickets"
+import { useCreateUserTicket, useDeleteUserTicket } from "@/hooks/useUserTickets"
 import { useUnits } from "@/hooks/useUnits"
 import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
 import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
 import { TicketFilters } from "@/components/TicketFilters"
 import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
+import { EditTicketDialog } from "@/components/EditTicketDialog"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
-import { Edit, Plus, Eye, Clock, User, MapPin } from "lucide-react"
+import { Edit, Plus, Eye, Clock, User, MapPin, Trash2 } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 export default function Tickets() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [attachmentImages, setAttachmentImages] = useState<File[]>([])
   
   // Filtros
@@ -42,6 +45,7 @@ export default function Tickets() {
   const { data: technicianUnits = [] } = useTechnicianUnits(profile?.id)
   const { data: profiles = [] } = useProfiles()
   const createUserTicket = useCreateUserTicket()
+  const deleteTicket = useDeleteUserTicket()
   const updateStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
 
@@ -112,7 +116,7 @@ export default function Tickets() {
 
     await createUserTicket.mutateAsync({
       ...ticketData,
-      attachments: attachmentImages
+      images: attachmentImages
     })
 
     setIsCreateDialogOpen(false)
@@ -128,9 +132,18 @@ export default function Tickets() {
     await assignTicket.mutateAsync({ id: ticketId, assigneeId: actualAssigneeId })
   }
 
+  const handleDeleteTicket = async (ticketId: string) => {
+    await deleteTicket.mutateAsync(ticketId)
+  }
+
   const openTicketDetails = (ticket: any) => {
     setSelectedTicket(ticket)
     setIsDetailsDialogOpen(true)
+  }
+
+  const openEditDialog = (ticket: any) => {
+    setSelectedTicket(ticket)
+    setIsEditDialogOpen(true)
   }
 
   const clearFilters = () => {
@@ -139,6 +152,11 @@ export default function Tickets() {
     setPriorityFilter('all')
     setCategoryFilter('all')
     setAssigneeFilter('all')
+  }
+
+  // Verificar se o usuário pode editar/excluir chamados
+  const canEditTicket = (ticket: any) => {
+    return profile?.role === 'admin'
   }
 
   if (ticketsLoading) {
@@ -461,14 +479,57 @@ export default function Tickets() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openTicketDetails(ticket)}
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openTicketDetails(ticket)}
+                          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canEditTicket(ticket) && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(ticket)}
+                              className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir o chamado #{ticket.ticket_number}? 
+                                    Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteTicket(ticket.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -491,14 +552,26 @@ export default function Tickets() {
                             : ticket.description}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openTicketDetails(ticket)}
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 ml-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openTicketDetails(ticket)}
+                          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canEditTicket(ticket) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(ticket)}
+                            className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -547,6 +620,13 @@ export default function Tickets() {
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         technicians={technicians}
+      />
+
+      {/* Dialog de Edição */}
+      <EditTicketDialog
+        ticket={selectedTicket}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
       />
     </div>
   )
