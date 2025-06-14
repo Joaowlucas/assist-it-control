@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { TicketPrintView } from "@/components/TicketPrintView"
 import { useTicketPDF } from "@/hooks/useTicketPDF"
-import { Download, X } from "lucide-react"
+import { Download, X, Printer } from "lucide-react"
 
 interface TicketPDFPreviewDialogProps {
   open: boolean
@@ -21,15 +21,16 @@ export function TicketPDFPreviewDialog({
   systemSettings, 
   ticketNumber 
 }: TicketPDFPreviewDialogProps) {
-  const { downloadPDFFromPreview, isGenerating } = useTicketPDF()
+  const { downloadPDFFromPreview, printFromPreview, isGenerating } = useTicketPDF()
 
   const handleDownload = async () => {
     if (!ticket || !systemSettings) return
     await downloadPDFFromPreview(ticket, systemSettings, ticketNumber)
   }
 
-  const handlePrint = () => {
-    window.print()
+  const handlePrint = async () => {
+    if (!ticket || !systemSettings) return
+    await printFromPreview(ticket, systemSettings)
   }
 
   return (
@@ -44,8 +45,9 @@ export function TicketPDFPreviewDialog({
                 size="sm"
                 onClick={handlePrint}
                 className="hidden md:flex"
-                title="Imprimir (Ctrl+P)"
+                title="Imprimir"
               >
+                <Printer className="h-4 w-4 mr-2" />
                 Imprimir
               </Button>
               <Button

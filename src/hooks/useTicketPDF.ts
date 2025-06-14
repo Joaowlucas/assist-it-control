@@ -77,6 +77,68 @@ export function useTicketPDF() {
     }
   }
 
+  const printFromPreview = async (ticket: any, systemSettings: any) => {
+    try {
+      // Criar o mesmo conteúdo HTML usado para PDF
+      const printContent = createPrintHTML(ticket, systemSettings)
+      
+      // Criar elemento temporário para impressão
+      const printWindow = window.open('', '_blank')
+      if (!printWindow) {
+        throw new Error('Não foi possível abrir a janela de impressão')
+      }
+
+      // Escrever o conteúdo na nova janela
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Chamado #${ticket.ticket_number}</title>
+            <style>
+              @media print {
+                body { margin: 0; }
+                .no-print { display: none !important; }
+                .page-break { page-break-before: always; }
+              }
+              @media screen {
+                body { padding: 20px; background: #f5f5f5; }
+                .print-container { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="print-container">
+              ${printContent}
+            </div>
+          </body>
+        </html>
+      `)
+      
+      printWindow.document.close()
+      
+      // Aguardar imagens carregarem antes de imprimir
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print()
+          printWindow.close()
+        }, 1000)
+      }
+
+      toast({
+        title: 'Preparando impressão',
+        description: 'O documento está sendo preparado para impressão.',
+      })
+
+    } catch (error: any) {
+      console.error('Erro ao imprimir:', error)
+      toast({
+        title: 'Erro ao imprimir',
+        description: error.message || 'Ocorreu um erro ao preparar a impressão.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const downloadPDFFromPreview = async (ticket: any, systemSettings: any, ticketNumber: string) => {
     setIsGenerating(true)
     
@@ -313,6 +375,7 @@ export function useTicketPDF() {
     generateTicketPDF,
     previewTicketPDF,
     downloadPDFFromPreview,
+    printFromPreview,
     isGenerating,
     isLoadingPreview
   }
