@@ -151,7 +151,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer com perfil do usuário */}
+      {/* Footer com perfil do usuário - apenas um componente */}
       <div className="border-t p-4">
         {renderProfileDropdown()}
       </div>

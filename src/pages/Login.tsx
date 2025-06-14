@@ -66,7 +66,7 @@ export default function Login() {
         <img 
           src={systemSettings.company_logo_url} 
           alt="Logo da Empresa" 
-          className="h-16 w-auto object-contain"
+          className="h-16 w-auto object-contain mx-auto"
           onError={(e) => {
             e.currentTarget.style.display = 'none'
           }}
@@ -75,11 +75,11 @@ export default function Login() {
     }
     
     if (settingsLoading) {
-      return <Skeleton className="h-16 w-16 rounded" />
+      return <Skeleton className="h-16 w-16 rounded mx-auto" />
     }
     
     return (
-      <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
+      <div className="h-16 w-16 bg-muted rounded flex items-center justify-center mx-auto">
         <span className="text-2xl font-bold text-muted-foreground">
           {systemSettings?.company_name?.charAt(0) || 'S'}
         </span>
@@ -94,7 +94,9 @@ export default function Login() {
           <div className="flex justify-center mb-4">
             {renderLogo()}
           </div>
-          <CardTitle>Sistema de Suporte TI</CardTitle>
+          <CardTitle>
+            {systemSettings?.company_name || 'Sistema de Suporte TI'}
+          </CardTitle>
           <CardDescription>
             Faça login para acessar o sistema
           </CardDescription>
