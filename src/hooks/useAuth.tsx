@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { Session, User } from '@supabase/supabase-js'
 import { Tables } from '@/integrations/supabase/types'
@@ -26,35 +26,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      }
-      setLoading(false)
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-      }
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
+    if (profileLoading) return // Prevent multiple concurrent calls
+    
+    setProfileLoading(true)
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -65,12 +42,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching profile:', error)
+        return
+      }
+      
       setProfile(data)
     } catch (error) {
       console.error('Error fetching profile:', error)
+    } finally {
+      setProfileLoading(false)
     }
-  }
+  }, [profileLoading])
+
+  useEffect(() => {
+    let mounted = true
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
+      
+      setSession(session)
+      setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        // Use setTimeout to prevent potential deadlocks
+        setTimeout(() => {
+          if (mounted) {
+            fetchProfile(session.user.id)
+          }
+        }, 0)
+      } else {
+        setProfile(null)
+      }
+      
+      setLoading(false)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+      
+      console.log('Auth state change:', event, session?.user?.email)
+      
+      setSession(session)
+      setUser(session?.user ?? null)
+      
+      if (session?.user && event === 'SIGNED_IN') {
+        // Use setTimeout to prevent potential deadlocks
+        setTimeout(() => {
+          if (mounted) {
+            fetchProfile(session.user.id)
+          }
+        }, 0)
+      } else {
+        setProfile(null)
+      }
+      
+      if (!loading) {
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [fetchProfile, loading])
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -81,6 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, name: string) => {
+    const redirectUrl = `${window.location.origin}/`
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -88,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           name,
         },
+        emailRedirectTo: redirectUrl
       },
     })
     if (error) throw error

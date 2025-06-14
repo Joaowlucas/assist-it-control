@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAdminEquipmentRequests, useApproveEquipmentRequest, useRejectEquipmentRequest } from "@/hooks/useAdminEquipmentRequests"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react"
@@ -100,9 +101,31 @@ export function EquipmentRequestsManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Solicitações de Equipamentos</CardTitle>
+          <CardDescription>
+            Gerencie as solicitações de equipamentos dos usuários
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <Skeleton className="h-12 w-12 rounded" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-4 w-[150px]" />
+                </div>
+                <div className="space-x-2">
+                  <Skeleton className="h-8 w-20 inline-block" />
+                  <Skeleton className="h-8 w-20 inline-block" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -262,7 +285,6 @@ export function EquipmentRequestsManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para rejeitar solicitação */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
