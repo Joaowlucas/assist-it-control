@@ -19,6 +19,34 @@ interface AuthContextType {
   updateProfile: (updates: Partial<Profile>) => Promise<void>
 }
 
+// Função para limpeza completa do estado de autenticação
+const cleanupAuthState = () => {
+  try {
+    // Remove tokens padrão do Supabase
+    localStorage.removeItem('supabase.auth.token')
+    
+    // Remove todas as chaves relacionadas ao Supabase
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key)
+      }
+    })
+    
+    // Limpa sessionStorage também se existir
+    if (typeof sessionStorage !== 'undefined') {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          sessionStorage.removeItem(key)
+        }
+      })
+    }
+    
+    console.log('Auth state cleanup completed')
+  } catch (error) {
+    console.error('Error during auth cleanup:', error)
+  }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -66,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted.current) return
       
+      console.log('Initial session check:', session?.user?.email || 'No session')
       setSession(session)
       setUser(session?.user ?? null)
       
@@ -75,10 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null)
       }
       
-      // Reduzir tempo de loading inicial drasticamente
       if (!initialLoadComplete.current) {
         initialLoadComplete.current = true
-        setTimeout(() => setLoading(false), 100) // Mínimo delay para evitar flash
+        setTimeout(() => setLoading(false), 100)
       }
     })
 
@@ -86,20 +114,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted.current) return
       
-      console.log('Auth state change:', event, session?.user?.email)
+      console.log('Auth state change:', event, session?.user?.email || 'No session')
       
       setSession(session)
       setUser(session?.user ?? null)
       
       if (session?.user && event === 'SIGNED_IN') {
         if (!fetchingProfile.current) {
-          fetchProfile(session.user.id)
+          setTimeout(() => {
+            fetchProfile(session.user.id)
+          }, 0)
         }
       } else {
         setProfile(null)
       }
       
-      // Loading completo após primeira inicialização
       if (initialLoadComplete.current) {
         setLoading(false)
       }
@@ -112,6 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile])
 
   const signIn = async (email: string, password: string) => {
+    // Limpa estado antes de fazer login
+    cleanupAuthState()
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -136,8 +168,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    try {
+      console.log('Starting logout process...')
+      
+      // Primeiro, limpa o estado local
+      cleanupAuthState()
+      
+      // Tenta fazer logout global no Supabase
+      try {
+        const { error } = await supabase.auth.signOut({ scope: 'global' })
+        if (error && !error.message.includes('session_not_found')) {
+          console.error('Logout error:', error)
+        }
+      } catch (err) {
+        // Ignora erros de sessão não encontrada
+        console.log('Logout completed with cleanup (session may have been expired)')
+      }
+      
+      // Limpa estados locais
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      
+      // Força reload da página para garantir estado limpo
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 100)
+      
+    } catch (error) {
+      console.error('Error during signOut:', error)
+      // Mesmo com erro, força logout local
+      cleanupAuthState()
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      window.location.href = '/login'
+    }
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {

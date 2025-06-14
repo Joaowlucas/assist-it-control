@@ -4,6 +4,9 @@ import { Computer, Users, Settings, Calendar, Monitor, FileText, User } from "lu
 import { NavLink, useLocation } from "react-router-dom"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { useAuth } from "@/hooks/useAuth"
+import { AdminProfileDropdown } from "@/components/AdminProfileDropdown"
+import { TechnicianProfileDropdown } from "@/components/TechnicianProfileDropdown"
+import { UserProfileDropdown } from "@/components/UserProfileDropdown"
 
 import {
   Sidebar,
@@ -37,7 +40,7 @@ const technicianItems = [
 export function AppSidebar() {
   const { state } = useSidebar()
   const location = useLocation()
-  const { data: systemSettings } = useSystemSettings()
+  const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings()
   const { profile } = useAuth()
   const currentPath = location.pathname
 
@@ -56,6 +59,17 @@ export function AppSidebar() {
     isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
 
   const renderHeader = () => {
+    if (settingsLoading) {
+      return (
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 bg-slate-200 rounded animate-pulse" />
+          {state !== "collapsed" && (
+            <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+          )}
+        </div>
+      )
+    }
+
     if (systemSettings?.company_logo_url) {
       if (state === "collapsed") {
         return (
@@ -85,13 +99,25 @@ export function AppSidebar() {
       return (
         <>
           <h2 className={`font-bold text-lg ${state === "collapsed" ? "hidden" : "block"}`}>
-            IT Support
+            {systemSettings?.company_name || "IT Support"}
           </h2>
           {state === "collapsed" && (
-            <div className="text-center font-bold text-sm">IT</div>
+            <div className="text-center font-bold text-sm">
+              {systemSettings?.company_name?.slice(0, 2) || "IT"}
+            </div>
           )}
         </>
       )
+    }
+  }
+
+  const renderProfileDropdown = () => {
+    if (profile?.role === 'admin') {
+      return <AdminProfileDropdown />
+    } else if (profile?.role === 'technician') {
+      return <TechnicianProfileDropdown />
+    } else {
+      return <UserProfileDropdown />
     }
   }
 
@@ -124,6 +150,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* Footer com perfil do usuário */}
+      <div className="border-t p-4">
+        {renderProfileDropdown()}
+      </div>
     </Sidebar>
   )
 }
