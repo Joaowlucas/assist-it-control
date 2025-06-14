@@ -1,6 +1,6 @@
 
 import { useState } from 'react'
-import jsPDF from 'jspdf'
+import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import { useToast } from './use-toast'
 import { supabase } from '@/integrations/supabase/client'
