@@ -1,13 +1,14 @@
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAssignmentStats } from "@/hooks/useAssignmentStats"
-import { Search, Calendar, BarChart3, Users, Package } from "lucide-react"
+import { useAssignmentPDF } from "@/hooks/useAssignmentPDF"
+import { Search, Calendar, BarChart3, Users, Package, Printer } from "lucide-react"
 
 interface AllAssignmentsModalProps {
   open: boolean
@@ -16,6 +17,7 @@ interface AllAssignmentsModalProps {
 
 export function AllAssignmentsModal({ open, onOpenChange }: AllAssignmentsModalProps) {
   const { data, isLoading } = useAssignmentStats()
+  const { generateAssignmentPDF, isGenerating } = useAssignmentPDF()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterType, setFilterType] = useState("all")
@@ -76,6 +78,14 @@ export function AllAssignmentsModal({ open, onOpenChange }: AllAssignmentsModalP
       case "finalizado": return "Finalizado"
       default: return status
     }
+  }
+
+  const handlePrintAssignment = async (assignment: any) => {
+    await generateAssignmentPDF(
+      assignment.id,
+      assignment.equipment?.name || 'Equipamento',
+      assignment.user?.name || 'Usuário'
+    )
   }
 
   return (
@@ -205,6 +215,7 @@ export function AllAssignmentsModal({ open, onOpenChange }: AllAssignmentsModalP
                   <TableHead>Duração</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Responsável</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -264,6 +275,17 @@ export function AllAssignmentsModal({ open, onOpenChange }: AllAssignmentsModalP
                         <div className="text-sm text-muted-foreground">
                           {assignment.assigned_by_user?.name || 'Sistema'}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePrintAssignment(assignment)}
+                          disabled={isGenerating}
+                          title="Imprimir relatório da atribuição"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   )

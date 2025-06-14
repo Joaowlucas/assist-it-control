@@ -11,9 +11,10 @@ import { useAssignments, useUpdateAssignment } from "@/hooks/useAssignments"
 import { useCreateAssignment } from "@/hooks/useCreateAssignment"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
+import { useAssignmentPDF } from "@/hooks/useAssignmentPDF"
 import { useAuth } from "@/hooks/useAuth"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit } from "lucide-react"
+import { Plus, Edit, Printer } from "lucide-react"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
 
 export function AssignmentManagementSection() {
@@ -23,6 +24,7 @@ export function AssignmentManagementSection() {
   const { user } = useAuth()
   const createAssignmentMutation = useCreateAssignment()
   const updateAssignmentMutation = useUpdateAssignment()
+  const { generateAssignmentPDF, isGenerating } = useAssignmentPDF()
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -134,6 +136,14 @@ export function AssignmentManagementSection() {
   const isOverdue = (assignment: any) => {
     if (assignment.status !== 'ativo' || !assignment.expected_return_date) return false
     return new Date(assignment.expected_return_date) < new Date()
+  }
+
+  const handlePrintAssignment = async (assignment: any) => {
+    await generateAssignmentPDF(
+      assignment.id,
+      assignment.equipment?.name || 'Equipamento',
+      assignment.user?.name || 'Usuário'
+    )
   }
 
   if (isLoading) {
@@ -410,6 +420,15 @@ export function AssignmentManagementSection() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrintAssignment(assignment)}
+                        disabled={isGenerating}
+                        title="Imprimir relatório da atribuição"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
                       {assignment.status === 'ativo' && (
                         <>
                           <Button

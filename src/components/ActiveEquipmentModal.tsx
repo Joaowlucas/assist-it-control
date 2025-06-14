@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -7,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useAssignmentStats } from "@/hooks/useAssignmentStats"
+import { useAssignmentPDF } from "@/hooks/useAssignmentPDF"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
-import { Search, Calendar, User, Settings } from "lucide-react"
+import { Search, Calendar, User, Settings, Printer } from "lucide-react"
 
 interface ActiveEquipmentModalProps {
   open: boolean
@@ -17,6 +17,7 @@ interface ActiveEquipmentModalProps {
 
 export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModalProps) {
   const { data, isLoading } = useAssignmentStats()
+  const { generateAssignmentPDF, isGenerating } = useAssignmentPDF()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterUnit, setFilterUnit] = useState("all")
@@ -41,6 +42,14 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
   // Obter tipos únicos para filtro
   const uniqueTypes = [...new Set(activeAssignments.map(a => a.equipment?.type).filter(Boolean))]
   const uniqueUnits = [...new Set(activeAssignments.map(a => a.user?.unit?.name).filter(Boolean))]
+
+  const handlePrintAssignment = async (assignment: any) => {
+    await generateAssignmentPDF(
+      assignment.id,
+      assignment.equipment?.name || 'Equipamento',
+      assignment.user?.name || 'Usuário'
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -159,15 +168,26 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <ConfirmEndAssignmentDialog
-                          assignmentId={assignment.id}
-                          equipmentName={assignment.equipment?.name || 'Equipamento'}
-                          userName={assignment.user?.name || 'Usuário'}
-                        >
-                          <Button variant="outline" size="sm">
-                            Finalizar
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePrintAssignment(assignment)}
+                            disabled={isGenerating}
+                            title="Imprimir relatório da atribuição"
+                          >
+                            <Printer className="h-4 w-4" />
                           </Button>
-                        </ConfirmEndAssignmentDialog>
+                          <ConfirmEndAssignmentDialog
+                            assignmentId={assignment.id}
+                            equipmentName={assignment.equipment?.name || 'Equipamento'}
+                            userName={assignment.user?.name || 'Usuário'}
+                          >
+                            <Button variant="outline" size="sm">
+                              Finalizar
+                            </Button>
+                          </ConfirmEndAssignmentDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
