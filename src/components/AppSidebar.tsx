@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Computer, Users, Settings, Calendar, Monitor, FileText, User } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
+import { useAuth } from "@/hooks/useAuth"
 
 import {
   Sidebar,
@@ -26,11 +27,29 @@ const adminItems = [
   { title: "Configurações", url: "/settings", icon: Settings },
 ]
 
+const technicianItems = [
+  { title: "Dashboard", url: "/", icon: Monitor },
+  { title: "Chamados", url: "/tickets", icon: FileText },
+  { title: "Equipamentos", url: "/equipment", icon: Computer },
+  { title: "Atribuições", url: "/assignments", icon: Users },
+]
+
 export function AppSidebar() {
   const { state } = useSidebar()
   const location = useLocation()
   const { data: systemSettings } = useSystemSettings()
+  const { profile } = useAuth()
   const currentPath = location.pathname
+
+  // Determinar quais itens mostrar baseado no role
+  const getNavigationItems = () => {
+    if (profile?.role === 'technician') {
+      return technicianItems
+    }
+    return adminItems
+  }
+
+  const navigationItems = getNavigationItems()
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -86,10 +105,12 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Administração</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            {profile?.role === 'technician' ? 'Técnico' : 'Administração'}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminItems.map((item) => (
+              {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
