@@ -30,12 +30,6 @@ export function useCreateUser() {
   return useMutation({
     mutationFn: async (userData: CreateUserData) => {
       console.log('Creating user with data:', userData)
-      console.log('User phone number:', userData.phone)
-
-      // Validar se há telefone quando necessário
-      if (!userData.phone || userData.phone.trim() === '') {
-        console.warn('User being created without phone number')
-      }
 
       // Get current session for authorization
       const { data: { session } } = await supabase.auth.getSession()
@@ -70,8 +64,7 @@ export function useCreateUser() {
 
       return data
     },
-    onSuccess: (data) => {
-      console.log('User created successfully:', data)
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] })
       queryClient.invalidateQueries({ queryKey: ['technician-units'] })
       toast({
@@ -97,9 +90,6 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, unit_ids, ...updateData }: UpdateUserData) => {
-      console.log('Updating user:', id, 'with data:', updateData)
-      console.log('User phone number:', updateData.phone)
-
       // Se está atualizando email, verificar se já existe
       if (updateData.email) {
         const { data: existingUser } = await supabase
@@ -118,8 +108,6 @@ export function useUpdateUser() {
       const profileData = { ...updateData }
       delete (profileData as any).unit_ids
 
-      console.log('Updating profile with data:', profileData)
-
       const { data, error } = await supabase
         .from('profiles')
         .update(profileData)
@@ -130,12 +118,7 @@ export function useUpdateUser() {
         `)
         .single()
 
-      if (error) {
-        console.error('Error updating profile:', error)
-        throw error
-      }
-
-      console.log('Profile updated successfully:', data)
+      if (error) throw error
 
       // Se for técnico e tiver unit_ids, atualizar unidades do técnico
       if (updateData.role === 'technician' && unit_ids) {
@@ -148,7 +131,6 @@ export function useUpdateUser() {
       return data
     },
     onSuccess: (data) => {
-      console.log('User update completed:', data)
       queryClient.invalidateQueries({ queryKey: ['profiles'] })
       queryClient.invalidateQueries({ queryKey: ['technician-units'] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
@@ -158,7 +140,6 @@ export function useUpdateUser() {
       })
     },
     onError: (error: any) => {
-      console.error('Update user error:', error)
       toast({
         title: 'Erro ao atualizar usuário',
         description: error.message || 'Erro ao atualizar o usuário.',
