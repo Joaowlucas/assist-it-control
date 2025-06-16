@@ -34,10 +34,20 @@ serve(async (req) => {
       throw new Error('URL, token e nome da instância são obrigatórios')
     }
 
+    // Limpar e validar URL - remover /manager se presente
+    let cleanUrl = url.trim()
+    if (cleanUrl.endsWith('/')) {
+      cleanUrl = cleanUrl.slice(0, -1)
+    }
+    // Remover /manager do final se estiver presente
+    if (cleanUrl.endsWith('/manager')) {
+      cleanUrl = cleanUrl.slice(0, -8)
+    }
+
     // Verificar se a URL é válida
     let apiUrl: URL
     try {
-      apiUrl = new URL(url)
+      apiUrl = new URL(cleanUrl)
       if (!apiUrl.protocol.startsWith('http')) {
         throw new Error('URL deve começar com http:// ou https://')
       }
@@ -55,13 +65,15 @@ serve(async (req) => {
       throw new Error('Nome da instância deve ter pelo menos 3 caracteres')
     }
 
-    // Primeiro, testar se a API está respondendo
+    console.log('URL limpa para teste:', cleanUrl)
+
+    // Primeiro, testar se a API está respondendo - usar endpoint básico da Evolution API
     console.log('Testando conectividade básica da API...')
-    const baseUrl = `${url.replace(/\/$/, '')}`
+    const baseUrl = cleanUrl
     
-    // Testar endpoint básico primeiro
+    // Testar endpoint básico da Evolution API
     try {
-      const pingResponse = await fetch(baseUrl, {
+      const pingResponse = await fetch(`${baseUrl}/instance/fetchInstances`, {
         method: 'GET',
         headers: {
           'apikey': token,
@@ -70,17 +82,23 @@ serve(async (req) => {
         signal: AbortSignal.timeout(10000) // 10 segundos timeout
       })
       
-      console.log('Ping response:', pingResponse.status)
+      console.log('Ping response status:', pingResponse.status)
+      console.log('Ping response headers:', Object.fromEntries(pingResponse.headers.entries()))
       
       if (!pingResponse.ok) {
+        const errorText = await pingResponse.text()
+        console.error('Erro no ping:', errorText)
+        
         // Se der 401/403, é problema de autenticação
         if (pingResponse.status === 401 || pingResponse.status === 403) {
           throw new Error('Token de API inválido ou sem permissões')
         }
         // Se der 404, talvez a URL esteja errada
         if (pingResponse.status === 404) {
-          throw new Error('URL da API não encontrada - verifique se está correta')
+          throw new Error('URL da API não encontrada - verifique se está correta. Tente sem /manager no final.')
         }
+        
+        throw new Error(`Erro HTTP ${pingResponse.status}: ${errorText}`)
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -95,7 +113,7 @@ serve(async (req) => {
       throw new Error('Erro desconhecido ao testar conectividade')
     }
 
-    // Agora testar o estado da conexão da instância
+    // Agora testar o estado da conexão da instância específica
     console.log('Testando estado da instância:', `${baseUrl}/instance/connectionState/${instance}`)
     
     const response = await fetch(`${baseUrl}/instance/connectionState/${instance}`, {
@@ -107,7 +125,8 @@ serve(async (req) => {
       signal: AbortSignal.timeout(15000) // 15 segundos timeout
     })
 
-    console.log('Resposta da API:', response.status, response.statusText)
+    console.log('Resposta da API - Status:', response.status)
+    console.log('Resposta da API - Headers:', Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -125,6 +144,14 @@ serve(async (req) => {
       }
     }
 
+    // Verificar se a resposta é JSON válido
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      const responseText = await response.text()
+      console.error('Resposta não é JSON:', responseText.substring(0, 200))
+      throw new Error('API retornou resposta não-JSON. Verifique se a URL está correta.')
+    }
+
     const result = await response.json()
     console.log('Estado da conexão:', result)
     
@@ -135,6 +162,8 @@ serve(async (req) => {
     if (result.instance) {
       connectionStatus = result.instance.state || 'unknown'
       additionalInfo = result.instance.qrcode ? 'QR Code disponível' : 'Instância configurada'
+    } else if (result.state) {
+      connectionStatus = result.state
     }
     
     return new Response(JSON.stringify({ 
@@ -142,6 +171,7 @@ serve(async (req) => {
       connectionState: result,
       connectionStatus,
       additionalInfo,
+      cleanUrl: cleanUrl,
       message: `Conexão testada com sucesso! Status: ${connectionStatus}${additionalInfo ? ` - ${additionalInfo}` : ''}`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

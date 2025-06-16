@@ -117,19 +117,28 @@ serve(async (req) => {
       throw new Error('Configurações da Evolution API incompletas. Verifique URL, token e nome da instância.')
     }
 
+    // Limpar URL da API - remover /manager se presente
+    let cleanApiUrl = systemSettings.evolution_api_url.trim()
+    if (cleanApiUrl.endsWith('/')) {
+      cleanApiUrl = cleanApiUrl.slice(0, -1)
+    }
+    if (cleanApiUrl.endsWith('/manager')) {
+      cleanApiUrl = cleanApiUrl.slice(0, -8)
+    }
+
     // Preparar dados para envio
     const evolutionPayload = {
       number: formattedPhone,
       text: message,
     }
     
-    const evolutionUrl = `${systemSettings.evolution_api_url.replace(/\/$/, '')}/message/sendText/${systemSettings.evolution_instance_name}`
+    const evolutionUrl = `${cleanApiUrl}/message/sendText/${systemSettings.evolution_instance_name}`
     
     console.log('Enviando para Evolution API...', {
       url: evolutionUrl,
       instance: systemSettings.evolution_instance_name,
       phone: formattedPhone.substring(0, 4) + '****',
-      payload: { ...evolutionPayload, text: message.substring(0, 50) + '...' }
+      cleanApiUrl: cleanApiUrl
     })
 
     // Enviar mensagem via Evolution API
@@ -144,6 +153,7 @@ serve(async (req) => {
     })
 
     console.log('Resposta da Evolution API:', evolutionResponse.status, evolutionResponse.statusText)
+    console.log('Headers da resposta:', Object.fromEntries(evolutionResponse.headers.entries()))
 
     if (!evolutionResponse.ok) {
       const errorText = await evolutionResponse.text()
@@ -154,7 +164,7 @@ serve(async (req) => {
       if (evolutionResponse.status === 401) {
         errorMessage = 'Token da Evolution API inválido'
       } else if (evolutionResponse.status === 404) {
-        errorMessage = 'Instância do WhatsApp não encontrada'
+        errorMessage = `Instância '${systemSettings.evolution_instance_name}' não encontrada ou endpoint incorreto. Verifique se a URL não contém /manager.`
       } else if (evolutionResponse.status === 400) {
         errorMessage = 'Dados inválidos enviados para a Evolution API'
       } else if (errorText) {
@@ -164,11 +174,20 @@ serve(async (req) => {
       throw new Error(errorMessage)
     }
 
-    const evolutionResult = await evolutionResponse.json()
-    console.log('Mensagem enviada com sucesso:', {
-      messageId: evolutionResult.key?.id,
-      status: evolutionResult.status
-    })
+    // Verificar se a resposta é JSON
+    const contentType = evolutionResponse.headers.get('content-type')
+    let evolutionResult
+    if (contentType && contentType.includes('application/json')) {
+      evolutionResult = await evolutionResponse.json()
+      console.log('Mensagem enviada com sucesso:', {
+        messageId: evolutionResult.key?.id,
+        status: evolutionResult.status
+      })
+    } else {
+      const responseText = await evolutionResponse.text()
+      console.log('Resposta não-JSON da Evolution API:', responseText.substring(0, 200))
+      evolutionResult = { status: 'sent', message: 'Enviado com sucesso' }
+    }
 
     // Atualizar notificação como enviada
     console.log('Atualizando status da notificação...')
@@ -208,10 +227,11 @@ serve(async (req) => {
     console.error('Erro:', error)
     console.error('Stack:', error.stack)
     
-    // Extrair message do request para atualizar a notificação
+    // Extrair notificationId do request para atualizar a notificação
     let notificationId: string | null = null
     try {
-      const body = await req.clone().json()
+      const requestClone = req.clone()
+      const body = await requestClone.json()
       notificationId = body.notificationId
     } catch {
       console.log('Não foi possível extrair notificationId do request')

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSettings"
-import { Loader2, MessageSquare, TestTube } from "lucide-react"
+import { Loader2, MessageSquare, TestTube, AlertTriangle } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 
 export function WhatsAppConfigSection() {
@@ -36,10 +36,24 @@ export function WhatsAppConfigSection() {
   }, [systemSettings])
 
   const handleSave = () => {
+    // Limpar URL antes de salvar - remover /manager se presente
+    let cleanUrl = formData.evolution_api_url.trim()
+    if (cleanUrl.endsWith('/')) {
+      cleanUrl = cleanUrl.slice(0, -1)
+    }
+    if (cleanUrl.endsWith('/manager')) {
+      cleanUrl = cleanUrl.slice(0, -8)
+      toast({
+        title: 'URL Corrigida',
+        description: 'Removemos "/manager" da URL. A URL correta é apenas a base da API.',
+      })
+    }
+
     if (systemSettings) {
       updateSettings.mutate({
         id: systemSettings.id,
-        ...formData
+        ...formData,
+        evolution_api_url: cleanUrl
       })
     }
   }
@@ -56,14 +70,19 @@ export function WhatsAppConfigSection() {
 
     // Validar formato da URL
     try {
-      const url = new URL(formData.evolution_api_url)
+      let testUrl = formData.evolution_api_url.trim()
+      if (testUrl.endsWith('/')) {
+        testUrl = testUrl.slice(0, -1)
+      }
+      
+      const url = new URL(testUrl)
       if (!url.protocol.startsWith('http')) {
         throw new Error('URL deve começar com http:// ou https://')
       }
     } catch (error) {
       toast({
         title: 'Erro',
-        description: 'URL da API inválida. Use o formato: https://sua-api.com',
+        description: 'URL da API inválida. Use o formato: https://sua-api.com (sem /manager no final)',
         variant: 'destructive'
       })
       return
@@ -77,7 +96,6 @@ export function WhatsAppConfigSection() {
         hasToken: !!formData.evolution_api_token
       })
 
-      // CORRIGIDO: Usar supabase.functions.invoke em vez de fetch direto
       const { data, error } = await supabase.functions.invoke('test-evolution-api', {
         body: {
           url: formData.evolution_api_url,
@@ -99,6 +117,15 @@ export function WhatsAppConfigSection() {
           description: data.message || 'Conexão com Evolution API estabelecida com sucesso!',
         })
         console.log('Estado da conexão:', data.connectionState)
+        
+        // Se a URL foi corrigida durante o teste, atualizar o form
+        if (data.cleanUrl && data.cleanUrl !== formData.evolution_api_url) {
+          setFormData(prev => ({ ...prev, evolution_api_url: data.cleanUrl }))
+          toast({
+            title: 'URL Corrigida',
+            description: 'A URL foi automaticamente corrigida removendo "/manager"',
+          })
+        }
       } else {
         throw new Error(data?.error || 'Falha na conexão')
       }
@@ -152,9 +179,16 @@ export function WhatsAppConfigSection() {
               value={formData.evolution_api_url}
               onChange={(e) => setFormData(prev => ({ ...prev, evolution_api_url: e.target.value }))}
             />
-            <p className="text-xs text-muted-foreground">
-              Exemplo: https://api.evolutionapi.com ou http://localhost:8080
-            </p>
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Importante:</p>
+                <p>• Use apenas a URL base: https://api.evolutionapi.com</p>
+                <p>• NÃO inclua /manager no final da URL</p>
+                <p>• Exemplo correto: https://apiwhats.iconnecti.com.br</p>
+                <p>• Exemplo incorreto: https://apiwhats.iconnecti.com.br/manager</p>
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-2">
