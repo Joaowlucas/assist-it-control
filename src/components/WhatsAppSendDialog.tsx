@@ -19,6 +19,7 @@ interface Ticket {
   status: string
   category: string
   requester: {
+    id: string
     name: string
     phone?: string
   }

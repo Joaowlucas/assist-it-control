@@ -13,6 +13,10 @@ interface SystemSettings {
   equipment_email: string
   auto_assign_tickets: boolean
   default_priority: string
+  evolution_api_url: string | null
+  evolution_api_token: string | null
+  evolution_instance_name: string | null
+  whatsapp_enabled: boolean
 }
 
 // Cache localStorage para system settings
