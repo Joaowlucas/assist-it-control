@@ -19,6 +19,7 @@ import { ImageUpload } from "@/components/ImageUpload"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
 import { EquipmentPDFPreviewDialog } from "@/components/EquipmentPDFPreviewDialog"
 import { Tables } from "@/integrations/supabase/types"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type Equipment = Tables<'equipment'> & {
   unit?: { name: string } | null
@@ -41,6 +42,7 @@ export default function Equipment() {
   const { data: equipment, isLoading: loadingEquipment } = useEquipment()
   const { data: units } = useUnits()
   const { profile } = useAuth()
+  const isMobile = useIsMobile()
   const createEquipment = useCreateEquipment()
   const updateEquipment = useUpdateEquipment()
   const uploadPhoto = useUploadEquipmentPhoto()
@@ -165,17 +167,17 @@ export default function Equipment() {
   if (loadingEquipment) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Equipamentos</h2>
-          <p className="text-muted-foreground">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Equipamentos</h2>
+          <p className="text-sm md:text-base text-muted-foreground">
             Gerencie o inventário de equipamentos da empresa
           </p>
         </div>
@@ -183,12 +185,12 @@ export default function Equipment() {
         {canEdit && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar Equipamento
+                {isMobile ? "Adicionar" : "Adicionar Equipamento"}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className={`${isMobile ? 'w-[95vw] max-w-[95vw] h-[90vh]' : 'sm:max-w-[700px]'} max-h-[90vh] overflow-y-auto`}>
               <DialogHeader>
                 <DialogTitle>Adicionar Novo Equipamento</DialogTitle>
                 <DialogDescription>
@@ -197,7 +199,7 @@ export default function Equipment() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                     <div>
                       <Label htmlFor="name">Nome do Equipamento</Label>
                       <Input 
@@ -205,6 +207,7 @@ export default function Equipment() {
                         name="name" 
                         placeholder="Ex: Desktop Marketing 01"
                         required 
+                        className="mt-1"
                       />
                     </div>
                     
@@ -214,15 +217,16 @@ export default function Equipment() {
                         id="tombamento" 
                         name="tombamento" 
                         placeholder="Deixe vazio para gerar automaticamente"
+                        className="mt-1"
                       />
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                     <div>
                       <Label htmlFor="type">Tipo</Label>
                       <Select name="type" required>
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -240,7 +244,7 @@ export default function Equipment() {
                     <div>
                       <Label htmlFor="unitId">Unidade</Label>
                       <Select name="unitId">
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Selecione a unidade" />
                         </SelectTrigger>
                         <SelectContent>
@@ -254,13 +258,14 @@ export default function Equipment() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                     <div>
                       <Label htmlFor="brand">Marca</Label>
                       <Input 
                         id="brand" 
                         name="brand" 
                         placeholder="Ex: Dell, HP, Lenovo"
+                        className="mt-1"
                       />
                     </div>
                     
@@ -270,17 +275,19 @@ export default function Equipment() {
                         id="model" 
                         name="model" 
                         placeholder="Ex: OptiPlex 7090"
+                        className="mt-1"
                       />
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                     <div>
                       <Label htmlFor="serialNumber">Número de Série</Label>
                       <Input 
                         id="serialNumber" 
                         name="serialNumber" 
                         placeholder="Número de série do equipamento"
+                        className="mt-1"
                       />
                     </div>
                     
@@ -290,17 +297,19 @@ export default function Equipment() {
                         id="location" 
                         name="location" 
                         placeholder="Ex: Marketing - Mesa 15"
+                        className="mt-1"
                       />
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                     <div>
                       <Label htmlFor="purchaseDate">Data de Compra</Label>
                       <Input 
                         id="purchaseDate" 
                         name="purchaseDate" 
                         type="date"
+                        className="mt-1"
                       />
                     </div>
                     
@@ -310,6 +319,7 @@ export default function Equipment() {
                         id="warrantyExpiry" 
                         name="warrantyExpiry" 
                         type="date"
+                        className="mt-1"
                       />
                     </div>
                   </div>
@@ -320,6 +330,7 @@ export default function Equipment() {
                       id="notes" 
                       name="notes" 
                       placeholder="Descrição e observações sobre o equipamento"
+                      className="mt-1"
                     />
                   </div>
 
@@ -330,11 +341,11 @@ export default function Equipment() {
                   />
                 </div>
                 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'justify-end'}`}>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className={isMobile ? 'w-full' : ''}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={createEquipment.isPending}>
+                  <Button type="submit" disabled={createEquipment.isPending} className={isMobile ? 'w-full' : ''}>
                     {createEquipment.isPending ? 'Criando...' : 'Adicionar Equipamento'}
                   </Button>
                 </div>
@@ -344,107 +355,197 @@ export default function Equipment() {
         )}
       </div>
 
-      <Card>
+      <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle>Inventário de Equipamentos</CardTitle>
+          <CardTitle className="text-card-foreground">Inventário de Equipamentos</CardTitle>
           <CardDescription>
             Lista completa de todos os equipamentos da empresa
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tombamento</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Marca/Modelo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Localização</TableHead>
-                <TableHead>Unidade</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {equipment?.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.tombamento}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{item.name}</div>
-                      {item.serial_number && (
-                        <div className="text-sm text-muted-foreground">
-                          S/N: {item.serial_number}
+        <CardContent className="p-0">
+          {/* Desktop Table */}
+          <div className="hidden lg:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tombamento</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Marca/Modelo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Localização</TableHead>
+                  <TableHead>Unidade</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {equipment?.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.tombamento}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{item.name}</div>
+                        {item.serial_number && (
+                          <div className="text-sm text-muted-foreground">
+                            S/N: {item.serial_number}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{item.type}</TableCell>
+                    <TableCell>
+                      <div>
+                        {item.brand && <div>{item.brand}</div>}
+                        {item.model && (
+                          <div className="text-sm text-muted-foreground">{item.model}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusColor(item.status) as any}>
+                        {getStatusLabel(item.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {item.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {item.location}
                         </div>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{item.type}</TableCell>
-                  <TableCell>
-                    <div>
-                      {item.brand && <div>{item.brand}</div>}
-                      {item.model && (
-                        <div className="text-sm text-muted-foreground">{item.model}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(item.status) as any}>
-                      {getStatusLabel(item.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {item.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {item.location}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {item.unit?.name || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {canEdit && (
+                    </TableCell>
+                    <TableCell>
+                      {item.unit?.name || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {canEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEdit(item)}
+                          onClick={() => setSelectedEquipment(item.id)}
                         >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Editar
+                          <ImageIcon className="h-4 w-4 mr-1" />
+                          Ver Fotos
                         </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedEquipment(item.id)}
-                      >
-                        <ImageIcon className="h-4 w-4 mr-1" />
-                        Ver Fotos
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePreviewPDF(item)}
-                        disabled={isLoadingPreview}
-                      >
-                        <FileText className="h-4 w-4 mr-1" />
-                        {isLoadingPreview ? 'Carregando...' : 'Visualizar PDF'}
-                      </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreviewPDF(item)}
+                          disabled={isLoadingPreview}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          {isLoadingPreview ? 'Carregando...' : 'Visualizar PDF'}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-4 p-4">
+            {equipment?.map((item) => (
+              <Card key={item.id} className="border-border bg-muted/50">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-base">{item.name}</CardTitle>
+                      <CardDescription className="text-sm">
+                        {item.tombamento && `Tomb: ${item.tombamento}`}
+                      </CardDescription>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    <Badge variant={getStatusColor(item.status) as any} className="text-xs">
+                      {getStatusLabel(item.status)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium">Tipo:</span> {item.type}
+                    </div>
+                    <div>
+                      <span className="font-medium">Unidade:</span> {item.unit?.name || '-'}
+                    </div>
+                    {item.brand && (
+                      <div>
+                        <span className="font-medium">Marca:</span> {item.brand}
+                      </div>
+                    )}
+                    {item.model && (
+                      <div>
+                        <span className="font-medium">Modelo:</span> {item.model}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {item.location && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      {item.location}
+                    </div>
+                  )}
+                  
+                  {item.serial_number && (
+                    <div className="text-sm text-muted-foreground">
+                      S/N: {item.serial_number}
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col gap-2 pt-2">
+                    {canEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(item)}
+                        className="w-full justify-start"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedEquipment(item.id)}
+                      className="w-full justify-start"
+                    >
+                      <ImageIcon className="h-4 w-4 mr-2" />
+                      Ver Fotos
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePreviewPDF(item)}
+                      disabled={isLoadingPreview}
+                      className="w-full justify-start"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      {isLoadingPreview ? 'Carregando...' : 'Visualizar PDF'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Dialog para editar equipamento */}
+      {/* Edit Dialog - keeping existing content but with mobile optimization */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`${isMobile ? 'w-[95vw] max-w-[95vw] h-[90vh]' : 'sm:max-w-[700px]'} max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
             <DialogTitle>Editar Equipamento</DialogTitle>
             <DialogDescription>
@@ -453,8 +554,9 @@ export default function Equipment() {
           </DialogHeader>
           {editingEquipment && (
             <form onSubmit={handleEditSubmit} className="space-y-4">
+              {/* Similar form structure as above but with edit values */}
               <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   <div>
                     <Label htmlFor="edit-name">Nome do Equipamento</Label>
                     <Input 
@@ -462,6 +564,7 @@ export default function Equipment() {
                       name="name" 
                       defaultValue={editingEquipment.name}
                       required 
+                      className="mt-1"
                     />
                   </div>
                   
@@ -471,15 +574,16 @@ export default function Equipment() {
                       id="edit-tombamento" 
                       name="tombamento" 
                       defaultValue={editingEquipment.tombamento || ''}
+                      className="mt-1"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   <div>
                     <Label htmlFor="edit-type">Tipo</Label>
                     <Select name="type" defaultValue={editingEquipment.type} required>
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -497,7 +601,7 @@ export default function Equipment() {
                   <div>
                     <Label htmlFor="edit-unitId">Unidade</Label>
                     <Select name="unitId" defaultValue={editingEquipment.unit_id || ''}>
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -511,13 +615,14 @@ export default function Equipment() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   <div>
                     <Label htmlFor="edit-brand">Marca</Label>
                     <Input 
                       id="edit-brand" 
                       name="brand" 
                       defaultValue={editingEquipment.brand || ''}
+                      className="mt-1"
                     />
                   </div>
                   
@@ -527,17 +632,19 @@ export default function Equipment() {
                       id="edit-model" 
                       name="model" 
                       defaultValue={editingEquipment.model || ''}
+                      className="mt-1"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   <div>
                     <Label htmlFor="edit-serialNumber">Número de Série</Label>
                     <Input 
                       id="edit-serialNumber" 
                       name="serialNumber" 
                       defaultValue={editingEquipment.serial_number || ''}
+                      className="mt-1"
                     />
                   </div>
                   
@@ -547,15 +654,16 @@ export default function Equipment() {
                       id="edit-location" 
                       name="location" 
                       defaultValue={editingEquipment.location || ''}
+                      className="mt-1"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-4">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
                   <div>
                     <Label htmlFor="edit-status">Status</Label>
                     <Select name="status" defaultValue={editingEquipment.status} required>
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -574,6 +682,7 @@ export default function Equipment() {
                       name="purchaseDate" 
                       type="date"
                       defaultValue={editingEquipment.purchase_date || ''}
+                      className="mt-1"
                     />
                   </div>
                   
@@ -584,6 +693,7 @@ export default function Equipment() {
                       name="warrantyExpiry" 
                       type="date"
                       defaultValue={editingEquipment.warranty_end_date || ''}
+                      className="mt-1"
                     />
                   </div>
                 </div>
@@ -594,15 +704,16 @@ export default function Equipment() {
                     id="edit-notes" 
                     name="notes" 
                     defaultValue={editingEquipment.description || ''}
+                    className="mt-1"
                   />
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'justify-end'}`}>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className={isMobile ? 'w-full' : ''}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={updateEquipment.isPending}>
+                <Button type="submit" disabled={updateEquipment.isPending} className={isMobile ? 'w-full' : ''}>
                   {updateEquipment.isPending ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
               </div>
@@ -611,9 +722,9 @@ export default function Equipment() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para visualizar fotos do equipamento */}
+      {/* Photo Gallery Dialog */}
       <Dialog open={!!selectedEquipment} onOpenChange={() => setSelectedEquipment(null)}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`${isMobile ? 'w-[95vw] max-w-[95vw] h-[90vh]' : 'sm:max-w-[800px]'} max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
             <DialogTitle>Fotos do Equipamento</DialogTitle>
             <DialogDescription>
@@ -629,7 +740,7 @@ export default function Equipment() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de pré-visualização do PDF */}
+      {/* PDF Preview Dialog */}
       {previewData && (
         <EquipmentPDFPreviewDialog
           open={isPDFPreviewOpen}

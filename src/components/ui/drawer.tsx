@@ -1,6 +1,6 @@
-
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
+import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -27,7 +27,7 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/20 backdrop-blur-lg transition-all duration-300 ease-out", className)}
+    className={cn("fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-all duration-300 ease-out", className)}
     {...props}
   />
 ))
@@ -42,12 +42,16 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[20px] bg-white/90 backdrop-blur-xl border-t border-white/20 shadow-2xl ring-1 ring-black/5 transition-all duration-300 ease-out will-change-transform",
+        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[20px] bg-background border-t border-border shadow-lg transition-all duration-300 ease-out will-change-transform",
         className
       )}
       {...props}
     >
-      <div className="mx-auto mt-4 h-1.5 w-[60px] rounded-full bg-black/20 transition-colors hover:bg-black/30" />
+      <div className="mx-auto mt-4 h-1.5 w-[60px] rounded-full bg-muted transition-colors hover:bg-muted-foreground/20" />
+      <DrawerPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 opacity-70 ring-offset-background transition-all duration-200 hover:opacity-100 hover:bg-muted hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Fechar</span>
+      </DrawerPrimitive.Close>
       <div className="p-4">
         {children}
       </div>
