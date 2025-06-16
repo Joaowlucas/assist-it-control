@@ -81,21 +81,21 @@ export default function Tickets() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'aberto': return 'bg-red-100 text-red-700 border-red-200'
-      case 'em_andamento': return 'bg-blue-100 text-blue-700 border-blue-200'
-      case 'aguardando': return 'bg-purple-100 text-purple-700 border-purple-200'
-      case 'fechado': return 'bg-green-100 text-green-700 border-green-200'
-      default: return 'bg-gray-100 text-gray-700 border-gray-200'
+      case 'aberto': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+      case 'em_andamento': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
+      case 'aguardando': return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800'
+      case 'fechado': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+      default: return 'bg-muted text-muted-foreground border-border'
     }
   }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critica': return 'bg-red-100 text-red-700 border-red-200'
-      case 'alta': return 'bg-orange-100 text-orange-700 border-orange-200'
-      case 'media': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
-      case 'baixa': return 'bg-green-100 text-green-700 border-green-200'
-      default: return 'bg-gray-100 text-gray-700 border-gray-200'
+      case 'critica': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+      case 'alta': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800'
+      case 'media': return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800'
+      case 'baixa': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+      default: return 'bg-muted text-muted-foreground border-border'
     }
   }
 
@@ -162,7 +162,7 @@ export default function Tickets() {
   if (ticketsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Carregando chamados...</div>
+        <div className="text-muted-foreground">Carregando chamados...</div>
       </div>
     )
   }
@@ -170,29 +170,29 @@ export default function Tickets() {
   if (ticketsError) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-red-500">Erro ao carregar chamados: {ticketsError.message}</div>
+        <div className="text-destructive">Erro ao carregar chamados: {ticketsError.message}</div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 bg-gray-50 min-h-screen p-3 md:p-6">
+    <div className="space-y-4 md:space-y-6 bg-background min-h-screen p-3 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">Chamados</h2>
-          <p className="text-gray-600 text-sm md:text-base">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Chamados</h2>
+          <p className="text-muted-foreground text-sm md:text-base">
             Gerencie todos os chamados de suporte
           </p>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Novo Chamado
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px] bg-gray-50 mx-4 max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Novo Chamado</DialogTitle>
               <DialogDescription>
@@ -202,32 +202,32 @@ export default function Tickets() {
             <form onSubmit={handleCreateTicket} className="space-y-6">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="title" className="text-slate-700">Título</Label>
+                  <Label htmlFor="title" className="text-foreground">Título</Label>
                   <Input 
                     id="title" 
                     name="title" 
                     placeholder="Descreva brevemente o problema"
                     required 
-                    className="border-slate-300 focus:border-slate-400"
+                    className="border-input focus:border-ring"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="description" className="text-slate-700">Descrição</Label>
+                  <Label htmlFor="description" className="text-foreground">Descrição</Label>
                   <Textarea 
                     id="description" 
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
                     required 
-                    className="border-slate-300 focus:border-slate-400 min-h-[100px]"
+                    className="border-input focus:border-ring min-h-[100px]"
                   />
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="priority" className="text-slate-700">Prioridade</Label>
+                    <Label htmlFor="priority" className="text-foreground">Prioridade</Label>
                     <Select name="priority" defaultValue="media">
-                      <SelectTrigger className="border-slate-300">
+                      <SelectTrigger className="border-input">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -240,9 +240,9 @@ export default function Tickets() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="category" className="text-slate-700">Categoria</Label>
+                    <Label htmlFor="category" className="text-foreground">Categoria</Label>
                     <Select name="category">
-                      <SelectTrigger className="border-slate-300">
+                      <SelectTrigger className="border-input">
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
@@ -257,11 +257,11 @@ export default function Tickets() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="unit_id" className="text-slate-700">
+                  <Label htmlFor="unit_id" className="text-foreground">
                     Unidade {profile?.role === 'admin' ? '(Todas disponíveis)' : '(Suas unidades atribuídas)'}
                   </Label>
                   <Select name="unit_id">
-                    <SelectTrigger className="border-slate-300">
+                    <SelectTrigger className="border-input">
                       <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
@@ -275,7 +275,7 @@ export default function Tickets() {
                 </div>
 
                 {/* Upload de Anexos */}
-                <div className="border-t border-slate-200 pt-4">
+                <div className="border-t border-border pt-4">
                   <ImageUpload
                     images={attachmentImages}
                     onImagesChange={setAttachmentImages}
@@ -284,7 +284,7 @@ export default function Tickets() {
                 </div>
               </div>
               
-              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t border-slate-200">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t border-border">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -292,7 +292,7 @@ export default function Tickets() {
                     setIsCreateDialogOpen(false)
                     setAttachmentImages([])
                   }}
-                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                  className="border-input text-muted-foreground hover:bg-muted"
                   disabled={createUserTicket.isPending}
                 >
                   Cancelar
@@ -300,7 +300,7 @@ export default function Tickets() {
                 <Button 
                   type="submit"
                   disabled={createUserTicket.isPending}
-                  className="bg-slate-600 hover:bg-slate-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {createUserTicket.isPending ? 'Criando...' : 'Criar Chamado'}
                 </Button>
@@ -328,46 +328,46 @@ export default function Tickets() {
 
       {/* Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-card border-border">
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-300"></div>
-              <span className="text-xs md:text-sm text-gray-600">Abertos</span>
+              <div className="w-2 h-2 rounded-full bg-red-400"></div>
+              <span className="text-xs md:text-sm text-muted-foreground">Abertos</span>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">
+            <p className="text-xl md:text-2xl font-bold text-foreground">
               {tickets.filter(t => t.status === 'aberto').length}
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-card border-border">
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-300"></div>
-              <span className="text-xs md:text-sm text-gray-600">Em Andamento</span>
+              <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+              <span className="text-xs md:text-sm text-muted-foreground">Em Andamento</span>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">
+            <p className="text-xl md:text-2xl font-bold text-foreground">
               {tickets.filter(t => t.status === 'em_andamento').length}
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-card border-border">
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-purple-300"></div>
-              <span className="text-xs md:text-sm text-gray-600">Aguardando</span>
+              <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+              <span className="text-xs md:text-sm text-muted-foreground">Aguardando</span>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">
+            <p className="text-xl md:text-2xl font-bold text-foreground">
               {tickets.filter(t => t.status === 'aguardando').length}
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-card border-border">
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-300"></div>
-              <span className="text-xs md:text-sm text-gray-600">Fechados</span>
+              <div className="w-2 h-2 rounded-full bg-green-400"></div>
+              <span className="text-xs md:text-sm text-muted-foreground">Fechados</span>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">
+            <p className="text-xl md:text-2xl font-bold text-foreground">
               {tickets.filter(t => t.status === 'fechado').length}
             </p>
           </CardContent>
@@ -375,10 +375,10 @@ export default function Tickets() {
       </div>
 
       {/* Lista de Chamados */}
-      <Card className="bg-white border-gray-200">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-900 text-lg md:text-xl">Lista de Chamados</CardTitle>
-          <CardDescription className="text-gray-600">
+          <CardTitle className="text-foreground text-lg md:text-xl">Lista de Chamados</CardTitle>
+          <CardDescription className="text-muted-foreground">
             {filteredTickets.length} de {tickets.length} chamados
           </CardDescription>
         </CardHeader>
@@ -387,27 +387,27 @@ export default function Tickets() {
           <div className="hidden lg:block overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-200">
-                  <TableHead className="text-gray-700">#</TableHead>
-                  <TableHead className="text-gray-700">Título</TableHead>
-                  <TableHead className="text-gray-700">Solicitante</TableHead>
-                  <TableHead className="text-gray-700">Unidade</TableHead>
-                  <TableHead className="text-gray-700">Categoria</TableHead>
-                  <TableHead className="text-gray-700">Prioridade</TableHead>
-                  <TableHead className="text-gray-700">Status</TableHead>
-                  <TableHead className="text-gray-700">Técnico</TableHead>
-                  <TableHead className="text-gray-700">Criado</TableHead>
-                  <TableHead className="text-gray-700">Ações</TableHead>
+                <TableRow className="border-border">
+                  <TableHead className="text-muted-foreground">#</TableHead>
+                  <TableHead className="text-muted-foreground">Título</TableHead>
+                  <TableHead className="text-muted-foreground">Solicitante</TableHead>
+                  <TableHead className="text-muted-foreground">Unidade</TableHead>
+                  <TableHead className="text-muted-foreground">Categoria</TableHead>
+                  <TableHead className="text-muted-foreground">Prioridade</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-muted-foreground">Técnico</TableHead>
+                  <TableHead className="text-muted-foreground">Criado</TableHead>
+                  <TableHead className="text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTickets.map((ticket) => (
-                  <TableRow key={ticket.id} className="border-gray-200 hover:bg-gray-50">
-                    <TableCell className="font-medium text-gray-900">#{ticket.ticket_number}</TableCell>
+                  <TableRow key={ticket.id} className="border-border hover:bg-muted/50">
+                    <TableCell className="font-medium text-foreground">#{ticket.ticket_number}</TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium text-gray-900">{ticket.title}</div>
-                        <div className="text-sm text-gray-600">
+                        <div className="font-medium text-foreground">{ticket.title}</div>
+                        <div className="text-sm text-muted-foreground">
                           {ticket.description.length > 50 
                             ? `${ticket.description.substring(0, 50)}...` 
                             : ticket.description}
@@ -416,18 +416,18 @@ export default function Tickets() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-900">{ticket.requester?.name}</span>
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-foreground">{ticket.requester?.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-900">{ticket.unit?.name}</span>
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-foreground">{ticket.unit?.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="capitalize text-gray-900">{ticket.category}</span>
+                      <span className="capitalize text-foreground">{ticket.category}</span>
                     </TableCell>
                     <TableCell>
                       <Badge className={`${getPriorityColor(ticket.priority)} capitalize`}>
@@ -439,7 +439,7 @@ export default function Tickets() {
                         value={ticket.status} 
                         onValueChange={(value) => handleStatusChange(ticket.id, value)}
                       >
-                        <SelectTrigger className="w-32 bg-white border-gray-300">
+                        <SelectTrigger className="w-32 bg-background border-input">
                           <Badge className={`${getStatusColor(ticket.status)} capitalize border-0`}>
                             {ticket.status.replace('_', ' ')}
                           </Badge>
@@ -457,7 +457,7 @@ export default function Tickets() {
                         value={ticket.assignee_id || 'unassigned'} 
                         onValueChange={(value) => handleAssigneeChange(ticket.id, value)}
                       >
-                        <SelectTrigger className="w-32 bg-white border-gray-300">
+                        <SelectTrigger className="w-32 bg-background border-input">
                           <SelectValue placeholder="Atribuir" />
                         </SelectTrigger>
                         <SelectContent>
@@ -472,8 +472,8 @@ export default function Tickets() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           {format(new Date(ticket.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                         </span>
                       </div>
@@ -484,7 +484,7 @@ export default function Tickets() {
                           variant="ghost"
                           size="sm"
                           onClick={() => openTicketDetails(ticket)}
-                          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -494,7 +494,7 @@ export default function Tickets() {
                               variant="ghost"
                               size="sm"
                               onClick={() => openEditDialog(ticket)}
-                              className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200"
+                              className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800 dark:hover:bg-yellow-900/30"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -503,7 +503,7 @@ export default function Tickets() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+                                  className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -540,13 +540,13 @@ export default function Tickets() {
           {/* Cards para mobile e tablet */}
           <div className="lg:hidden space-y-4 p-4">
             {filteredTickets.map((ticket) => (
-              <Card key={ticket.id} className="border border-gray-200">
+              <Card key={ticket.id} className="border border-border">
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">#{ticket.ticket_number} - {ticket.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <h3 className="font-medium text-foreground">#{ticket.ticket_number} - {ticket.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
                           {ticket.description.length > 100 
                             ? `${ticket.description.substring(0, 100)}...` 
                             : ticket.description}
@@ -557,31 +557,62 @@ export default function Tickets() {
                           variant="ghost"
                           size="sm"
                           onClick={() => openTicketDetails(ticket)}
-                          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         {canEditTicket(ticket) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(ticket)}
-                            className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(ticket)}
+                              className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800 dark:hover:bg-yellow-900/30"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir o chamado #{ticket.ticket_number}? 
+                                    Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteTicket(ticket.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
                         )}
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-500">Solicitante:</span>
-                        <div className="font-medium">{ticket.requester?.name}</div>
+                        <span className="text-muted-foreground">Solicitante:</span>
+                        <div className="font-medium text-foreground">{ticket.requester?.name}</div>
                       </div>
                       <div>
-                        <span className="text-gray-500">Unidade:</span>
-                        <div className="font-medium">{ticket.unit?.name}</div>
+                        <span className="text-muted-foreground">Unidade:</span>
+                        <div className="font-medium text-foreground">{ticket.unit?.name}</div>
                       </div>
                     </div>
                     
@@ -592,12 +623,12 @@ export default function Tickets() {
                       <Badge className={`${getPriorityColor(ticket.priority)} capitalize text-xs`}>
                         {ticket.priority}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs border-border">
                         {ticket.category}
                       </Badge>
                     </div>
                     
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       Criado em {format(new Date(ticket.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                     </div>
                   </div>
@@ -607,7 +638,7 @@ export default function Tickets() {
           </div>
           
           {filteredTickets.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               Nenhum chamado encontrado com os filtros aplicados
             </div>
           )}

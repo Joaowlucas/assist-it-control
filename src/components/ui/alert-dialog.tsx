@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 import { X } from "lucide-react"
@@ -41,10 +42,6 @@ const AlertDialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <AlertDialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 opacity-70 ring-offset-background transition-all duration-200 hover:opacity-100 hover:bg-muted hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Fechar</span>
-      </AlertDialogPrimitive.Close>
     </AlertDialogPrimitive.Content>
   </AlertDialogPortal>
 ))

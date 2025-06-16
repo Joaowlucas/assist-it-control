@@ -34,17 +34,17 @@ export function TicketFilters({
   technicians = []
 }: TicketFiltersProps) {
   return (
-    <div className="bg-gray-50 p-3 md:p-4 rounded-lg border border-gray-200 space-y-4">
+    <div className="bg-card p-3 md:p-4 rounded-lg border border-border space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
         {/* Busca por texto */}
         <div className="lg:col-span-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por título ou descrição..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 bg-white border-gray-300"
+              className="pl-10 bg-background border-input"
             />
           </div>
         </div>
@@ -52,7 +52,7 @@ export function TicketFilters({
         {/* Filtro por Status */}
         <div>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger className="bg-white border-gray-300">
+            <SelectTrigger className="bg-background border-input">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -68,7 +68,7 @@ export function TicketFilters({
         {/* Filtro por Prioridade */}
         <div>
           <Select value={priorityFilter} onValueChange={onPriorityFilterChange}>
-            <SelectTrigger className="bg-white border-gray-300">
+            <SelectTrigger className="bg-background border-input">
               <SelectValue placeholder="Prioridade" />
             </SelectTrigger>
             <SelectContent>
@@ -84,7 +84,7 @@ export function TicketFilters({
         {/* Filtro por Categoria */}
         <div>
           <Select value={categoryFilter} onValueChange={onCategoryFilterChange}>
-            <SelectTrigger className="bg-white border-gray-300">
+            <SelectTrigger className="bg-background border-input">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
@@ -101,7 +101,7 @@ export function TicketFilters({
         {/* Filtro por Técnico */}
         <div>
           <Select value={assigneeFilter} onValueChange={onAssigneeFilterChange}>
-            <SelectTrigger className="bg-white border-gray-300">
+            <SelectTrigger className="bg-background border-input">
               <SelectValue placeholder="Técnico" />
             </SelectTrigger>
             <SelectContent>
@@ -123,7 +123,7 @@ export function TicketFilters({
           variant="outline"
           size="sm"
           onClick={onClearFilters}
-          className="text-gray-600 hover:text-gray-800 border-gray-300"
+          className="text-muted-foreground hover:text-foreground border-input"
         >
           <X className="h-4 w-4 mr-2" />
           Limpar Filtros
