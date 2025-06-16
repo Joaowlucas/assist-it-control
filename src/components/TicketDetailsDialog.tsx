@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -85,7 +86,7 @@ interface Ticket {
 }
 
 interface TicketDetailsDialogProps {
-  ticket: Ticket
+  ticket: Ticket | null
   open: boolean
   onOpenChange: (open: boolean) => void
   units: {
@@ -103,6 +104,11 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange, units, technic
   const [isEditing, setIsEditing] = useState(false)
   const updateTicket = useUpdateTicket()
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
+
+  // Early return if ticket is null
+  if (!ticket) {
+    return null
+  }
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
