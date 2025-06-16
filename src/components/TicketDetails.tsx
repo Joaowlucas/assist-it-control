@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -93,6 +92,11 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
   const { data: attachments = [], isLoading: attachmentsLoading, error: attachmentsError } = useTicketAttachments(ticket.id)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
+  console.log('TicketDetails - ticket ID:', ticket.id)
+  console.log('TicketDetails - attachments:', attachments)
+  console.log('TicketDetails - attachments loading:', attachmentsLoading)
+  console.log('TicketDetails - attachments error:', attachmentsError)
+
   const isImageFile = (mimeType?: string) => {
     return mimeType?.startsWith('image/')
   }
@@ -178,85 +182,105 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
       {/* Anexos */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Anexos</CardTitle>
+          <CardTitle className="text-lg">Anexos do Chamado</CardTitle>
         </CardHeader>
         <CardContent>
           {attachmentsLoading ? (
-            <div className="text-center text-gray-500 py-4">Carregando anexos...</div>
+            <div className="text-center text-gray-500 py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              Carregando anexos...
+            </div>
           ) : attachmentsError ? (
             <div className="text-center text-red-500 py-4">
-              Erro ao carregar anexos: {attachmentsError.message}
+              <p className="font-medium">Erro ao carregar anexos</p>
+              <p className="text-sm">{attachmentsError.message}</p>
             </div>
           ) : attachments.length === 0 ? (
-            <div className="text-center text-gray-500 py-4">Nenhum anexo encontrado</div>
+            <div className="text-center text-gray-500 py-8">
+              <FileImage className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+              <p className="font-medium">Nenhum anexo encontrado</p>
+              <p className="text-sm">Este chamado não possui arquivos anexados.</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {attachments.map((attachment) => (
-                <div key={attachment.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                  {isImageFile(attachment.mime_type) ? (
-                    <div className="space-y-2">
-                      <img
-                        src={attachment.public_url}
-                        alt={attachment.file_name}
-                        className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => setSelectedImage(attachment.public_url)}
-                        onError={(e) => {
-                          console.error('Error loading image:', attachment.public_url)
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                      <div className="flex items-center justify-between">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedImage(attachment.public_url)}
-                          className="text-blue-600 hover:text-blue-800 p-1"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(attachment.public_url, '_blank')}
-                          className="text-gray-600 hover:text-gray-800 p-1"
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                {attachments.length} arquivo{attachments.length > 1 ? 's' : ''} anexado{attachments.length > 1 ? 's' : ''}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
+                    {isImageFile(attachment.mime_type) ? (
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <img
+                            src={attachment.public_url}
+                            alt={attachment.file_name}
+                            className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setSelectedImage(attachment.public_url)}
+                            onError={(e) => {
+                              console.error('Error loading image:', attachment.public_url)
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                          <div className="absolute top-2 right-2 opacity-0 hover:opacity-100 transition-opacity">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setSelectedImage(attachment.public_url)}
+                              className="p-1 h-6 w-6"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-green-600 font-medium">Imagem</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(attachment.public_url, '_blank')}
+                            className="text-blue-600 hover:text-blue-800 p-1 h-6"
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-3">
-                      <FileImage className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(attachment.public_url, '_blank')}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Baixar
-                      </Button>
-                    </div>
-                  )}
-                  
-                  <div className="mt-2 text-xs space-y-1">
-                    <div className="font-medium truncate" title={attachment.file_name}>
-                      {attachment.file_name}
-                    </div>
-                    {attachment.file_size && (
-                      <div className="text-gray-500">
-                        {formatFileSize(attachment.file_size)}
+                    ) : (
+                      <div className="text-center py-4">
+                        <FileImage className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                        <div className="flex justify-center">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(attachment.public_url, '_blank')}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Baixar
+                          </Button>
+                        </div>
                       </div>
                     )}
-                    <div className="text-gray-400">
-                      Por: {attachment.uploader?.name || 'Usuário'}
+                    
+                    <div className="mt-2 text-xs space-y-1">
+                      <div className="font-medium truncate" title={attachment.file_name}>
+                        {attachment.file_name}
+                      </div>
+                      {attachment.file_size && (
+                        <div className="text-gray-500">
+                          {formatFileSize(attachment.file_size)}
+                        </div>
+                      )}
+                      <div className="text-gray-400">
+                        Enviado por: {attachment.uploader?.name || 'Usuário'}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </CardContent>

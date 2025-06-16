@@ -68,9 +68,17 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
   const { generateTicketPDF, isGenerating } = useTicketPDF()
   const { data: systemSettings } = useSystemSettings()
 
+  console.log('TicketDetailsDialog - ticket:', ticket)
+  console.log('TicketDetailsDialog - systemSettings:', systemSettings)
+
   const handleDownloadPDF = async () => {
+    console.log('Iniciando download do PDF para ticket:', ticket.id)
     try {
       await generateTicketPDF(ticket.id, ticket.ticket_number.toString())
+      toast({
+        title: "PDF gerado!",
+        description: "O PDF do chamado foi gerado e baixado com sucesso.",
+      })
     } catch (error) {
       console.error('Error generating PDF:', error)
       toast({
@@ -82,7 +90,24 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
   }
 
   const handlePreviewPDF = () => {
+    console.log('Abrindo preview do PDF para ticket:', ticket.id)
     setPdfPreviewOpen(true)
+  }
+
+  const handleWhatsAppClick = () => {
+    console.log('Abrindo WhatsApp para ticket:', ticket.id)
+    console.log('Telefone do solicitante:', ticket.requester.phone)
+    
+    if (!ticket.requester.phone) {
+      toast({
+        title: "Número não encontrado",
+        description: "O solicitante não possui número de telefone cadastrado.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setWhatsappDialogOpen(true)
   }
 
   return (
@@ -96,7 +121,7 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setWhatsappDialogOpen(true)}
+                  onClick={handleWhatsAppClick}
                 >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   WhatsApp
