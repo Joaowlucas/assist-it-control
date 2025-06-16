@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { ImageUpload } from "@/components/ImageUpload"
 import { UserProfileSection } from "@/components/UserProfileSection"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
@@ -19,7 +21,7 @@ import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } 
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
 import { useAuth } from "@/hooks/useAuth"
-import { Edit, Trash2, Eye } from "lucide-react"
+import { Edit, Trash2, Eye, Plus } from "lucide-react"
 
 export default function UserPortal() {
   const { profile } = useAuth()
@@ -160,61 +162,62 @@ export default function UserPortal() {
   if (ticketsLoading || assignmentsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-slate-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6 p-2 md:p-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-700">Portal do Usuário</h2>
-          <p className="text-slate-500">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Portal do Usuário</h2>
+          <p className="text-muted-foreground text-sm md:text-base">
             Gerencie seus chamados e visualize seus equipamentos
           </p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-slate-600 hover:bg-slate-700 text-white">Novo Chamado</Button>
+            <Button className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Chamado
+            </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] bg-slate-50 border-slate-200 max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-slate-700">Criar Novo Chamado</DialogTitle>
-              <DialogDescription className="text-slate-600">
+              <DialogTitle className="text-foreground">Criar Novo Chamado</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 Descreva seu problema e nossa equipe irá ajudá-lo
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-4">
                 <div>
-                  <Label htmlFor="title" className="text-slate-700">Título</Label>
+                  <Label htmlFor="title" className="text-foreground">Título</Label>
                   <Input 
                     id="title" 
                     name="title" 
                     placeholder="Descreva brevemente o problema"
                     required 
-                    className="border-slate-300 focus:border-slate-400"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="description" className="text-slate-700">Descrição</Label>
+                  <Label htmlFor="description" className="text-foreground">Descrição</Label>
                   <Textarea 
                     id="description" 
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
                     required 
-                    className="border-slate-300 focus:border-slate-400"
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="priority" className="text-slate-700">Prioridade</Label>
+                    <Label htmlFor="priority" className="text-foreground">Prioridade</Label>
                     <Select name="priority" required>
-                      <SelectTrigger className="border-slate-300">
+                      <SelectTrigger>
                         <SelectValue placeholder="Selecione a prioridade" />
                       </SelectTrigger>
                       <SelectContent>
@@ -227,9 +230,9 @@ export default function UserPortal() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="category" className="text-slate-700">Categoria</Label>
+                    <Label htmlFor="category" className="text-foreground">Categoria</Label>
                     <Select name="category" required>
-                      <SelectTrigger className="border-slate-300">
+                      <SelectTrigger>
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
@@ -250,10 +253,10 @@ export default function UserPortal() {
                 />
                 
                 <div>
-                  <Label className="text-slate-700">Unidade</Label>
+                  <Label className="text-foreground">Unidade</Label>
                   {isTechnician && availableUnits.length > 0 ? (
                     <Select value={selectedUnitId} onValueChange={setSelectedUnitId} required>
-                      <SelectTrigger className="border-slate-300">
+                      <SelectTrigger>
                         <SelectValue placeholder="Selecione a unidade" />
                       </SelectTrigger>
                       <SelectContent>
@@ -268,10 +271,10 @@ export default function UserPortal() {
                     <Input 
                       value={profile?.unit?.name || 'Unidade não definida'}
                       disabled
-                      className="bg-slate-100 border-slate-300"
+                      className="bg-muted"
                     />
                   )}
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {isTechnician 
                       ? 'Selecione a unidade onde o problema está ocorrendo'
                       : 'Sua unidade será automaticamente selecionada'
@@ -280,20 +283,20 @@ export default function UserPortal() {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setIsDialogOpen(false)} 
-                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
                   disabled={createTicketMutation.isPending}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
-                  className="bg-slate-600 hover:bg-slate-700 text-white"
                   disabled={createTicketMutation.isPending || (isTechnician && !selectedUnitId)}
+                  className="w-full sm:w-auto"
                 >
                   {createTicketMutation.isPending ? 'Criando...' : 'Criar Chamado'}
                 </Button>
@@ -304,161 +307,165 @@ export default function UserPortal() {
       </div>
 
       {/* Dashboard Cards com Modais */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setOpenTicketsModalOpen(true)}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-700">Chamados Abertos</CardTitle>
-            <Eye className="h-4 w-4 text-slate-400" />
+      <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setOpenTicketsModalOpen(true)}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium text-foreground">Chamados Abertos</CardTitle>
+            <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{openTickets.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-bold text-foreground">{openTickets.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setClosedTicketsModalOpen(true)}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-700">Chamados Fechados</CardTitle>
-            <Eye className="h-4 w-4 text-slate-400" />
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setClosedTicketsModalOpen(true)}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium text-foreground">Chamados Fechados</CardTitle>
+            <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{closedTickets.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-bold text-foreground">{closedTickets.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setActiveEquipmentModalOpen(true)}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-700">Equipamentos Ativos</CardTitle>
-            <Eye className="h-4 w-4 text-slate-400" />
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveEquipmentModalOpen(true)}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium text-foreground">Equipamentos Ativos</CardTitle>
+            <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{activeAssignments.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-bold text-foreground">{activeAssignments.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-slate-100/70 border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setAllAssignmentsModalOpen(true)}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-700">Total de Atribuições</CardTitle>
-            <Eye className="h-4 w-4 text-slate-400" />
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setAllAssignmentsModalOpen(true)}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium text-foreground">Total de Atribuições</CardTitle>
+            <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{assignments.length}</div>
-            <p className="text-xs text-slate-500 mt-1">Clique para ver detalhes</p>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-bold text-foreground">{assignments.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Clique para ver detalhes</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs section */}
       <Tabs defaultValue="tickets" className="space-y-4">
-        <TabsList className="bg-slate-200 border-slate-300">
-          <TabsTrigger value="tickets" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Chamados</TabsTrigger>
-          <TabsTrigger value="assignments" className="data-[state=active]:bg-slate-100 text-slate-700">Meus Equipamentos</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="tickets" className="text-xs md:text-sm">Meus Chamados</TabsTrigger>
+          <TabsTrigger value="assignments" className="text-xs md:text-sm">Meus Equipamentos</TabsTrigger>
         </TabsList>
         
         <TabsContent value="tickets" className="space-y-4">
-          <Card className="bg-slate-100/50 border-slate-200">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-slate-700">Histórico de Chamados</CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardTitle className="text-foreground text-lg md:text-xl">Histórico de Chamados</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Todos os seus chamados de suporte
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-200">
-                    <TableHead className="text-slate-600">ID</TableHead>
-                    <TableHead className="text-slate-600">Título</TableHead>
-                    <TableHead className="text-slate-600">Unidade</TableHead>
-                    <TableHead className="text-slate-600">Categoria</TableHead>
-                    <TableHead className="text-slate-600">Prioridade</TableHead>
-                    <TableHead className="text-slate-600">Status</TableHead>
-                    <TableHead className="text-slate-600">Criado em</TableHead>
-                    <TableHead className="text-slate-600">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tickets.map((ticket) => (
-                    <TableRow key={ticket.id} className="border-slate-200">
-                      <TableCell className="font-medium text-slate-700">
-                        #{ticket.ticket_number}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium text-slate-700">{ticket.title}</div>
-                          <div className="text-sm text-slate-500">
-                            {ticket.description.length > 40 
-                              ? `${ticket.description.substring(0, 40)}...` 
-                              : ticket.description}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-600">{ticket.unit?.name}</TableCell>
-                      <TableCell className="text-slate-600">{getCategoryLabel(ticket.category)}</TableCell>
-                      <TableCell>
-                        <Badge variant={getPriorityColor(ticket.priority) as any}>
-                          {getPriorityLabel(ticket.priority)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(ticket.status) as any}>
-                          {getStatusLabel(ticket.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {canEditOrDelete(ticket) && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditTicket(ticket)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
+            <CardContent className="p-0 md:p-6">
+              <div className="rounded-md border overflow-hidden">
+                <ScrollArea className="h-[400px] md:h-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">ID</TableHead>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">Título</TableHead>
+                        <TableHead className="hidden md:table-cell text-muted-foreground text-xs md:text-sm">Unidade</TableHead>
+                        <TableHead className="hidden sm:table-cell text-muted-foreground text-xs md:text-sm">Categoria</TableHead>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">Prioridade</TableHead>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">Status</TableHead>
+                        <TableHead className="hidden lg:table-cell text-muted-foreground text-xs md:text-sm">Criado em</TableHead>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tickets.map((ticket) => (
+                        <TableRow key={ticket.id}>
+                          <TableCell className="font-medium text-foreground text-xs md:text-sm">
+                            #{ticket.ticket_number}
+                          </TableCell>
+                          <TableCell className="text-xs md:text-sm">
+                            <div>
+                              <div className="font-medium text-foreground">{ticket.title}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {ticket.description.length > 30 
+                                  ? `${ticket.description.substring(0, 30)}...` 
+                                  : ticket.description}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-xs md:text-sm">{ticket.unit?.name}</TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground text-xs md:text-sm">{getCategoryLabel(ticket.category)}</TableCell>
+                          <TableCell>
+                            <Badge variant={getPriorityColor(ticket.priority) as any} className="text-xs">
+                              {getPriorityLabel(ticket.priority)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusColor(ticket.status) as any} className="text-xs">
+                              {getStatusLabel(ticket.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-muted-foreground text-xs md:text-sm">
+                            {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {canEditOrDelete(ticket) && (
+                                <>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => handleEditTicket(ticket)}
+                                    className="h-6 w-6 p-0 md:h-8 md:w-8"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Edit className="h-3 w-3 md:h-4 md:w-4" />
                                   </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja excluir o chamado #{ticket.ticket_number}? 
-                                      Esta ação não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDeleteTicket(ticket.id)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Excluir
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 md:h-8 md:w-8 text-destructive hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="w-[95vw] max-w-md">
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Tem certeza que deseja excluir o chamado #{ticket.ticket_number}? 
+                                          Esta ação não pode ser desfeita.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                        <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeleteTicket(ticket.id)}
+                                          className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
+                                        >
+                                          Excluir
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -466,58 +473,62 @@ export default function UserPortal() {
         <TabsContent value="assignments" className="space-y-4">
           <EquipmentRequestsSection />
           
-          <Card className="bg-slate-100/50 border-slate-200">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-slate-700">Histórico de Equipamentos</CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardTitle className="text-foreground text-lg md:text-xl">Histórico de Equipamentos</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Todos os equipamentos que você utilizou ou está utilizando
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-200">
-                    <TableHead className="text-slate-600">Equipamento</TableHead>
-                    <TableHead className="text-slate-600">Tipo</TableHead>
-                    <TableHead className="text-slate-600">Marca/Modelo</TableHead>
-                    <TableHead className="text-slate-600">Data de Início</TableHead>
-                    <TableHead className="text-slate-600">Data de Fim</TableHead>
-                    <TableHead className="text-slate-600">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assignments.map((assignment) => (
-                    <TableRow key={assignment.id} className="border-slate-200">
-                      <TableCell className="font-medium text-slate-700">
-                        {assignment.equipment.name}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.equipment.type}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.equipment.brand && assignment.equipment.model 
-                          ? `${assignment.equipment.brand} ${assignment.equipment.model}`
-                          : assignment.equipment.brand || assignment.equipment.model || '-'
-                        }
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {assignment.end_date 
-                          ? new Date(assignment.end_date).toLocaleDateString('pt-BR') 
-                          : "-"
-                        }
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getAssignmentStatusColor(assignment.status) as any}>
-                          {assignment.status === 'ativo' ? 'Ativo' : 'Finalizado'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="p-0 md:p-6">
+              <div className="rounded-md border overflow-hidden">
+                <ScrollArea className="h-[400px] md:h-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">Equipamento</TableHead>
+                        <TableHead className="hidden sm:table-cell text-muted-foreground text-xs md:text-sm">Tipo</TableHead>
+                        <TableHead className="hidden md:table-cell text-muted-foreground text-xs md:text-sm">Marca/Modelo</TableHead>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">Data de Início</TableHead>
+                        <TableHead className="hidden lg:table-cell text-muted-foreground text-xs md:text-sm">Data de Fim</TableHead>
+                        <TableHead className="text-muted-foreground text-xs md:text-sm">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {assignments.map((assignment) => (
+                        <TableRow key={assignment.id}>
+                          <TableCell className="font-medium text-foreground text-xs md:text-sm">
+                            {assignment.equipment.name}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground text-xs md:text-sm">
+                            {assignment.equipment.type}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-xs md:text-sm">
+                            {assignment.equipment.brand && assignment.equipment.model 
+                              ? `${assignment.equipment.brand} ${assignment.equipment.model}`
+                              : assignment.equipment.brand || assignment.equipment.model || '-'
+                            }
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs md:text-sm">
+                            {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-muted-foreground text-xs md:text-sm">
+                            {assignment.end_date 
+                              ? new Date(assignment.end_date).toLocaleDateString('pt-BR') 
+                              : "-"
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getAssignmentStatusColor(assignment.status) as any} className="text-xs">
+                              {assignment.status === 'ativo' ? 'Ativo' : 'Finalizado'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
