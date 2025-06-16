@@ -7,12 +7,15 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSettings"
 import { useUnits } from "@/hooks/useUnits"
 import { useCreateUnit, useDeleteUnit } from "@/hooks/useUnitManagement"
-import { Loader2, Trash2 } from "lucide-react"
+import { Loader2, Trash2, Settings as SettingsIcon, Building2, MessageSquare } from "lucide-react"
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload"
+import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection"
+import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 
 export default function Settings() {
   const { toast } = useToast()
@@ -92,240 +95,244 @@ export default function Settings() {
         </p>
       </div>
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Identidade Visual</CardTitle>
-            <CardDescription>
-              Configure a logo da empresa que aparecerá no sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-base font-medium">Logo da Empresa</Label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  A logo será exibida na barra lateral e na tela de login
-                </p>
-                <CompanyLogoUpload />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="general" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <SettingsIcon className="h-4 w-4" />
+            Geral
+          </TabsTrigger>
+          <TabsTrigger value="units" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Unidades
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            WhatsApp
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Unidades de Atendimento</CardTitle>
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Identidade Visual</CardTitle>
               <CardDescription>
-                Gerencie as unidades da empresa para organizar chamados
+                Configure a logo da empresa que aparecerá no sistema
               </CardDescription>
-            </div>
-            
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>Nova Unidade</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Criar Nova Unidade</DialogTitle>
-                  <DialogDescription>
-                    Adicione uma nova unidade de atendimento
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmitUnit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nome da Unidade</Label>
-                    <Input 
-                      id="name" 
-                      name="name" 
-                      placeholder="Ex: Matriz São Paulo"
-                      required 
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="description">Descrição</Label>
-                    <Input 
-                      id="description" 
-                      name="description" 
-                      placeholder="Descrição da unidade"
-                      required 
-                    />
-                  </div>
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={createUnit.isPending}>
-                      {createUnit.isPending ? "Criando..." : "Criar Unidade"}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </CardHeader>
-          <CardContent>
-            {isLoadingUnits ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-6 w-6 animate-spin" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base font-medium">Logo da Empresa</Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    A logo será exibida na barra lateral e na tela de login
+                  </p>
+                  <CompanyLogoUpload />
+                </div>
               </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Data de Criação</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {units?.map((unit) => (
-                    <TableRow key={unit.id}>
-                      <TableCell className="font-medium">{unit.name}</TableCell>
-                      <TableCell>{unit.description}</TableCell>
-                      <TableCell>{new Date(unit.created_at).toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteUnit(unit.id)}
-                          disabled={deleteUnit.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações Gerais</CardTitle>
+              <CardDescription>
+                Configurações básicas do sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="company">Nome da Empresa</Label>
+                <Input 
+                  id="company" 
+                  value={formData.company_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="department">Departamento de TI</Label>
+                <Input 
+                  id="department" 
+                  value={formData.department_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, department_name: e.target.value }))}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="email">E-mail de Suporte</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={formData.support_email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, support_email: e.target.value }))}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="ticketEmail">E-mail para novos chamados</Label>
+                <Input 
+                  id="ticketEmail" 
+                  type="email" 
+                  value={formData.ticket_email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ticket_email: e.target.value }))}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="equipmentEmail">E-mail para equipamentos</Label>
+                <Input 
+                  id="equipmentEmail" 
+                  type="email" 
+                  value={formData.equipment_email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, equipment_email: e.target.value }))}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="autoAssign">Auto-atribuição de chamados</Label>
+                <Select 
+                  value={formData.auto_assign_tickets ? "enabled" : "disabled"}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, auto_assign_tickets: value === "enabled" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="enabled">Habilitado</SelectItem>
+                    <SelectItem value="disabled">Desabilitado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="priority">Prioridade padrão para novos chamados</Label>
+                <Select 
+                  value={formData.default_priority}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, default_priority: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="critica">Crítica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={handleSave} 
+                  disabled={updateSettings.isPending}
+                >
+                  {updateSettings.isPending ? "Salvando..." : "Salvar Configurações"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="units" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Unidades de Atendimento</CardTitle>
+                <CardDescription>
+                  Gerencie as unidades da empresa para organizar chamados
+                </CardDescription>
+              </div>
+              
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>Nova Unidade</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Nova Unidade</DialogTitle>
+                    <DialogDescription>
+                      Adicione uma nova unidade de atendimento
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmitUnit} className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Nome da Unidade</Label>
+                      <Input 
+                        id="name" 
+                        name="name" 
+                        placeholder="Ex: Matriz São Paulo"
+                        required 
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="description">Descrição</Label>
+                      <Input 
+                        id="description" 
+                        name="description" 
+                        placeholder="Descrição da unidade"
+                        required 
+                      />
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={createUnit.isPending}>
+                        {createUnit.isPending ? "Criando..." : "Criar Unidade"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isLoadingUnits ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Data de Criação</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {units?.map((unit) => (
+                      <TableRow key={unit.id}>
+                        <TableCell className="font-medium">{unit.name}</TableCell>
+                        <TableCell>{unit.description}</TableCell>
+                        <TableCell>{new Date(unit.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteUnit(unit.id)}
+                            disabled={deleteUnit.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Configurações Gerais</CardTitle>
-            <CardDescription>
-              Configurações básicas do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="company">Nome da Empresa</Label>
-              <Input 
-                id="company" 
-                value={formData.company_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="department">Departamento de TI</Label>
-              <Input 
-                id="department" 
-                value={formData.department_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, department_name: e.target.value }))}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="email">E-mail de Suporte</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                value={formData.support_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, support_email: e.target.value }))}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Configurações de Notificação</CardTitle>
-            <CardDescription>
-              Configure como e quando receber notificações
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="ticketEmail">E-mail para novos chamados</Label>
-              <Input 
-                id="ticketEmail" 
-                type="email" 
-                value={formData.ticket_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, ticket_email: e.target.value }))}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="equipmentEmail">E-mail para equipamentos</Label>
-              <Input 
-                id="equipmentEmail" 
-                type="email" 
-                value={formData.equipment_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, equipment_email: e.target.value }))}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Configurações de Sistema</CardTitle>
-            <CardDescription>
-              Configurações técnicas do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="autoAssign">Auto-atribuição de chamados</Label>
-              <Select 
-                value={formData.auto_assign_tickets ? "enabled" : "disabled"}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, auto_assign_tickets: value === "enabled" }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="enabled">Habilitado</SelectItem>
-                  <SelectItem value="disabled">Desabilitado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="priority">Prioridade padrão para novos chamados</Label>
-              <Select 
-                value={formData.default_priority}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, default_priority: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="critica">Crítica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button 
-            onClick={handleSave} 
-            disabled={updateSettings.isPending}
-          >
-            {updateSettings.isPending ? "Salvando..." : "Salvar Configurações"}
-          </Button>
-        </div>
-      </div>
+        <TabsContent value="whatsapp" className="space-y-6">
+          <WhatsAppConfigSection />
+          <WhatsAppLogsSection />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
