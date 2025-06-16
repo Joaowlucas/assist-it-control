@@ -38,19 +38,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -100,16 +93,17 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Smooth transitions for all interactive elements */
-  button, a, [role="button"] {
-    @apply transition-all duration-200 ease-smooth;
+  /* Apple-style smooth transitions for all interactive elements */
+  button, a, [role="button"], input, textarea, select {
+    @apply transition-all duration-300 ease-out;
   }
 
-  /* Modern focus styles */
+  /* Enhanced focus styles */
   *:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background transition-all duration-200;
   }
 
   /* Mobile touch improvements */
@@ -118,99 +112,152 @@
       @apply min-h-[44px] min-w-[44px];
     }
   }
+
+  /* Glass morphism support */
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl;
+  }
+
+  .glass-dark {
+    @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
 }
 
 @layer components {
-  /* Modern hover effects */
-  .hover-lift {
-    @apply transition-all duration-300 hover:translate-y-[-2px] hover:shadow-lg;
+  /* Apple-style hover effects */
+  .apple-hover {
+    @apply transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg active:scale-[0.98];
   }
 
-  .hover-scale {
-    @apply transition-transform duration-200 hover:scale-105;
+  .apple-button {
+    @apply transition-all duration-200 ease-out hover:scale-105 active:scale-95 hover:brightness-110;
   }
 
-  .hover-glow {
-    @apply transition-all duration-300 hover:shadow-xl hover:shadow-primary/20;
+  /* Modern card animations */
+  .card-modern {
+    @apply transition-all duration-300 ease-out hover:translate-y-[-2px] hover:shadow-2xl hover:shadow-black/10;
   }
 
-  /* Card animations */
-  .card-hover {
-    @apply transition-all duration-300 hover:translate-y-[-4px] hover:shadow-2xl;
+  /* Glassmorphism cards */
+  .glass-card {
+    @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-xl rounded-2xl transition-all duration-300 hover:bg-white/70 hover:shadow-2xl;
   }
 
-  /* Button animations */
-  .btn-bounce {
-    @apply transition-all duration-200 active:scale-95 hover:animate-bounce-gentle;
+  /* Loading shimmer effect enhanced */
+  .shimmer-modern {
+    @apply bg-gradient-to-r from-gray-200 via-white to-gray-200 bg-[length:200%_100%] animate-shimmer rounded-lg;
   }
 
-  /* Loading shimmer effect */
-  .shimmer {
-    @apply bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer;
+  /* Page transitions */
+  .page-enter-apple {
+    @apply animate-[fade-in_0.4s_ease-out,scale-in_0.3s_ease-out];
   }
 
-  /* Smooth page transitions */
-  .page-enter {
-    @apply animate-fade-in;
+  .page-exit-apple {
+    @apply animate-[fade-out_0.3s_ease-out,scale-out_0.2s_ease-out];
   }
 
-  .page-exit {
-    @apply animate-fade-out;
+  /* Floating elements */
+  .float-gentle {
+    @apply animate-[float_3s_ease-in-out_infinite];
   }
 
-  /* Mobile-optimized spacing */
+  /* iOS-style blur backgrounds */
+  .blur-background {
+    @apply backdrop-blur-xl bg-white/80 border border-white/20;
+  }
+
+  /* Enhanced mobile optimizations */
   @media (max-width: 768px) {
-    .mobile-padding {
-      @apply px-4 py-2;
+    .mobile-glass {
+      @apply bg-white/90 backdrop-blur-lg;
     }
 
-    .mobile-text {
-      @apply text-sm;
+    .mobile-padding-modern {
+      @apply px-4 py-3;
     }
 
-    .mobile-hidden {
-      @apply hidden;
+    .mobile-text-responsive {
+      @apply text-sm leading-relaxed;
     }
 
-    .mobile-full {
-      @apply w-full;
+    .mobile-full-modern {
+      @apply w-full rounded-2xl;
     }
   }
 }
 
 @layer utilities {
-  /* Modern animation utilities */
-  .animate-in {
-    @apply animate-fade-in;
+  /* Enhanced animation utilities */
+  .animate-in-apple {
+    @apply animate-[fade-in_0.4s_ease-out,scale-in_0.3s_ease-out];
   }
 
-  .animate-out {
-    @apply animate-fade-out;
+  .animate-out-apple {
+    @apply animate-[fade-out_0.3s_ease-out,scale-out_0.2s_ease-out];
   }
 
-  .slide-in {
-    @apply animate-slide-up;
+  .slide-in-apple {
+    @apply animate-[slide-up_0.4s_ease-out];
   }
 
-  .slide-out {
-    @apply animate-slide-down;
+  .slide-out-apple {
+    @apply animate-[slide-down_0.3s_ease-out];
   }
 
-  /* Responsive utilities */
-  .mobile-stack {
-    @apply flex flex-col gap-2 md:flex-row md:gap-4;
+  /* Modern responsive utilities */
+  .stack-modern {
+    @apply flex flex-col gap-3 md:flex-row md:gap-6;
   }
 
-  .mobile-grid {
-    @apply grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3;
+  .grid-modern {
+    @apply grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3;
   }
 
-  /* Accessibility improvements */
+  /* Apple-style interactive feedback */
+  .touch-feedback {
+    @apply transition-transform duration-150 ease-out active:scale-95;
+  }
+
+  .press-feedback {
+    @apply transition-all duration-100 ease-out active:scale-[0.98] active:brightness-95;
+  }
+
+  /* Enhanced accessibility with motion preferences */
   @media (prefers-reduced-motion: reduce) {
-    * {
+    *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
+  }
+
+  /* Performance optimizations */
+  .gpu-accelerated {
+    @apply transform-gpu will-change-transform;
+  }
+
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Additional keyframes for Apple-style animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
   }
 }
