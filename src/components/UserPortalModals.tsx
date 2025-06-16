@@ -72,7 +72,7 @@ export function OpenTicketsModal({ open, onOpenChange, tickets }: OpenTicketsMod
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] flex flex-col bg-card border-border">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-foreground">Chamados Abertos ({tickets.length})</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -88,15 +88,15 @@ export function OpenTicketsModal({ open, onOpenChange, tickets }: OpenTicketsMod
                 placeholder="Buscar por título ou descrição..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-background border-border text-foreground"
               />
             </div>
             <div className="flex gap-2 sm:gap-4">
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-40 bg-background border-border text-foreground">
                   <SelectValue placeholder="Prioridade" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-card border-border">
                   <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="critica">Crítica</SelectItem>
                   <SelectItem value="alta">Alta</SelectItem>
@@ -105,10 +105,10 @@ export function OpenTicketsModal({ open, onOpenChange, tickets }: OpenTicketsMod
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-40 bg-background border-border text-foreground">
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-card border-border">
                   <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="hardware">Hardware</SelectItem>
                   <SelectItem value="software">Software</SelectItem>
@@ -120,11 +120,11 @@ export function OpenTicketsModal({ open, onOpenChange, tickets }: OpenTicketsMod
             </div>
           </div>
 
-          <div className="rounded-md border overflow-hidden flex-1">
+          <div className="rounded-md border border-border overflow-hidden flex-1 bg-card">
             <ScrollArea className="h-full max-h-[400px]">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="border-border hover:bg-muted/50">
                     <TableHead className="text-muted-foreground">ID</TableHead>
                     <TableHead className="text-muted-foreground">Título</TableHead>
                     <TableHead className="hidden sm:table-cell text-muted-foreground">Categoria</TableHead>
@@ -135,7 +135,7 @@ export function OpenTicketsModal({ open, onOpenChange, tickets }: OpenTicketsMod
                 </TableHeader>
                 <TableBody>
                   {filteredTickets.map((ticket) => (
-                    <TableRow key={ticket.id}>
+                    <TableRow key={ticket.id} className="border-border hover:bg-muted/50">
                       <TableCell className="font-medium text-foreground">#{ticket.ticket_number}</TableCell>
                       <TableCell>
                         <div>
@@ -198,7 +198,7 @@ export function ClosedTicketsModal({ open, onOpenChange, tickets }: ClosedTicket
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] flex flex-col bg-card border-border">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-foreground">Chamados Fechados ({tickets.length})</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -213,15 +213,15 @@ export function ClosedTicketsModal({ open, onOpenChange, tickets }: ClosedTicket
               placeholder="Buscar por título ou descrição..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-background border-border text-foreground"
             />
           </div>
 
-          <div className="rounded-md border overflow-hidden flex-1">
+          <div className="rounded-md border border-border overflow-hidden flex-1 bg-card">
             <ScrollArea className="h-full max-h-[400px]">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="border-border hover:bg-muted/50">
                     <TableHead className="text-muted-foreground">ID</TableHead>
                     <TableHead className="text-muted-foreground">Título</TableHead>
                     <TableHead className="hidden sm:table-cell text-muted-foreground">Categoria</TableHead>
@@ -232,7 +232,7 @@ export function ClosedTicketsModal({ open, onOpenChange, tickets }: ClosedTicket
                 </TableHeader>
                 <TableBody>
                   {filteredTickets.map((ticket) => (
-                    <TableRow key={ticket.id}>
+                    <TableRow key={ticket.id} className="border-border hover:bg-muted/50">
                       <TableCell className="font-medium text-foreground">#{ticket.ticket_number}</TableCell>
                       <TableCell>
                         <div>
@@ -286,7 +286,7 @@ export function ActiveEquipmentModal({ open, onOpenChange, assignments }: Active
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] flex flex-col bg-card border-border">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-foreground">Equipamentos Ativos ({assignments.length})</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -301,15 +301,15 @@ export function ActiveEquipmentModal({ open, onOpenChange, assignments }: Active
               placeholder="Buscar por nome ou tipo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-background border-border text-foreground"
             />
           </div>
 
-          <div className="rounded-md border overflow-hidden flex-1">
+          <div className="rounded-md border border-border overflow-hidden flex-1 bg-card">
             <ScrollArea className="h-full max-h-[400px]">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="border-border hover:bg-muted/50">
                     <TableHead className="text-muted-foreground">Equipamento</TableHead>
                     <TableHead className="hidden sm:table-cell text-muted-foreground">Tipo</TableHead>
                     <TableHead className="hidden md:table-cell text-muted-foreground">Marca/Modelo</TableHead>
@@ -320,7 +320,7 @@ export function ActiveEquipmentModal({ open, onOpenChange, assignments }: Active
                 </TableHeader>
                 <TableBody>
                   {filteredAssignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
+                    <TableRow key={assignment.id} className="border-border hover:bg-muted/50">
                       <TableCell className="font-medium text-foreground">{assignment.equipment.name}</TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground">{assignment.equipment.type}</TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
@@ -378,7 +378,7 @@ export function AllAssignmentsModal({ open, onOpenChange, assignments }: AllAssi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-5xl max-h-[85vh] flex flex-col">
+      <DialogContent className="w-[95vw] max-w-5xl max-h-[85vh] flex flex-col bg-card border-border">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-foreground">Histórico de Atribuições ({assignments.length})</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -394,14 +394,14 @@ export function AllAssignmentsModal({ open, onOpenChange, assignments }: AllAssi
                 placeholder="Buscar por nome ou tipo..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-background border-border text-foreground"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full sm:w-40 bg-background border-border text-foreground">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="ativo">Ativo</SelectItem>
                 <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -409,11 +409,11 @@ export function AllAssignmentsModal({ open, onOpenChange, assignments }: AllAssi
             </Select>
           </div>
 
-          <div className="rounded-md border overflow-hidden flex-1">
+          <div className="rounded-md border border-border overflow-hidden flex-1 bg-card">
             <ScrollArea className="h-full max-h-[400px]">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="border-border hover:bg-muted/50">
                     <TableHead className="text-muted-foreground">Equipamento</TableHead>
                     <TableHead className="hidden sm:table-cell text-muted-foreground">Tipo</TableHead>
                     <TableHead className="hidden md:table-cell text-muted-foreground">Marca/Modelo</TableHead>
@@ -430,7 +430,7 @@ export function AllAssignmentsModal({ open, onOpenChange, assignments }: AllAssi
                     const durationDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
                     
                     return (
-                      <TableRow key={assignment.id}>
+                      <TableRow key={assignment.id} className="border-border hover:bg-muted/50">
                         <TableCell className="font-medium text-foreground">{assignment.equipment.name}</TableCell>
                         <TableCell className="hidden sm:table-cell text-muted-foreground">{assignment.equipment.type}</TableCell>
                         <TableCell className="hidden md:table-cell text-muted-foreground">

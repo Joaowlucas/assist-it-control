@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Computer, Users, Settings, Calendar, Monitor, FileText, User } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
@@ -129,18 +130,18 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="transition-all duration-300 ease-smooth border-r border-border bg-sidebar">
-      <div className="p-3 md:p-4 border-b border-border transition-all duration-300 hover:bg-muted/30">
+    <Sidebar collapsible="icon" className="transition-all duration-300 ease-smooth border-r border-border/50 bg-sidebar/80 backdrop-blur-sm supports-[backdrop-filter]:bg-sidebar/60">
+      <div className="p-3 md:p-4 border-b border-border/50 transition-all duration-300 hover:bg-muted/30 backdrop-blur-sm">
         {renderHeader()}
       </div>
 
       {!isMobile && (
-        <SidebarTrigger className="m-2 self-end hover:bg-muted transition-all duration-200 hover:scale-105" />
+        <SidebarTrigger className="m-2 self-end hover:bg-muted/50 transition-all duration-200 hover:scale-105 backdrop-blur-sm" />
       )}
 
-      <SidebarContent className="animate-fade-in">
+      <SidebarContent className="animate-fade-in backdrop-blur-sm">
         <SidebarGroup>
-          <SidebarGroupLabel className="transition-all duration-200 text-sidebar-foreground">
+          <SidebarGroupLabel className="transition-all duration-200 text-sidebar-foreground/90">
             {profile?.role === 'technician' ? 'Técnico' : 'Administração'}
           </SidebarGroupLabel>
           <SidebarGroupContent>

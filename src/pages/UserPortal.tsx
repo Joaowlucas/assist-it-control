@@ -184,7 +184,7 @@ export default function UserPortal() {
               Novo Chamado
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto bg-card border-border">
             <DialogHeader>
               <DialogTitle className="text-foreground">Criar Novo Chamado</DialogTitle>
               <DialogDescription className="text-muted-foreground">
@@ -200,6 +200,7 @@ export default function UserPortal() {
                     name="title" 
                     placeholder="Descreva brevemente o problema"
                     required 
+                    className="bg-background border-border text-foreground"
                   />
                 </div>
                 
@@ -210,6 +211,7 @@ export default function UserPortal() {
                     name="description" 
                     placeholder="Descreva detalhadamente o problema"
                     required 
+                    className="bg-background border-border text-foreground"
                   />
                 </div>
                 
@@ -217,10 +219,10 @@ export default function UserPortal() {
                   <div>
                     <Label htmlFor="priority" className="text-foreground">Prioridade</Label>
                     <Select name="priority" required>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background border-border text-foreground">
                         <SelectValue placeholder="Selecione a prioridade" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-card border-border">
                         <SelectItem value="baixa">Baixa</SelectItem>
                         <SelectItem value="media">Média</SelectItem>
                         <SelectItem value="alta">Alta</SelectItem>
@@ -232,10 +234,10 @@ export default function UserPortal() {
                   <div>
                     <Label htmlFor="category" className="text-foreground">Categoria</Label>
                     <Select name="category" required>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background border-border text-foreground">
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-card border-border">
                         <SelectItem value="hardware">Hardware</SelectItem>
                         <SelectItem value="software">Software</SelectItem>
                         <SelectItem value="rede">Rede</SelectItem>
@@ -256,10 +258,10 @@ export default function UserPortal() {
                   <Label className="text-foreground">Unidade</Label>
                   {isTechnician && availableUnits.length > 0 ? (
                     <Select value={selectedUnitId} onValueChange={setSelectedUnitId} required>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background border-border text-foreground">
                         <SelectValue placeholder="Selecione a unidade" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-card border-border">
                         {availableUnits.map((unit) => (
                           <SelectItem key={unit.unit_id} value={unit.unit_id}>
                             {unit.unit?.name}
@@ -271,7 +273,7 @@ export default function UserPortal() {
                     <Input 
                       value={profile?.unit?.name || 'Unidade não definida'}
                       disabled
-                      className="bg-muted"
+                      className="bg-muted border-border text-muted-foreground"
                     />
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
@@ -308,7 +310,7 @@ export default function UserPortal() {
 
       {/* Dashboard Cards com Modais */}
       <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setOpenTicketsModalOpen(true)}>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors bg-card border-border" onClick={() => setOpenTicketsModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium text-foreground">Chamados Abertos</CardTitle>
             <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
@@ -319,7 +321,7 @@ export default function UserPortal() {
           </CardContent>
         </Card>
         
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setClosedTicketsModalOpen(true)}>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors bg-card border-border" onClick={() => setClosedTicketsModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium text-foreground">Chamados Fechados</CardTitle>
             <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
@@ -330,7 +332,7 @@ export default function UserPortal() {
           </CardContent>
         </Card>
         
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveEquipmentModalOpen(true)}>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors bg-card border-border" onClick={() => setActiveEquipmentModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium text-foreground">Equipamentos Ativos</CardTitle>
             <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
@@ -341,7 +343,7 @@ export default function UserPortal() {
           </CardContent>
         </Card>
         
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setAllAssignmentsModalOpen(true)}>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors bg-card border-border" onClick={() => setAllAssignmentsModalOpen(true)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium text-foreground">Total de Atribuições</CardTitle>
             <Eye className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
@@ -355,13 +357,13 @@ export default function UserPortal() {
 
       {/* Tabs section */}
       <Tabs defaultValue="tickets" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 bg-muted">
           <TabsTrigger value="tickets" className="text-xs md:text-sm">Meus Chamados</TabsTrigger>
           <TabsTrigger value="assignments" className="text-xs md:text-sm">Meus Equipamentos</TabsTrigger>
         </TabsList>
         
         <TabsContent value="tickets" className="space-y-4">
-          <Card>
+          <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground text-lg md:text-xl">Histórico de Chamados</CardTitle>
               <CardDescription className="text-muted-foreground">
@@ -369,11 +371,11 @@ export default function UserPortal() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 md:p-6">
-              <div className="rounded-md border overflow-hidden">
+              <div className="rounded-md border border-border overflow-hidden bg-card">
                 <ScrollArea className="h-[400px] md:h-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="border-border hover:bg-muted/50">
                         <TableHead className="text-muted-foreground text-xs md:text-sm">ID</TableHead>
                         <TableHead className="text-muted-foreground text-xs md:text-sm">Título</TableHead>
                         <TableHead className="hidden md:table-cell text-muted-foreground text-xs md:text-sm">Unidade</TableHead>
@@ -386,7 +388,7 @@ export default function UserPortal() {
                     </TableHeader>
                     <TableBody>
                       {tickets.map((ticket) => (
-                        <TableRow key={ticket.id}>
+                        <TableRow key={ticket.id} className="border-border hover:bg-muted/50">
                           <TableCell className="font-medium text-foreground text-xs md:text-sm">
                             #{ticket.ticket_number}
                           </TableCell>
@@ -437,10 +439,10 @@ export default function UserPortal() {
                                         <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                                       </Button>
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent className="w-[95vw] max-w-md">
+                                    <AlertDialogContent className="w-[95vw] max-w-md bg-card border-border">
                                       <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                        <AlertDialogDescription>
+                                        <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-muted-foreground">
                                           Tem certeza que deseja excluir o chamado #{ticket.ticket_number}? 
                                           Esta ação não pode ser desfeita.
                                         </AlertDialogDescription>
@@ -473,7 +475,7 @@ export default function UserPortal() {
         <TabsContent value="assignments" className="space-y-4">
           <EquipmentRequestsSection />
           
-          <Card>
+          <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground text-lg md:text-xl">Histórico de Equipamentos</CardTitle>
               <CardDescription className="text-muted-foreground">
@@ -481,11 +483,11 @@ export default function UserPortal() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 md:p-6">
-              <div className="rounded-md border overflow-hidden">
+              <div className="rounded-md border border-border overflow-hidden bg-card">
                 <ScrollArea className="h-[400px] md:h-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="border-border hover:bg-muted/50">
                         <TableHead className="text-muted-foreground text-xs md:text-sm">Equipamento</TableHead>
                         <TableHead className="hidden sm:table-cell text-muted-foreground text-xs md:text-sm">Tipo</TableHead>
                         <TableHead className="hidden md:table-cell text-muted-foreground text-xs md:text-sm">Marca/Modelo</TableHead>
@@ -496,7 +498,7 @@ export default function UserPortal() {
                     </TableHeader>
                     <TableBody>
                       {assignments.map((assignment) => (
-                        <TableRow key={assignment.id}>
+                        <TableRow key={assignment.id} className="border-border hover:bg-muted/50">
                           <TableCell className="font-medium text-foreground text-xs md:text-sm">
                             {assignment.equipment.name}
                           </TableCell>
