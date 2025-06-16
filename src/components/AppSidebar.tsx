@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Computer, Users, Settings, Calendar, Monitor, FileText, User } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
@@ -43,7 +42,6 @@ export function AppSidebar() {
   const isMobile = useIsMobile()
   const currentPath = location.pathname
 
-  // Determinar quais itens mostrar baseado no role
   const getNavigationItems = () => {
     if (profile?.role === 'technician') {
       return technicianItems
@@ -55,9 +53,8 @@ export function AppSidebar() {
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    `transition-all duration-200 ${isActive ? "bg-muted text-primary font-medium shadow-sm" : "hover:bg-muted/50 hover:translate-x-1"}`
+    `transition-all duration-200 ${isActive ? "bg-muted text-primary font-medium shadow-sm dark:bg-muted dark:text-primary" : "hover:bg-muted/50 hover:translate-x-1 dark:hover:bg-muted/30"}`
 
-  // Fechar sidebar no mobile após clique em item
   const handleItemClick = () => {
     if (isMobile) {
       setOpenMobile(false)
@@ -65,19 +62,18 @@ export function AppSidebar() {
   }
 
   const renderHeader = () => {
-    // Mostrar placeholder com animação enquanto carrega
     if (settingsLoading) {
       if (state === "collapsed") {
         return (
           <div className="flex justify-center">
-            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse shimmer"></div>
+            <div className="h-8 w-8 bg-muted rounded animate-pulse shimmer-modern"></div>
           </div>
         )
       } else {
         return (
           <div className="flex items-center gap-3 animate-pulse">
-            <div className="h-8 w-8 bg-gray-200 rounded shimmer"></div>
-            <div className="h-5 w-32 bg-gray-200 rounded shimmer"></div>
+            <div className="h-8 w-8 bg-muted rounded shimmer-modern"></div>
+            <div className="h-5 w-32 bg-muted rounded shimmer-modern"></div>
           </div>
         )
       }
@@ -92,7 +88,6 @@ export function AppSidebar() {
               alt="Logo" 
               className="h-8 w-8 object-contain transition-transform duration-300 hover:scale-110"
               onError={(e) => {
-                console.error('Erro ao carregar logo:', systemSettings.company_logo_url)
                 const target = e.target as HTMLImageElement
                 target.style.display = 'none'
               }}
@@ -107,12 +102,11 @@ export function AppSidebar() {
               alt="Logo da Empresa" 
               className="h-8 w-8 object-contain transition-transform duration-300 hover:scale-110"
               onError={(e) => {
-                console.error('Erro ao carregar logo:', systemSettings.company_logo_url)
                 const target = e.target as HTMLImageElement
                 target.style.display = 'none'
               }}
             />
-            <span className={`font-bold transition-all duration-300 ${isMobile ? 'text-lg' : 'text-lg'}`}>
+            <span className="font-bold transition-all duration-300 text-base md:text-lg text-foreground">
               {systemSettings.company_name || "IT Support"}
             </span>
           </div>
@@ -121,11 +115,11 @@ export function AppSidebar() {
     } else {
       return (
         <div className="animate-fade-in">
-          <h2 className={`font-bold transition-all duration-300 ${state === "collapsed" && !isMobile ? "hidden" : "block text-lg"}`}>
+          <h2 className={`font-bold transition-all duration-300 text-foreground ${state === "collapsed" && !isMobile ? "hidden" : "block text-base md:text-lg"}`}>
             {systemSettings?.company_name || "IT Support"}
           </h2>
           {state === "collapsed" && !isMobile && (
-            <div className="text-center font-bold text-sm transition-all duration-300 animate-scale-in">
+            <div className="text-center font-bold text-sm transition-all duration-300 animate-scale-in text-foreground">
               {systemSettings?.company_name ? systemSettings.company_name.substring(0, 2).toUpperCase() : "IT"}
             </div>
           )}
@@ -135,19 +129,18 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="transition-all duration-300 ease-smooth">
-      <div className="p-4 border-b transition-all duration-300 hover:bg-muted/30">
+    <Sidebar collapsible="icon" className="transition-all duration-300 ease-smooth border-r border-border bg-sidebar">
+      <div className="p-3 md:p-4 border-b border-border transition-all duration-300 hover:bg-muted/30">
         {renderHeader()}
       </div>
 
-      {/* Desktop sidebar trigger - only show on desktop */}
       {!isMobile && (
         <SidebarTrigger className="m-2 self-end hover:bg-muted transition-all duration-200 hover:scale-105" />
       )}
 
       <SidebarContent className="animate-fade-in">
         <SidebarGroup>
-          <SidebarGroupLabel className="transition-all duration-200">
+          <SidebarGroupLabel className="transition-all duration-200 text-sidebar-foreground">
             {profile?.role === 'technician' ? 'Técnico' : 'Administração'}
           </SidebarGroupLabel>
           <SidebarGroupContent>

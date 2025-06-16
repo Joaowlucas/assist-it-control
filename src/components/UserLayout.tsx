@@ -1,6 +1,7 @@
 
 import { ReactNode } from "react"
 import { UserProfileDropdown } from "@/components/UserProfileDropdown"
+import { ThemeToggle } from "@/components/ThemeToggle"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -13,40 +14,33 @@ export function UserLayout({ children }: UserLayoutProps) {
   const isMobile = useIsMobile()
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 animate-fade-in">
-      <header className="h-16 flex items-center justify-between border-b border-slate-200 bg-slate-100/50 px-4 md:px-6 transition-all duration-300 hover:bg-slate-100/70">
-        <div className="flex items-center gap-3 animate-slide-in-left">
+    <div className="min-h-screen flex flex-col bg-background text-foreground animate-fade-in">
+      <header className="h-14 md:h-16 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 md:px-6 transition-all duration-300 hover:bg-muted/20 sticky top-0 z-40">
+        <div className="flex items-center gap-2 md:gap-3 animate-slide-in-left flex-1 min-w-0">
           {systemSettings?.company_logo_url && (
             <img 
               src={systemSettings.company_logo_url} 
               alt="Logo da empresa" 
-              className="h-8 w-auto transition-transform duration-300 hover:scale-110"
+              className="h-6 md:h-8 w-auto transition-transform duration-300 hover:scale-110 shrink-0"
             />
           )}
-          <h1 className={`font-semibold text-slate-700 transition-all duration-300 ${
-            isMobile 
-              ? 'text-sm sm:text-lg' 
-              : 'text-xl'
-          }`}>
+          <h1 className="font-semibold text-foreground transition-all duration-300 truncate">
             {isMobile ? (
-              <>
-                <span className="block sm:hidden">Portal</span>
-                <span className="hidden sm:block">
-                  Portal do Usuário - {systemSettings?.department_name || 'Suporte TI'}
-                </span>
-              </>
+              <span className="text-sm">Portal do Usuário</span>
             ) : (
               `Portal do Usuário - ${systemSettings?.department_name || 'Suporte TI'}`
             )}
           </h1>
         </div>
-        <div className="animate-slide-in-right">
+        
+        <div className="flex items-center gap-2 animate-slide-in-right shrink-0">
+          <ThemeToggle />
           <UserProfileDropdown />
         </div>
       </header>
       
-      <main className="flex-1 p-4 md:p-6 animate-fade-in">
-        <div className="animate-in">
+      <main className="flex-1 p-3 md:p-6 animate-fade-in overflow-auto">
+        <div className="animate-in max-w-full">
           {children}
         </div>
       </main>

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 export default function Login() {
   const { user, profile, signIn, loading: authLoading } = useAuth()
@@ -59,14 +60,13 @@ export default function Login() {
     }
   }
 
-  // Renderizar logo imediatamente se disponível
   const renderLogo = () => {
     if (systemSettings?.company_logo_url) {
       return (
         <img 
           src={systemSettings.company_logo_url} 
           alt="Logo da Empresa" 
-          className="h-16 w-auto object-contain"
+          className="h-12 md:h-16 w-auto object-contain transition-transform duration-300 hover:scale-105"
           onError={(e) => {
             e.currentTarget.style.display = 'none'
           }}
@@ -75,12 +75,12 @@ export default function Login() {
     }
     
     if (settingsLoading) {
-      return <Skeleton className="h-16 w-16 rounded" />
+      return <Skeleton className="h-12 md:h-16 w-16 rounded" />
     }
     
     return (
-      <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
-        <span className="text-2xl font-bold text-muted-foreground">
+      <div className="h-12 md:h-16 w-12 md:w-16 bg-muted rounded flex items-center justify-center">
+        <span className="text-xl md:text-2xl font-bold text-muted-foreground">
           {systemSettings?.company_name?.charAt(0) || 'S'}
         </span>
       </div>
@@ -88,21 +88,26 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative">
+      {/* Theme toggle no canto superior direito */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      
+      <Card className="w-full max-w-sm md:max-w-md glass-card animate-fade-in">
+        <CardHeader className="text-center space-y-4">
+          <div className="flex justify-center mb-2 md:mb-4">
             {renderLogo()}
           </div>
-          <CardTitle>Sistema de Suporte TI</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg md:text-xl">Sistema de Suporte TI</CardTitle>
+          <CardDescription className="text-sm">
             Faça login para acessar o sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -110,10 +115,12 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                className="h-11 transition-all duration-200 focus:scale-[1.02]"
+                placeholder="seu.email@empresa.com"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -121,14 +128,20 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                className="h-11 transition-all duration-200 focus:scale-[1.02]"
+                placeholder="••••••••"
               />
             </div>
             {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="animate-in">
+                <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full h-11 apple-button" 
+              disabled={isLoading}
+            >
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
