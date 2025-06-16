@@ -13,21 +13,28 @@ import { useProfiles } from '@/hooks/useProfiles'
 import { useNotificationSettings, useUpdateNotificationSetting, useNotificationLogs, useTestWhatsAppConnection } from '@/hooks/useNotificationSettings'
 import { Phone, Bell, MessageSquare, Send, AlertCircle, CheckCircle } from 'lucide-react'
 
-const notificationTypes = [
+type NotificationType = 'tickets' | 'assignments' | 'equipment'
+
+const notificationTypes: Array<{
+  key: NotificationType
+  label: string
+  description: string
+  icon: string
+}> = [
   {
-    key: 'tickets' as const,
+    key: 'tickets',
     label: 'Chamados',
     description: 'Receber notificações sobre criação, atualização e fechamento de chamados',
     icon: '🎫'
   },
   {
-    key: 'assignments' as const,
+    key: 'assignments',
     label: 'Atribuições de Equipamento',
     description: 'Receber notificações sobre atribuições e devoluções de equipamentos',
     icon: '📦'
   },
   {
-    key: 'equipment' as const,
+    key: 'equipment',
     label: 'Equipamentos',
     description: 'Receber notificações sobre cadastro e alterações de equipamentos',
     icon: '🖥️'
@@ -47,7 +54,7 @@ export function NotificationSettingsSection() {
 
   const currentProfile = profiles?.find(p => p.id === user?.id)
 
-  const handleToggle = (type: string, enabled: boolean) => {
+  const handleToggle = (type: NotificationType, enabled: boolean) => {
     if (!user?.id) return
     
     updateSetting.mutate({
@@ -57,7 +64,7 @@ export function NotificationSettingsSection() {
     })
   }
 
-  const handlePhoneOverride = (type: string, phone: string) => {
+  const handlePhoneOverride = (type: NotificationType, phone: string) => {
     if (!user?.id) return
     
     updateSetting.mutate({
@@ -77,7 +84,7 @@ export function NotificationSettingsSection() {
     })
   }
 
-  const getSettingForType = (type: string) => {
+  const getSettingForType = (type: NotificationType) => {
     return settings?.find(s => s.notification_type === type)
   }
 
