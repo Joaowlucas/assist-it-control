@@ -19,34 +19,60 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== Testando conexão Evolution API ===')
     const { url, token, instance }: TestConnectionRequest = await req.json()
 
+    console.log('Parâmetros de teste:', {
+      url: url,
+      hasToken: !!token,
+      instance: instance
+    })
+
+    // Verificar se a URL é válida
+    try {
+      new URL(url)
+    } catch {
+      throw new Error('URL da API inválida')
+    }
+
     // Testar conexão com Evolution API
+    console.log('Fazendo requisição para:', `${url}/instance/connectionState/${instance}`)
+    
     const response = await fetch(`${url}/instance/connectionState/${instance}`, {
       method: 'GET',
       headers: {
         'apikey': token,
+        'Content-Type': 'application/json',
       },
     })
 
+    console.log('Resposta da API:', response.status, response.statusText)
+
     if (!response.ok) {
-      throw new Error(`Erro HTTP: ${response.status}`)
+      const errorText = await response.text()
+      console.error('Erro da API:', errorText)
+      throw new Error(`Erro HTTP ${response.status}: ${errorText || response.statusText}`)
     }
 
     const result = await response.json()
+    console.log('Estado da conexão:', result)
     
     return new Response(JSON.stringify({ 
       success: true, 
-      connectionState: result 
+      connectionState: result,
+      message: 'Conexão testada com sucesso!'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
   } catch (error) {
-    console.error('Erro ao testar conexão Evolution API:', error)
+    console.error('=== Erro no teste de conexão ===')
+    console.error('Erro:', error)
+    console.error('Stack:', error.stack)
     
     return new Response(JSON.stringify({ 
-      error: error.message 
+      error: error.message,
+      success: false
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

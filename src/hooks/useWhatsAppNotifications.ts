@@ -52,39 +52,55 @@ export function useSendWhatsAppMessage() {
       message: string
       userId?: string
     }) => {
+      console.log('Iniciando envio de WhatsApp...', { ticketId, phone: phone.substring(0, 4) + '****', userId })
+
+      // Validar telefone
+      const cleanPhone = phone.replace(/\D/g, '')
+      if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+        throw new Error('Número de telefone inválido. Use o formato (11) 99999-9999')
+      }
+
       // Primeiro salvar no banco
       const { data: notification, error } = await supabase
         .from('whatsapp_notifications')
         .insert({
           ticket_id: ticketId || null,
           user_id: userId || null,
-          phone_number: phone,
+          phone_number: cleanPhone,
           message,
           status: 'pending'
         })
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro ao salvar notificação:', error)
+        throw new Error('Erro ao salvar notificação: ' + error.message)
+      }
+
+      console.log('Notificação salva:', notification.id)
 
       // Tentar enviar via Evolution API
       try {
-        const response = await fetch('/api/send-whatsapp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone,
+        console.log('Chamando função send-whatsapp...')
+        const response = await supabase.functions.invoke('send-whatsapp', {
+          body: {
+            phone: cleanPhone,
             message,
             notificationId: notification.id
-          })
+          }
         })
 
-        if (!response.ok) {
-          throw new Error('Erro ao enviar mensagem')
+        if (response.error) {
+          console.error('Erro na função send-whatsapp:', response.error)
+          throw new Error(response.error.message || 'Erro na função de envio')
         }
 
+        console.log('WhatsApp enviado com sucesso:', response.data)
         return notification
       } catch (error) {
+        console.error('Erro no envio:', error)
+        
         // Atualizar status para failed
         await supabase
           .from('whatsapp_notifications')
@@ -105,6 +121,7 @@ export function useSendWhatsAppMessage() {
       })
     },
     onError: (error) => {
+      console.error('Erro no hook de envio:', error)
       toast({
         title: 'Erro',
         description: 'Erro ao enviar mensagem WhatsApp: ' + error.message,

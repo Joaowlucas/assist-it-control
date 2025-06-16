@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -650,6 +649,7 @@ export default function Tickets() {
         ticket={selectedTicket}
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
+        units={availableUnits}
         technicians={technicians}
       />
 
