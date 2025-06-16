@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -99,5 +100,117 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Smooth transitions for all interactive elements */
+  button, a, [role="button"] {
+    @apply transition-all duration-200 ease-smooth;
+  }
+
+  /* Modern focus styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Mobile touch improvements */
+  @media (max-width: 768px) {
+    button, a, [role="button"] {
+      @apply min-h-[44px] min-w-[44px];
+    }
+  }
+}
+
+@layer components {
+  /* Modern hover effects */
+  .hover-lift {
+    @apply transition-all duration-300 hover:translate-y-[-2px] hover:shadow-lg;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-xl hover:shadow-primary/20;
+  }
+
+  /* Card animations */
+  .card-hover {
+    @apply transition-all duration-300 hover:translate-y-[-4px] hover:shadow-2xl;
+  }
+
+  /* Button animations */
+  .btn-bounce {
+    @apply transition-all duration-200 active:scale-95 hover:animate-bounce-gentle;
+  }
+
+  /* Loading shimmer effect */
+  .shimmer {
+    @apply bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer;
+  }
+
+  /* Smooth page transitions */
+  .page-enter {
+    @apply animate-fade-in;
+  }
+
+  .page-exit {
+    @apply animate-fade-out;
+  }
+
+  /* Mobile-optimized spacing */
+  @media (max-width: 768px) {
+    .mobile-padding {
+      @apply px-4 py-2;
+    }
+
+    .mobile-text {
+      @apply text-sm;
+    }
+
+    .mobile-hidden {
+      @apply hidden;
+    }
+
+    .mobile-full {
+      @apply w-full;
+    }
+  }
+}
+
+@layer utilities {
+  /* Modern animation utilities */
+  .animate-in {
+    @apply animate-fade-in;
+  }
+
+  .animate-out {
+    @apply animate-fade-out;
+  }
+
+  .slide-in {
+    @apply animate-slide-up;
+  }
+
+  .slide-out {
+    @apply animate-slide-down;
+  }
+
+  /* Responsive utilities */
+  .mobile-stack {
+    @apply flex flex-col gap-2 md:flex-row md:gap-4;
+  }
+
+  .mobile-grid {
+    @apply grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3;
+  }
+
+  /* Accessibility improvements */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
