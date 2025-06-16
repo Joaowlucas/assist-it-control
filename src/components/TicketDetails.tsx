@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -40,21 +39,21 @@ interface TicketDetailsProps {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'aberto': return 'bg-red-100 text-red-700 border-red-200'
-    case 'em_andamento': return 'bg-blue-100 text-blue-700 border-blue-200'
-    case 'aguardando': return 'bg-purple-100 text-purple-700 border-purple-200'
-    case 'fechado': return 'bg-green-100 text-green-700 border-green-200'
-    default: return 'bg-gray-100 text-gray-700 border-gray-200'
+    case 'aberto': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
+    case 'em_andamento': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
+    case 'aguardando': return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
+    case 'fechado': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+    default: return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'
   }
 }
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'critica': return 'bg-red-100 text-red-700 border-red-200'
-    case 'alta': return 'bg-orange-100 text-orange-700 border-orange-200'
-    case 'media': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
-    case 'baixa': return 'bg-green-100 text-green-700 border-green-200'
-    default: return 'bg-gray-100 text-gray-700 border-gray-200'
+    case 'critica': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
+    case 'alta': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800'
+    case 'media': return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800'
+    case 'baixa': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+    default: return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'
   }
 }
 
@@ -110,50 +109,50 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
       {/* Informações básicas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Status</Label>
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</Label>
           <Badge className={`${getStatusColor(ticket.status)} capitalize`}>
             {getStatusText(ticket.status)}
           </Badge>
         </div>
         
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Prioridade</Label>
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Prioridade</Label>
           <Badge className={`${getPriorityColor(ticket.priority)} capitalize`}>
             {getPriorityText(ticket.priority)}
           </Badge>
         </div>
         
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Categoria</Label>
-          <p className="text-sm">{getCategoryText(ticket.category)}</p>
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Categoria</Label>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{getCategoryText(ticket.category)}</p>
         </div>
         
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Solicitante</Label>
-          <p className="text-sm">{ticket.requester.name}</p>
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Solicitante</Label>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{ticket.requester.name}</p>
         </div>
         
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Unidade</Label>
-          <p className="text-sm">{ticket.unit?.name || 'Não informado'}</p>
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Unidade</Label>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{ticket.unit?.name || 'Não informado'}</p>
         </div>
         
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Técnico Responsável</Label>
-          <p className="text-sm">{ticket.assignee?.name || 'Não atribuído'}</p>
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Técnico Responsável</Label>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{ticket.assignee?.name || 'Não atribuído'}</p>
         </div>
         
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Data de Criação</Label>
-          <p className="text-sm">
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Data de Criação</Label>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </p>
         </div>
         
         {ticket.resolved_at && (
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Data de Resolução</Label>
-            <p className="text-sm">
+            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Data de Resolução</Label>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               {format(new Date(ticket.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </p>
           </div>
@@ -163,36 +162,36 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
       {/* Título e Descrição */}
       <div className="space-y-4">
         <div>
-          <Label className="text-lg font-semibold text-gray-900">Título</Label>
-          <p className="mt-1 text-gray-700">{ticket.title}</p>
+          <Label className="text-lg font-semibold text-slate-900 dark:text-slate-100">Título</Label>
+          <p className="mt-1 text-slate-700 dark:text-slate-300">{ticket.title}</p>
         </div>
         
         <div>
-          <Label className="text-lg font-semibold text-gray-900">Descrição</Label>
-          <div className="mt-1 p-3 bg-gray-50 rounded-lg border">
-            <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
+          <Label className="text-lg font-semibold text-slate-900 dark:text-slate-100">Descrição</Label>
+          <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+            <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{ticket.description}</p>
           </div>
         </div>
       </div>
 
       {/* Anexos */}
-      <Card>
+      <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600">
         <CardHeader>
-          <CardTitle className="text-lg">Anexos</CardTitle>
+          <CardTitle className="text-lg text-slate-900 dark:text-slate-100">Anexos</CardTitle>
         </CardHeader>
         <CardContent>
           {attachmentsLoading ? (
-            <div className="text-center text-gray-500 py-4">Carregando anexos...</div>
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">Carregando anexos...</div>
           ) : attachmentsError ? (
-            <div className="text-center text-red-500 py-4">
+            <div className="text-center text-red-500 dark:text-red-400 py-4">
               Erro ao carregar anexos: {attachmentsError.message}
             </div>
           ) : attachments.length === 0 ? (
-            <div className="text-center text-gray-500 py-4">Nenhum anexo encontrado</div>
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">Nenhum anexo encontrado</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {attachments.map((attachment) => (
-                <div key={attachment.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                <div key={attachment.id} className="border border-slate-200 dark:border-slate-600 rounded-lg p-3 bg-slate-50 dark:bg-slate-700/50">
                   {isImageFile(attachment.mime_type) ? (
                     <div className="space-y-2">
                       <img
@@ -211,7 +210,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                           variant="ghost"
                           size="sm"
                           onClick={() => setSelectedImage(attachment.public_url)}
-                          className="text-blue-600 hover:text-blue-800 p-1"
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1"
                         >
                           <Eye className="h-3 w-3" />
                         </Button>
@@ -220,7 +219,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                           variant="ghost"
                           size="sm"
                           onClick={() => window.open(attachment.public_url, '_blank')}
-                          className="text-gray-600 hover:text-gray-800 p-1"
+                          className="text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1"
                         >
                           <Download className="h-3 w-3" />
                         </Button>
@@ -228,13 +227,13 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                     </div>
                   ) : (
                     <div className="text-center py-3">
-                      <FileImage className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                      <FileImage className="h-6 w-6 mx-auto text-slate-400 dark:text-slate-500 mb-1" />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => window.open(attachment.public_url, '_blank')}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         <Download className="h-3 w-3 mr-1" />
                         Baixar
@@ -243,15 +242,15 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                   )}
                   
                   <div className="mt-2 text-xs space-y-1">
-                    <div className="font-medium truncate" title={attachment.file_name}>
+                    <div className="font-medium truncate text-slate-700 dark:text-slate-300" title={attachment.file_name}>
                       {attachment.file_name}
                     </div>
                     {attachment.file_size && (
-                      <div className="text-gray-500">
+                      <div className="text-slate-500 dark:text-slate-400">
                         {formatFileSize(attachment.file_size)}
                       </div>
                     )}
-                    <div className="text-gray-400">
+                    <div className="text-slate-400 dark:text-slate-500">
                       Por: {attachment.uploader?.name || 'Usuário'}
                     </div>
                   </div>
@@ -265,7 +264,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
       {/* Modal de visualização de imagem */}
       {selectedImage && (
         <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-2">
+          <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] p-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600">
             <div className="relative">
               <img
                 src={selectedImage}
@@ -279,7 +278,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => window.open(selectedImage, '_blank')}
-                className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70"
+                className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70 dark:bg-slate-900/50 dark:hover:bg-slate-900/70"
               >
                 <Download className="h-4 w-4" />
               </Button>

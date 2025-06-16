@@ -88,39 +88,42 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Chamado #{ticket.ticket_number}</span>
-              <div className="flex gap-2">
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <span className="text-slate-900 dark:text-slate-100">Chamado #{ticket.ticket_number}</span>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setWhatsappDialogOpen(true)}
+                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
                 >
                   <MessageSquare className="h-4 w-4 mr-2" />
-                  WhatsApp
+                  <span className="hidden sm:inline">WhatsApp</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handlePreviewPDF}
+                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  Visualizar PDF
+                  <span className="hidden sm:inline">Visualizar PDF</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDownloadPDF}
                   disabled={isGenerating}
+                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  {isGenerating ? 'Gerando...' : 'Baixar PDF'}
+                  <span className="hidden sm:inline">{isGenerating ? 'Gerando...' : 'Baixar PDF'}</span>
                 </Button>
               </div>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-600 dark:text-slate-300">
               Detalhes do chamado aberto por {ticket.requester.name} em{" "}
               {format(new Date(ticket.created_at), "dd 'de' MMMM 'de' yyyy", {
                 locale: ptBR,
