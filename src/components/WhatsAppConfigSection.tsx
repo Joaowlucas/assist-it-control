@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSettings"
 import { Loader2, MessageSquare, TestTube } from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
 
 export function WhatsAppConfigSection() {
   const { toast } = useToast()
@@ -16,14 +17,14 @@ export function WhatsAppConfigSection() {
   const [isTesting, setIsTesting] = useState(false)
 
   const [formData, setFormData] = useState({
-    evolution_api_url: systemSettings?.evolution_api_url || '',
-    evolution_api_token: systemSettings?.evolution_api_token || '',
-    evolution_instance_name: systemSettings?.evolution_instance_name || '',
-    whatsapp_enabled: systemSettings?.whatsapp_enabled || false
+    evolution_api_url: '',
+    evolution_api_token: '',
+    evolution_instance_name: '',
+    whatsapp_enabled: false
   })
 
   // Atualizar form data quando as configurações carregarem
-  useState(() => {
+  useEffect(() => {
     if (systemSettings) {
       setFormData({
         evolution_api_url: systemSettings.evolution_api_url || '',
@@ -32,7 +33,7 @@ export function WhatsAppConfigSection() {
         whatsapp_enabled: systemSettings.whatsapp_enabled || false
       })
     }
-  })
+  }, [systemSettings])
 
   const handleSave = () => {
     if (systemSettings) {
@@ -53,30 +54,59 @@ export function WhatsAppConfigSection() {
       return
     }
 
-    setIsTesting(true)
+    // Validar formato da URL
     try {
-      const response = await fetch('/api/test-evolution-api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: formData.evolution_api_url,
-          token: formData.evolution_api_token,
-          instance: formData.evolution_instance_name
-        })
-      })
-
-      if (response.ok) {
-        toast({
-          title: 'Sucesso',
-          description: 'Conexão com Evolution API estabelecida com sucesso!',
-        })
-      } else {
-        throw new Error('Falha na conexão')
+      const url = new URL(formData.evolution_api_url)
+      if (!url.protocol.startsWith('http')) {
+        throw new Error('URL deve começar com http:// ou https://')
       }
     } catch (error) {
       toast({
         title: 'Erro',
-        description: 'Erro ao conectar com a Evolution API. Verifique as configurações.',
+        description: 'URL da API inválida. Use o formato: https://sua-api.com',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    setIsTesting(true)
+    try {
+      console.log('Testando conexão Evolution API...', {
+        url: formData.evolution_api_url,
+        instance: formData.evolution_instance_name,
+        hasToken: !!formData.evolution_api_token
+      })
+
+      // CORRIGIDO: Usar supabase.functions.invoke em vez de fetch direto
+      const { data, error } = await supabase.functions.invoke('test-evolution-api', {
+        body: {
+          url: formData.evolution_api_url,
+          token: formData.evolution_api_token,
+          instance: formData.evolution_instance_name
+        }
+      })
+
+      console.log('Resposta do teste:', { data, error })
+
+      if (error) {
+        console.error('Erro na função:', error)
+        throw new Error(error.message || 'Erro na função de teste')
+      }
+
+      if (data?.success) {
+        toast({
+          title: 'Sucesso',
+          description: data.message || 'Conexão com Evolution API estabelecida com sucesso!',
+        })
+        console.log('Estado da conexão:', data.connectionState)
+      } else {
+        throw new Error(data?.error || 'Falha na conexão')
+      }
+    } catch (error) {
+      console.error('Erro no teste de conexão:', error)
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao conectar com a Evolution API. Verifique as configurações.',
         variant: 'destructive'
       })
     } finally {
@@ -122,6 +152,9 @@ export function WhatsAppConfigSection() {
               value={formData.evolution_api_url}
               onChange={(e) => setFormData(prev => ({ ...prev, evolution_api_url: e.target.value }))}
             />
+            <p className="text-xs text-muted-foreground">
+              Exemplo: https://api.evolutionapi.com ou http://localhost:8080
+            </p>
           </div>
 
           <div className="grid gap-2">
@@ -133,6 +166,9 @@ export function WhatsAppConfigSection() {
               value={formData.evolution_api_token}
               onChange={(e) => setFormData(prev => ({ ...prev, evolution_api_token: e.target.value }))}
             />
+            <p className="text-xs text-muted-foreground">
+              Token gerado na Evolution API para autenticação
+            </p>
           </div>
 
           <div className="grid gap-2">
@@ -143,6 +179,9 @@ export function WhatsAppConfigSection() {
               value={formData.evolution_instance_name}
               onChange={(e) => setFormData(prev => ({ ...prev, evolution_instance_name: e.target.value }))}
             />
+            <p className="text-xs text-muted-foreground">
+              Nome da instância do WhatsApp configurada na Evolution API
+            </p>
           </div>
 
           <div className="flex gap-2 pt-4">

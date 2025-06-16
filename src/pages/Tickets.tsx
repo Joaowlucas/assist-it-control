@@ -644,7 +644,7 @@ export default function Tickets() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Detalhes */}
+      {/* Dialog de Detalhes - CORRIGIDO: Adicionando props faltantes */}
       <TicketDetailsDialog
         ticket={selectedTicket}
         open={isDetailsDialogOpen}
