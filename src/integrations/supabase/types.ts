@@ -243,6 +243,94 @@ export type Database = {
           },
         ]
       }
+      notification_logs: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          error_message: string | null
+          id: string
+          message: string
+          notification_type: string
+          phone: string
+          sent_at: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          phone: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          phone?: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          notification_type: string
+          phone_override: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          notification_type: string
+          phone_override?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          notification_type?: string
+          phone_override?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -250,6 +338,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          phone: string | null
           role: Database["public"]["Enums"]["user_role"]
           status: string
           unit_id: string | null
@@ -261,6 +350,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: string
           unit_id?: string | null
@@ -272,6 +362,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: string
           unit_id?: string | null
@@ -595,6 +686,14 @@ export type Database = {
       generate_tombamento: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_notification_recipients: {
+        Args: { notification_type: string; entity_data?: Json }
+        Returns: {
+          user_id: string
+          phone: string
+          name: string
+        }[]
       }
       get_technician_units: {
         Args: { technician_id: string }
