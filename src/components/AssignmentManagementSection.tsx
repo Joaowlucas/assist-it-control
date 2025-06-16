@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -168,30 +169,31 @@ export function AssignmentManagementSection() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
     <>
-      <Card className="bg-slate-100/50 border-slate-200">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <CardTitle className="text-slate-700">Gestão de Atribuições</CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardTitle className="text-card-foreground">Gestão de Atribuições</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Gerencie as atribuições de equipamentos aos usuários
               </CardDescription>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-slate-600 hover:bg-slate-700 text-white">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px]">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nova Atribuição
+                  <span className="hidden sm:inline">Nova Atribuição</span>
+                  <span className="sm:hidden">Nova</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Criar Nova Atribuição</DialogTitle>
                   <DialogDescription>
@@ -240,7 +242,7 @@ export function AssignmentManagementSection() {
                       </SelectContent>
                     </Select>
                     {availableEquipment.length === 0 && (
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Todos os equipamentos estão em uso ou indisponíveis
                       </p>
                     )}
@@ -276,17 +278,17 @@ export function AssignmentManagementSection() {
                   </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="flex-col sm:flex-row gap-2">
                   <Button variant="outline" onClick={() => {
                     setIsCreateDialogOpen(false)
                     resetCreateForm()
-                  }}>
+                  }} className="w-full sm:w-auto">
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleCreateAssignment}
                     disabled={!selectedUserId || !selectedEquipmentId || createAssignmentMutation.isPending || !user?.id || availableEquipment.length === 0}
-                    className="bg-slate-600 hover:bg-slate-700"
+                    className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
                   >
                     {createAssignmentMutation.isPending ? "Criando..." : "Criar Atribuição"}
                   </Button>
@@ -295,7 +297,7 @@ export function AssignmentManagementSection() {
             </Dialog>
 
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Editar Atribuição</DialogTitle>
                   <DialogDescription>
@@ -318,7 +320,7 @@ export function AssignmentManagementSection() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-slate-500 mt-1">O usuário não pode ser alterado após a criação</p>
+                    <p className="text-xs text-muted-foreground mt-1">O usuário não pode ser alterado após a criação</p>
                   </div>
                   
                   <div>
@@ -335,7 +337,7 @@ export function AssignmentManagementSection() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-slate-500 mt-1">O equipamento não pode ser alterado após a criação</p>
+                    <p className="text-xs text-muted-foreground mt-1">O equipamento não pode ser alterado após a criação</p>
                   </div>
 
                   <div>
@@ -358,17 +360,17 @@ export function AssignmentManagementSection() {
                   </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="flex-col sm:flex-row gap-2">
                   <Button variant="outline" onClick={() => {
                     setIsEditDialogOpen(false)
                     resetEditForm()
-                  }}>
+                  }} className="w-full sm:w-auto">
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleEditAssignment}
                     disabled={updateAssignmentMutation.isPending}
-                    className="bg-slate-600 hover:bg-slate-700"
+                    className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
                   >
                     Salvar Alterações
                   </Button>
@@ -380,106 +382,209 @@ export function AssignmentManagementSection() {
         <CardContent>
           {assignments.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-slate-500">Nenhuma atribuição encontrada.</p>
+              <p className="text-muted-foreground">Nenhuma atribuição encontrada.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-200">
-                  <TableHead className="text-slate-600">Usuário</TableHead>
-                  <TableHead className="text-slate-600">Equipamento</TableHead>
-                  <TableHead className="text-slate-600">Início</TableHead>
-                  <TableHead className="text-slate-600">Fim</TableHead>
-                  <TableHead className="text-slate-600">Status</TableHead>
-                  <TableHead className="text-slate-600">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.map((assignment) => (
-                  <TableRow key={assignment.id} className="border-slate-200">
-                    <TableCell>
-                      <div>
-                        <div className="font-medium text-slate-700">
-                          {assignment.user?.name}
-                        </div>
-                        <div className="text-sm text-slate-500">
-                          {assignment.user?.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium text-slate-700">
-                          {assignment.equipment?.name}
-                        </div>
-                        <div className="text-sm text-slate-500">
-                          {assignment.equipment?.type}
-                          {assignment.equipment?.brand && assignment.equipment?.model && 
-                            ` - ${assignment.equipment.brand} ${assignment.equipment.model}`
-                          }
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-slate-600">
-                      {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-slate-600">
-                      {assignment.end_date ? new Date(assignment.end_date).toLocaleDateString('pt-BR') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getStatusColor(assignment.status) as any}>
-                          {getStatusLabel(assignment.status)}
-                        </Badge>
-                        {isOverdue(assignment) && (
-                          <Badge variant="destructive" className="text-xs">
-                            Vencido
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePreviewAssignment(assignment)}
-                          disabled={isLoadingPreview}
-                          title="Visualizar relatório da atribuição"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        {assignment.status === 'ativo' && (
-                          <>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border">
+                      <TableHead className="text-muted-foreground">Usuário</TableHead>
+                      <TableHead className="text-muted-foreground">Equipamento</TableHead>
+                      <TableHead className="text-muted-foreground">Início</TableHead>
+                      <TableHead className="text-muted-foreground">Fim</TableHead>
+                      <TableHead className="text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-muted-foreground">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignments.map((assignment) => (
+                      <TableRow key={assignment.id} className="border-border">
+                        <TableCell>
+                          <div>
+                            <div className="font-medium text-card-foreground">
+                              {assignment.user?.name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.user?.email}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium text-card-foreground">
+                              {assignment.equipment?.name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.equipment?.type}
+                              {assignment.equipment?.brand && assignment.equipment?.model && 
+                                ` - ${assignment.equipment.brand} ${assignment.equipment.model}`
+                              }
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-card-foreground">
+                          {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell className="text-card-foreground">
+                          {assignment.end_date ? new Date(assignment.end_date).toLocaleDateString('pt-BR') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={getStatusColor(assignment.status) as any}>
+                              {getStatusLabel(assignment.status)}
+                            </Badge>
+                            {isOverdue(assignment) && (
+                              <Badge variant="destructive" className="text-xs">
+                                Vencido
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openEditDialog(assignment)}
+                              onClick={() => handlePreviewAssignment(assignment)}
+                              disabled={isLoadingPreview}
+                              title="Visualizar relatório da atribuição"
                             >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Editar
+                              <FileText className="h-4 w-4" />
                             </Button>
-                            <ConfirmEndAssignmentDialog
-                              assignmentId={assignment.id}
-                              equipmentName={assignment.equipment?.name || 'Equipamento'}
-                              userName={assignment.user?.name || 'Usuário'}
-                            >
+                            {assignment.status === 'ativo' && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditDialog(assignment)}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Editar
+                                </Button>
+                                <ConfirmEndAssignmentDialog
+                                  assignmentId={assignment.id}
+                                  equipmentName={assignment.equipment?.name || 'Equipamento'}
+                                  userName={assignment.user?.name || 'Usuário'}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                                  >
+                                    Finalizar
+                                  </Button>
+                                </ConfirmEndAssignmentDialog>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-4">
+                {assignments.map((assignment) => (
+                  <Card key={assignment.id} className="border-border">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="font-medium text-card-foreground">
+                              {assignment.user?.name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {assignment.user?.email}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={getStatusColor(assignment.status) as any}>
+                              {getStatusLabel(assignment.status)}
+                            </Badge>
+                            {isOverdue(assignment) && (
+                              <Badge variant="destructive" className="text-xs">
+                                Vencido
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-medium text-card-foreground">
+                            {assignment.equipment?.name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {assignment.equipment?.type}
+                            {assignment.equipment?.brand && assignment.equipment?.model && 
+                              ` - ${assignment.equipment.brand} ${assignment.equipment.model}`
+                            }
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Início:</span>
+                            <div className="text-card-foreground">
+                              {new Date(assignment.start_date).toLocaleDateString('pt-BR')}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Fim:</span>
+                            <div className="text-card-foreground">
+                              {assignment.end_date ? new Date(assignment.end_date).toLocaleDateString('pt-BR') : '-'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePreviewAssignment(assignment)}
+                            disabled={isLoadingPreview}
+                            className="min-h-[44px] flex-1"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Relatório
+                          </Button>
+                          {assignment.status === 'ativo' && (
+                            <>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => openEditDialog(assignment)}
+                                className="min-h-[44px] flex-1"
                               >
-                                Finalizar
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar
                               </Button>
-                            </ConfirmEndAssignmentDialog>
-                          </>
-                        )}
+                              <ConfirmEndAssignmentDialog
+                                assignmentId={assignment.id}
+                                equipmentName={assignment.equipment?.name || 'Equipamento'}
+                                userName={assignment.user?.name || 'Usuário'}
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 min-h-[44px] w-full"
+                                >
+                                  Finalizar
+                                </Button>
+                              </ConfirmEndAssignmentDialog>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </CardContent>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
