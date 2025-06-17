@@ -1,5 +1,6 @@
+
 import { useState } from "react"
-import { Computer, Users, Settings, Calendar, Monitor, FileText, User, MessageSquare } from "lucide-react"
+import { Computer, Users, Settings, Calendar, Monitor, FileText, User } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { useAuth } from "@/hooks/useAuth"
@@ -23,7 +24,6 @@ const adminItems = [
   { title: "Chamados", url: "/tickets", icon: FileText },
   { title: "Equipamentos", url: "/equipment", icon: Computer },
   { title: "Atribuições", url: "/assignments", icon: Users },
-  { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Usuários", url: "/users", icon: User },
   { title: "Configurações", url: "/settings", icon: Settings },
 ]
@@ -33,7 +33,6 @@ const technicianItems = [
   { title: "Chamados", url: "/tickets", icon: FileText },
   { title: "Equipamentos", url: "/equipment", icon: Computer },
   { title: "Atribuições", url: "/assignments", icon: Users },
-  { title: "Chat", url: "/chat", icon: MessageSquare },
 ]
 
 export function AppSidebar() {

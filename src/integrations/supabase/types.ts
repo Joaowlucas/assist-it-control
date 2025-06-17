@@ -70,132 +70,6 @@ export type Database = {
           },
         ]
       }
-      chat_messages: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          room_id: string
-          sender_id: string
-          updated_at: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          room_id: string
-          sender_id: string
-          updated_at?: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          room_id?: string
-          sender_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_participants: {
-        Row: {
-          id: string
-          joined_at: string
-          last_read_at: string | null
-          room_id: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          joined_at?: string
-          last_read_at?: string | null
-          room_id: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          joined_at?: string
-          last_read_at?: string | null
-          room_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_participants_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_rooms: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          is_active: boolean
-          name: string
-          unit_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          is_active?: boolean
-          name: string
-          unit_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          unit_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_rooms_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_rooms_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       equipment: {
         Row: {
           brand: string | null
@@ -369,42 +243,6 @@ export type Database = {
           },
         ]
       }
-      landing_page_content: {
-        Row: {
-          content: string | null
-          created_at: string
-          display_order: number
-          id: string
-          image_url: string | null
-          is_active: boolean
-          title: string | null
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          display_order?: number
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          title?: string | null
-          type: string
-          updated_at?: string
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          display_order?: number
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          title?: string | null
-          type?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       notification_logs: {
         Row: {
           created_at: string
@@ -562,9 +400,6 @@ export type Database = {
           evolution_api_url: string | null
           evolution_instance_name: string | null
           id: string
-          landing_page_enabled: boolean | null
-          landing_page_subtitle: string | null
-          landing_page_title: string | null
           support_email: string
           ticket_email: string
           updated_at: string
@@ -591,9 +426,6 @@ export type Database = {
           evolution_api_url?: string | null
           evolution_instance_name?: string | null
           id?: string
-          landing_page_enabled?: boolean | null
-          landing_page_subtitle?: string | null
-          landing_page_title?: string | null
           support_email?: string
           ticket_email?: string
           updated_at?: string
@@ -620,9 +452,6 @@ export type Database = {
           evolution_api_url?: string | null
           evolution_instance_name?: string | null
           id?: string
-          landing_page_enabled?: boolean | null
-          landing_page_subtitle?: string | null
-          landing_page_title?: string | null
           support_email?: string
           ticket_email?: string
           updated_at?: string

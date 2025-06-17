@@ -1,8 +1,6 @@
-
 import { useAuth } from '@/hooks/useAuth'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useSystemSettings } from '@/hooks/useSystemSettings'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -11,7 +9,6 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, profile, loading } = useAuth()
-  const { data: settings } = useSystemSettings()
   const location = useLocation()
 
   // Mostrar loading apenas se realmente necessário
@@ -27,15 +24,10 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     )
   }
 
-  // Se não há usuário ou perfil, redirecionar conforme configuração
+  // Se não há usuário ou perfil, redirecionar para login preservando a rota atual
   if (!user || !profile) {
     if (location.pathname !== '/login') {
-      // Se landing page está habilitada, redirecionar para ela, senão para login
-      if (settings?.landing_page_enabled) {
-        return <Navigate to="/landing" replace />
-      } else {
-        return <Navigate to="/login" state={{ from: location }} replace />
-      }
+      return <Navigate to="/login" state={{ from: location }} replace />
     }
     return <>{children}</>
   }
