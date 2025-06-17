@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -17,6 +18,8 @@ import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import UserPortal from "./pages/UserPortal";
 import Login from "./pages/Login";
+import Chat from "./pages/Chat";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -55,6 +58,8 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
+              {/* Public Landing Page */}
+              <Route path="/landing" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               
               {/* Admin/Technician Routes */}
@@ -83,6 +88,13 @@ const App = () => (
                 <AuthGuard requiredRole="admin_tech">
                   <AdminLayout>
                     <Assignments />
+                  </AdminLayout>
+                </AuthGuard>
+              } />
+              <Route path="/chat" element={
+                <AuthGuard requiredRole="admin_tech">
+                  <AdminLayout>
+                    <Chat />
                   </AdminLayout>
                 </AuthGuard>
               } />
