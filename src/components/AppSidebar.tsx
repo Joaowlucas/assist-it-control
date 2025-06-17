@@ -1,6 +1,6 @@
 
 import { useState } from "react"
-import { Computer, Users, Settings, Calendar, Monitor, FileText, User } from "lucide-react"
+import { Computer, Users, Settings, Calendar, Monitor, FileText, User, MessageCircle } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { useAuth } from "@/hooks/useAuth"
@@ -24,6 +24,7 @@ const adminItems = [
   { title: "Chamados", url: "/tickets", icon: FileText },
   { title: "Equipamentos", url: "/equipment", icon: Computer },
   { title: "Atribuições", url: "/assignments", icon: Users },
+  { title: "Chat", url: "/chat", icon: MessageCircle },
   { title: "Usuários", url: "/users", icon: User },
   { title: "Configurações", url: "/settings", icon: Settings },
 ]
@@ -33,6 +34,12 @@ const technicianItems = [
   { title: "Chamados", url: "/tickets", icon: FileText },
   { title: "Equipamentos", url: "/equipment", icon: Computer },
   { title: "Atribuições", url: "/assignments", icon: Users },
+  { title: "Chat", url: "/chat", icon: MessageCircle },
+]
+
+const userItems = [
+  { title: "Portal", url: "/user-portal", icon: Monitor },
+  { title: "Chat", url: "/user-chat", icon: MessageCircle },
 ]
 
 export function AppSidebar() {
@@ -46,6 +53,9 @@ export function AppSidebar() {
   const getNavigationItems = () => {
     if (profile?.role === 'technician') {
       return technicianItems
+    }
+    if (profile?.role === 'user') {
+      return userItems
     }
     return adminItems
   }
@@ -142,7 +152,7 @@ export function AppSidebar() {
       <SidebarContent className="animate-fade-in backdrop-blur-sm">
         <SidebarGroup>
           <SidebarGroupLabel className="transition-all duration-200 text-sidebar-foreground/90">
-            {profile?.role === 'technician' ? 'Técnico' : 'Administração'}
+            {profile?.role === 'technician' ? 'Técnico' : profile?.role === 'user' ? 'Usuário' : 'Administração'}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
