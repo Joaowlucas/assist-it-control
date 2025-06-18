@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,9 +18,7 @@ export function TicketCategoriesManagement() {
   const deleteCategory = useDeleteTicketCategory()
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [edit
-
-ting Category, setEditingCategory] = useState<any>(null)
+  const [editingCategory, setEditingCategory] = useState<any>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
