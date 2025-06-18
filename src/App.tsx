@@ -92,21 +92,17 @@ const App = () => (
               {/* Chat Route - Available for all users */}
               <Route path="/chat" element={
                 <AuthGuard>
-                  {(profile) => {
-                    if (profile?.role === 'user') {
-                      return (
-                        <UserLayout>
-                          <Chat />
-                        </UserLayout>
-                      )
-                    } else {
-                      return (
-                        <AdminLayout>
-                          <Chat />
-                        </AdminLayout>
-                      )
-                    }
-                  }}
+                  {(profile) => (
+                    profile?.role === 'user' ? (
+                      <UserLayout>
+                        <Chat />
+                      </UserLayout>
+                    ) : (
+                      <AdminLayout>
+                        <Chat />
+                      </AdminLayout>
+                    )
+                  )}
                 </AuthGuard>
               } />
               

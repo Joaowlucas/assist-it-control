@@ -5,21 +5,24 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
-import { AlertCircle, Calendar, CheckCircle, Clock, FileText, Laptop, Plus, MessageCircle } from "lucide-react"
+import { AlertCircle, Calendar, CheckCircle, Clock, FileText, Laptop, Plus, MessageCircle, Ticket } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserTickets } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { EquipmentRequestDialog } from "@/components/EquipmentRequestDialog"
+import { CreateTicketDialog } from "@/components/CreateTicketDialog"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { NavLink } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 export default function UserPortal() {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const { data: userTickets = [], isLoading: ticketsLoading } = useUserTickets()
   const { data: assignments = [], isLoading: assignmentsLoading } = useUserAssignments()
   
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false)
+  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
 
   const stats = [
     {
@@ -110,6 +113,10 @@ export default function UserPortal() {
     .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
     .slice(0, 5)
 
+  const handleChatClick = () => {
+    navigate('/chat')
+  }
+
   return (
     <div className="space-y-6">
       {/* Header com informações do usuário */}
@@ -131,13 +138,26 @@ export default function UserPortal() {
               </div>
             </div>
             <div className="flex gap-2">
-              <NavLink to="/chat">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Chat
-                </Button>
-              </NavLink>
-              <Button onClick={() => setIsEquipmentDialogOpen(true)} className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={handleChatClick}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Chat
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setIsTicketDialogOpen(true)}
+              >
+                <Ticket className="h-4 w-4" />
+                Criar Chamado
+              </Button>
+              <Button 
+                onClick={() => setIsEquipmentDialogOpen(true)} 
+                className="flex items-center gap-2"
+              >
                 <Plus className="h-4 w-4" />
                 Solicitar Equipamento
               </Button>
@@ -287,6 +307,11 @@ export default function UserPortal() {
       <EquipmentRequestDialog
         open={isEquipmentDialogOpen}
         onOpenChange={setIsEquipmentDialogOpen}
+      />
+      
+      <CreateTicketDialog
+        open={isTicketDialogOpen}
+        onOpenChange={setIsTicketDialogOpen}
       />
     </div>
   )

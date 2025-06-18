@@ -1,43 +1,54 @@
 
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useProfiles, useUpdateProfile } from "@/hooks/useProfiles"
-import { useUnits } from "@/hooks/useUnits"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Search, Plus, Users as UsersIcon, Shield, User, Wrench } from "lucide-react"
+import { useProfiles } from "@/hooks/useProfiles"
 import { CreateUserDialog } from "@/components/CreateUserDialog"
+import { EditUserDialog } from "@/components/EditUserDialog"
 import { UserActionsDropdown } from "@/components/UserActionsDropdown"
-import { Loader2, User, Shield, Wrench, Calendar } from "lucide-react"
+import { useUnits } from "@/hooks/useUnits"
 
 export default function Users() {
-  const { data: profiles, isLoading } = useProfiles()
-  const { data: units } = useUnits()
-  const updateProfile = useUpdateProfile()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
+  
+  const { data: profiles = [], isLoading } = useProfiles()
+  const { data: units = [] } = useUnits()
+
+  const filteredProfiles = profiles.filter(profile =>
+    profile.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    profile.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      case 'technician':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+      case 'user':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+    }
+  }
 
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin':
-        return <Shield className="w-4 h-4" />
+        return Shield
       case 'technician':
-        return <Wrench className="w-4 h-4" />
+        return Wrench
+      case 'user':
+        return User
       default:
-        return <User className="w-4 h-4" />
+        return User
     }
-  }
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'destructive'
-      case 'technician':
-        return 'default'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const getStatusBadgeVariant = (status: string) => {
-    return status === 'ativo' ? 'default' : 'secondary'
   }
 
   const getRoleLabel = (role: string) => {
@@ -46,142 +57,165 @@ export default function Users() {
         return 'Administrador'
       case 'technician':
         return 'Técnico'
-      default:
+      case 'user':
         return 'Usuário'
+      default:
+        return role
     }
   }
 
-  const handleRoleChange = (userId: string, newRole: string) => {
-    updateProfile.mutate({
-      id: userId,
-      role: newRole as 'admin' | 'technician' | 'user'
-    })
-  }
-
-  const handleUnitChange = (userId: string, newUnitId: string) => {
-    updateProfile.mutate({
-      id: userId,
-      unit_id: newUnitId === "none" ? null : newUnitId
-    })
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR')
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
+  const stats = [
+    {
+      title: "Total de Usuários",
+      value: profiles.length,
+      icon: UsersIcon,
+      color: "text-blue-500",
+      bgColor: "bg-blue-50 dark:bg-blue-950"
+    },
+    {
+      title: "Administradores",
+      value: profiles.filter(p => p.role === 'admin').length,
+      icon: Shield,
+      color: "text-red-500",
+      bgColor: "bg-red-50 dark:bg-red-950"
+    },
+    {
+      title: "Técnicos",
+      value: profiles.filter(p => p.role === 'technician').length,
+      icon: Wrench,
+      color: "text-blue-500",
+      bgColor: "bg-blue-50 dark:bg-blue-950"
+    },
+    {
+      title: "Usuários",
+      value: profiles.filter(p => p.role === 'user').length,
+      icon: User,
+      color: "text-green-500",
+      bgColor: "bg-green-50 dark:bg-green-950"
+    }
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Usuários</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Gerenciamento de Usuários</h1>
           <p className="text-muted-foreground">
-            Gerencie usuários e suas permissões no sistema
+            Gerencie usuários, funções e permissões do sistema
           </p>
         </div>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Novo Usuário
+        </Button>
       </div>
 
-      <CreateUserDialog />
-
-      <div className="grid gap-4">
-        {profiles?.map((profile) => (
-          <Card key={profile.id}>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {getRoleIcon(profile.role)}
+      {/* Cards de estatísticas */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon
+          return (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">{profile.name}</CardTitle>
-                    <CardDescription>{profile.email}</CardDescription>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </p>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                  </div>
+                  <div className={`p-3 rounded-full ${stat.bgColor}`}>
+                    <Icon className={`h-6 w-6 ${stat.color}`} />
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant={getRoleBadgeVariant(profile.role)}>
-                    {getRoleLabel(profile.role)}
-                  </Badge>
-                  <Badge variant={getStatusBadgeVariant(profile.status)}>
-                    {profile.status}
-                  </Badge>
-                  <UserActionsDropdown user={profile} />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Função</label>
-                  <Select
-                    value={profile.role}
-                    onValueChange={(value) => handleRoleChange(profile.id, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">Usuário</SelectItem>
-                      <SelectItem value="technician">Técnico</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Unidade</label>
-                  <Select
-                    value={profile.unit_id || "none"}
-                    onValueChange={(value) => handleUnitChange(profile.id, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma unidade</SelectItem>
-                      {units?.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id}>
-                          {unit.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Status</label>
-                  <Badge variant={getStatusBadgeVariant(profile.status)}>
-                    {profile.status}
-                  </Badge>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Criado em</label>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    {profile.created_at ? formatDate(profile.created_at) : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
-      {profiles?.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum usuário encontrado</h3>
-            <p className="text-muted-foreground mb-4">
-              Comece criando o primeiro usuário do sistema.
-            </p>
-          </CardContent>
-        </Card>
+      {/* Lista de usuários */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Usuários</CardTitle>
+          <CardDescription>
+            Gerencie todos os usuários cadastrados no sistema
+          </CardDescription>
+          <div className="flex items-center space-x-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar usuários..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <div className="text-muted-foreground">Carregando usuários...</div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredProfiles.map((profile) => {
+                const RoleIcon = getRoleIcon(profile.role)
+                return (
+                  <div key={profile.id} className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback>
+                          {profile.name?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">{profile.name}</h3>
+                          <Badge className={getRoleColor(profile.role)}>
+                            <RoleIcon className="h-3 w-3 mr-1" />
+                            {getRoleLabel(profile.role)}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{profile.email}</p>
+                        {profile.unit && (
+                          <p className="text-xs text-muted-foreground">
+                            Unidade: {profile.unit.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <UserActionsDropdown 
+                      user={profile} 
+                      onEdit={() => setEditingUser(profile)}
+                    />
+                  </div>
+                )
+              })}
+              
+              {filteredProfiles.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <UsersIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Nenhum usuário encontrado</p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialogs */}
+      <CreateUserDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+      />
+      
+      {editingUser && (
+        <EditUserDialog
+          open={!!editingUser}
+          onOpenChange={(open) => !open && setEditingUser(null)}
+          user={editingUser}
+        />
       )}
     </div>
   )

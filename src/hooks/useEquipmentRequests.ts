@@ -8,9 +8,9 @@ export interface EquipmentRequest {
   id: string
   requester_id: string
   equipment_type: string
-  specifications: Record<string, any>
+  description: string
   justification: string
-  priority: 'baixa' | 'media' | 'alta' | 'critica'
+  priority: 'baixa' | 'media' | 'alta'
   status: 'pendente' | 'aprovado' | 'rejeitado' | 'entregue' | 'cancelado'
   requested_at: string
   reviewed_by?: string
@@ -32,15 +32,15 @@ export interface EquipmentRequest {
 
 export interface CreateEquipmentRequestData {
   equipment_type: string
-  specifications: Record<string, any>
+  description: string
   justification: string
-  priority: 'baixa' | 'media' | 'alta' | 'critica'
+  priority: 'baixa' | 'media' | 'alta'
 }
 
-export function useUserEquipmentRequests() {
+export function useEquipmentRequests() {
   const { profile } = useAuth()
   
-  return useQuery({
+  const query = useQuery({
     queryKey: ['user-equipment-requests', profile?.id],
     queryFn: async () => {
       if (!profile?.id) throw new Error('User not authenticated')
@@ -66,13 +66,8 @@ export function useUserEquipmentRequests() {
     },
     enabled: !!profile?.id,
   })
-}
 
-export function useCreateEquipmentRequest() {
-  const queryClient = useQueryClient()
-  const { profile } = useAuth()
-
-  return useMutation({
+  const createRequest = useMutation({
     mutationFn: async (data: CreateEquipmentRequestData) => {
       if (!profile?.id) throw new Error('User not authenticated')
 
@@ -81,7 +76,7 @@ export function useCreateEquipmentRequest() {
         .insert({
           requester_id: profile.id,
           equipment_type: data.equipment_type,
-          specifications: data.specifications,
+          description: data.description,
           justification: data.justification,
           priority: data.priority,
         })
@@ -107,88 +102,11 @@ export function useCreateEquipmentRequest() {
       })
     },
   })
-}
 
-export function useUpdateEquipmentRequest() {
   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<EquipmentRequest> }) => {
-      const { data: result, error } = await supabase
-        .from('equipment_requests')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return result
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-equipment-requests'] })
-      toast({
-        title: "Solicitação atualizada!",
-        description: "Sua solicitação foi atualizada com sucesso.",
-      })
-    },
-    onError: (error) => {
-      console.error('Error updating equipment request:', error)
-      toast({
-        title: "Erro ao atualizar",
-        description: "Não foi possível atualizar a solicitação.",
-        variant: "destructive",
-      })
-    },
-  })
-}
-
-export function useDeleteEquipmentRequest() {
-  const queryClient = useQueryClient()
-  const { profile } = useAuth()
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('equipment_requests')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-    },
-    onMutate: async (deletedId) => {
-      // Cancel any outgoing refetches so they don't overwrite our optimistic update
-      await queryClient.cancelQueries({ queryKey: ['user-equipment-requests', profile?.id] })
-
-      // Snapshot the previous value
-      const previousRequests = queryClient.getQueryData(['user-equipment-requests', profile?.id])
-
-      // Optimistically update by removing the deleted item
-      queryClient.setQueryData(['user-equipment-requests', profile?.id], (old: EquipmentRequest[] | undefined) => {
-        return old ? old.filter(request => request.id !== deletedId) : []
-      })
-
-      // Return a context object with the snapshotted value
-      return { previousRequests }
-    },
-    onError: (err, deletedId, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      if (context?.previousRequests) {
-        queryClient.setQueryData(['user-equipment-requests', profile?.id], context.previousRequests)
-      }
-      console.error('Error deleting equipment request:', err)
-      toast({
-        title: "Erro ao cancelar",
-        description: "Não foi possível cancelar a solicitação.",
-        variant: "destructive",
-      })
-    },
-    onSuccess: () => {
-      // Always refetch after error or success to ensure we have the latest data
-      queryClient.invalidateQueries({ queryKey: ['user-equipment-requests', profile?.id] })
-      toast({
-        title: "Solicitação cancelada!",
-        description: "Sua solicitação foi cancelada com sucesso.",
-      })
-    },
-  })
+  return {
+    ...query,
+    createRequest
+  }
 }
