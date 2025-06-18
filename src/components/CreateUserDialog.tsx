@@ -1,109 +1,60 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Checkbox } from '@/components/ui/checkbox'
-import { useCreateUser } from '@/hooks/useUserManagement'
-import { useUnits } from '@/hooks/useUnits'
-import { Plus, Loader2 } from 'lucide-react'
 
-export function CreateUserDialog() {
-  const [open, setOpen] = useState(false)
+import { useState } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useUnits } from "@/hooks/useUnits"
+import { useUserManagement } from "@/hooks/useUserManagement"
+
+interface CreateUserDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) {
+  const { data: units = [] } = useUnits()
+  const { createUser } = useUserManagement()
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'user' as 'admin' | 'technician' | 'user',
-    unit_id: 'none',
-    unit_ids: [] as string[]
+    phone: '',
+    role: 'user' as 'admin' | 'user' | 'technician',
+    unit_id: ''
   })
-  
-  const createUser = useCreateUser()
-  const { data: units } = useUnits()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (formData.password !== formData.confirmPassword) {
-      alert('As senhas não coincidem')
-      return
+    
+    try {
+      await createUser.mutateAsync(formData)
+      onOpenChange(false)
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        role: 'user',
+        unit_id: ''
+      })
+    } catch (error) {
+      console.error('Error creating user:', error)
     }
-
-    if (formData.password.length < 6) {
-      alert('A senha deve ter pelo menos 6 caracteres')
-      return
-    }
-
-    // Validar seleção de unidades para técnicos
-    if (formData.role === 'technician' && formData.unit_ids.length === 0) {
-      alert('Técnicos devem ter pelo menos uma unidade atribuída')
-      return
-    }
-
-    const userData = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: formData.role,
-      unit_id: formData.role === 'technician' ? null : (formData.unit_id === 'none' ? null : formData.unit_id),
-      unit_ids: formData.role === 'technician' ? formData.unit_ids : undefined
-    }
-
-    createUser.mutate(userData, {
-      onSuccess: () => {
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          role: 'user',
-          unit_id: 'none',
-          unit_ids: []
-        })
-        setOpen(false)
-      }
-    })
-  }
-
-  const handleUnitToggle = (unitId: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      unit_ids: checked 
-        ? [...prev.unit_ids, unitId]
-        : prev.unit_ids.filter(id => id !== unitId)
-    }))
-  }
-
-  const handleRoleChange = (role: 'admin' | 'technician' | 'user') => {
-    setFormData(prev => ({
-      ...prev,
-      role,
-      unit_id: role === 'technician' ? 'none' : prev.unit_id,
-      unit_ids: role === 'technician' ? prev.unit_ids : []
-    }))
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Adicionar Usuário
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Criar Novo Usuário</DialogTitle>
           <DialogDescription>
-            Preencha os dados para criar um novo usuário no sistema.
+            Adicione um novo usuário ao sistema
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="name">Nome</Label>
             <Input
               id="name"
@@ -113,7 +64,7 @@ export function CreateUserDialog() {
             />
           </div>
           
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -124,35 +75,20 @@ export function CreateUserDialog() {
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+          <div>
+            <Label htmlFor="phone">Telefone</Label>
             <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              required
-              minLength={6}
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-              required
-              minLength={6}
-            />
-          </div>
-          
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="role">Função</Label>
-            <Select value={formData.role} onValueChange={handleRoleChange}>
+            <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as any }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma função" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Usuário</SelectItem>
@@ -162,58 +98,30 @@ export function CreateUserDialog() {
             </Select>
           </div>
           
-          {formData.role === 'technician' ? (
-            <div className="space-y-2">
-              <Label>Unidades (Selecione uma ou mais)</Label>
-              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-                {units?.map((unit) => (
-                  <div key={unit.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`unit-${unit.id}`}
-                      checked={formData.unit_ids.includes(unit.id)}
-                      onCheckedChange={(checked) => handleUnitToggle(unit.id, !!checked)}
-                    />
-                    <Label htmlFor={`unit-${unit.id}`} className="text-sm">
-                      {unit.name}
-                    </Label>
-                  </div>
+          <div>
+            <Label htmlFor="unit_id">Unidade</Label>
+            <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma unidade" />
+              </SelectTrigger>
+              <SelectContent>
+                {units.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    {unit.name}
+                  </SelectItem>
                 ))}
-              </div>
-              {formData.unit_ids.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Técnicos devem ter pelo menos uma unidade selecionada
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="unit">Unidade</Label>
-              <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma unidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma unidade</SelectItem>
-                  {units?.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.id}>
-                      {unit.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+              </SelectContent>
+            </Select>
+          </div>
           
-          <Button type="submit" className="w-full" disabled={createUser.isPending}>
-            {createUser.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Criando...
-              </>
-            ) : (
-              'Criar Usuário'
-            )}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={createUser.isPending}>
+              {createUser.isPending ? 'Criando...' : 'Criar Usuário'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

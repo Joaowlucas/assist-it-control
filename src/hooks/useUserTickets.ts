@@ -1,7 +1,8 @@
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/use-toast'
 
 export type UserTicket = {
   id: string
@@ -25,6 +26,9 @@ export type UserTicket = {
     name: string
     email: string
   }
+  unit?: {
+    name: string
+  }
 }
 
 export function useUserTickets() {
@@ -40,7 +44,8 @@ export function useUserTickets() {
         .select(`
           *,
           requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email)
+          assignee:profiles!tickets_assignee_id_fkey(name, email),
+          unit:units(name)
         `)
         .eq('requester_id', profile.id)
         .order('created_at', { ascending: false })
@@ -49,5 +54,112 @@ export function useUserTickets() {
       return data as UserTicket[]
     },
     enabled: !!profile?.id,
+  })
+}
+
+export function useCreateUserTicket() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const { profile } = useAuth()
+
+  return useMutation({
+    mutationFn: async (ticket: {
+      title: string
+      description: string
+      category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
+      priority: 'baixa' | 'media' | 'alta' | 'critica'
+    }) => {
+      if (!profile?.id || !profile?.unit_id) throw new Error('User not authenticated or no unit')
+      
+      const { data, error } = await supabase
+        .from('tickets')
+        .insert({
+          ...ticket,
+          requester_id: profile.id,
+          unit_id: profile.unit_id
+        })
+        .select()
+        .single()
+      
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['user-tickets'] })
+      toast({
+        title: 'Sucesso',
+        description: `Chamado #${data.ticket_number} criado com sucesso`,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar chamado: ' + error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useUpdateUserTicket() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<UserTicket> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('tickets')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-tickets'] })
+      toast({
+        title: 'Sucesso',
+        description: 'Chamado atualizado com sucesso',
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar chamado: ' + error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useDeleteUserTicket() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('tickets')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-tickets'] })
+      toast({
+        title: 'Sucesso',
+        description: 'Chamado excluído com sucesso',
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao excluir chamado: ' + error.message,
+        variant: 'destructive',
+      })
+    },
   })
 }

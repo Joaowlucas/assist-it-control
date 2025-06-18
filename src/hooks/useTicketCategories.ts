@@ -77,7 +77,7 @@ export function useUpdateTicketCategory() {
       if (error) throw error
       return data
     },
-    on̂Success: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket-categories'] })
       toast({
         title: 'Sucesso',

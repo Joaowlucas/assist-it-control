@@ -7,9 +7,9 @@ interface AdminGuardProps {
 }
 
 export function AdminGuard({ children }: AdminGuardProps) {
-  const { profile, isLoading } = useAuth()
+  const { profile, loading } = useAuth()
 
-  if (isLoading) {
+  if (loading) {
     return <div>Carregando...</div>
   }
 

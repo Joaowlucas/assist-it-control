@@ -1,25 +1,34 @@
 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { useEndAssignment } from "@/hooks/useAssignments"
 
 interface ConfirmEndAssignmentDialogProps {
-  open: boolean
   assignmentId: string | null
   equipmentName: string
   userName: string
-  onConfirm: () => void
-  onCancel: () => void
+  children: React.ReactNode
 }
 
 export function ConfirmEndAssignmentDialog({ 
-  open, 
   assignmentId, 
   equipmentName,
   userName,
-  onConfirm, 
-  onCancel 
+  children
 }: ConfirmEndAssignmentDialogProps) {
+  const endAssignment = useEndAssignment()
+
+  const handleConfirm = async () => {
+    if (assignmentId) {
+      await endAssignment.mutateAsync(assignmentId)
+    }
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        {children}
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Finalização</AlertDialogTitle>
@@ -28,9 +37,9 @@ export function ConfirmEndAssignmentDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>
-            Finalizar Atribuição
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirm} disabled={endAssignment.isPending}>
+            {endAssignment.isPending ? 'Finalizando...' : 'Finalizar Atribuição'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
