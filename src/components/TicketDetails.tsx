@@ -1,13 +1,18 @@
+
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useTicketAttachments } from "@/hooks/useTicketAttachments"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { useState } from "react"
-import { Eye, Download, FileImage } from "lucide-react"
+import { useTicketComments, useCreateTicketComment } from "@/hooks/useTicketComments"
+import { useAuth } from "@/hooks/useAuth"
+import { Eye, Download, FileImage, MessageSquare, Send } from "lucide-react"
 
 interface Ticket {
   id: string
@@ -89,8 +94,13 @@ const getCategoryText = (category: string) => {
 }
 
 export function TicketDetails({ ticket }: TicketDetailsProps) {
+  const { profile } = useAuth()
   const { data: attachments = [], isLoading: attachmentsLoading, error: attachmentsError } = useTicketAttachments(ticket.id)
+  const { data: comments = [], isLoading: commentsLoading } = useTicketComments(ticket.id)
+  const createCommentMutation = useCreateTicketComment()
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [newComment, setNewComment] = useState('')
+  const [isInternal, setIsInternal] = useState(false)
 
   const isImageFile = (mimeType?: string) => {
     return mimeType?.startsWith('image/')
@@ -102,6 +112,26 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const canAddInternalComments = profile?.role === 'admin' || profile?.role === 'technician'
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newComment.trim()) return
+
+    try {
+      await createCommentMutation.mutateAsync({
+        ticket_id: ticket.id,
+        user_id: profile?.id || '',
+        content: newComment.trim(),
+        is_internal: isInternal
+      })
+      setNewComment('')
+      setIsInternal(false)
+    } catch (error) {
+      console.error('Error creating comment:', error)
+    }
   }
 
   return (
@@ -258,6 +288,100 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Observações/Comentários */}
+      <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600">
+        <CardHeader>
+          <CardTitle className="text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Observações/Comentários
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Lista de comentários existentes */}
+          {commentsLoading ? (
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">Carregando comentários...</div>
+          ) : comments.length === 0 ? (
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">Nenhum comentário encontrado</div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {comments.map((comment) => (
+                <div 
+                  key={comment.id} 
+                  className={`p-3 rounded-lg border ${
+                    comment.is_internal 
+                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' 
+                      : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-900 dark:text-slate-100">
+                        {comment.user?.name || 'Usuário'}
+                      </span>
+                      {comment.is_internal && (
+                        <Badge variant="outline" className="text-xs text-amber-700 dark:text-amber-300">
+                          Interno
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {format(new Date(comment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap text-sm">
+                    {comment.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Formulário para adicionar novo comentário */}
+          <form onSubmit={handleSubmitComment} className="space-y-3 border-t border-slate-200 dark:border-slate-600 pt-4">
+            <div>
+              <Label htmlFor="comment" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Novo Comentário
+              </Label>
+              <Textarea
+                id="comment"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Digite sua observação ou comentário..."
+                className="mt-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600"
+                rows={3}
+              />
+            </div>
+            
+            {canAddInternalComments && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="internal"
+                  checked={isInternal}
+                  onCheckedChange={(checked) => setIsInternal(checked as boolean)}
+                />
+                <Label 
+                  htmlFor="internal" 
+                  className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer"
+                >
+                  Comentário interno (visível apenas para técnicos e administradores)
+                </Label>
+              </div>
+            )}
+            
+            <div className="flex justify-end">
+              <Button 
+                type="submit" 
+                disabled={!newComment.trim() || createCommentMutation.isPending}
+                className="flex items-center gap-2"
+              >
+                <Send className="h-4 w-4" />
+                {createCommentMutation.isPending ? 'Enviando...' : 'Enviar Comentário'}
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
 
