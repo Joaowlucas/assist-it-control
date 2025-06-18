@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useUserTickets } from '@/hooks/useUserTickets'
+import { useCreateUserTicket } from '@/hooks/useUserTickets'
 import { useTicketCategories } from '@/hooks/useTicketCategories'
 import { useToast } from '@/hooks/use-toast'
 
@@ -19,11 +19,11 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category_id: '',
-    priority: 'media' as 'baixa' | 'media' | 'alta'
+    category: 'outros' as const,
+    priority: 'media' as const
   })
   
-  const { createTicket } = useUserTickets()
+  const createTicket = useCreateUserTicket()
   const { data: categories = [] } = useTicketCategories()
   const { toast } = useToast()
 
@@ -40,15 +40,12 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
     }
 
     try {
-      await createTicket.mutateAsync({
-        ...formData,
-        category_id: formData.category_id || null
-      })
+      await createTicket.mutateAsync(formData)
       
       setFormData({
         title: '',
         description: '',
-        category_id: '',
+        category: 'outros',
         priority: 'media'
       })
       onOpenChange(false)
@@ -101,17 +98,21 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
           
           <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select value={formData.category_id} onValueChange={(value) => handleInputChange('category_id', value)}>
+            <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem categoria</SelectItem>
                 {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
+                  <SelectItem key={category.id} value={category.name}>
                     {category.name}
                   </SelectItem>
                 ))}
+                <SelectItem value="hardware">Hardware</SelectItem>
+                <SelectItem value="software">Software</SelectItem>
+                <SelectItem value="rede">Rede</SelectItem>
+                <SelectItem value="acesso">Acesso</SelectItem>
+                <SelectItem value="outros">Outros</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -17,6 +16,9 @@ import Assignments from "./pages/Assignments";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import UserPortal from "./pages/UserPortal";
+import UserDashboard from "./pages/UserDashboard";
+import UserTickets from "./pages/UserTickets";
+import UserAssignments from "./pages/UserAssignments";
 import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -89,19 +91,43 @@ const App = () => (
                 </AuthGuard>
               } />
               
-              {/* Chat Route - Available for all users */}
+              {/* User Routes */}
+              <Route path="/user-dashboard" element={
+                <AuthGuard requiredRole="user">
+                  <UserLayout>
+                    <UserDashboard />
+                  </UserLayout>
+                </AuthGuard>
+              } />
+              <Route path="/user-tickets" element={
+                <AuthGuard requiredRole="user">
+                  <UserLayout>
+                    <UserTickets />
+                  </UserLayout>
+                </AuthGuard>
+              } />
+              <Route path="/user-assignments" element={
+                <AuthGuard requiredRole="user">
+                  <UserLayout>
+                    <UserAssignments />
+                  </UserLayout>
+                </AuthGuard>
+              } />
+              
+              {/* Chat Route - Available for all users with role-based layout */}
               <Route path="/chat" element={
                 <AuthGuard>
-                  <AuthGuard requiredRole="user">
-                    <UserLayout>
-                      <Chat />
-                    </UserLayout>
-                  </AuthGuard>
-                  <AuthGuard requiredRole="admin_tech">
-                    <AdminLayout>
-                      <Chat />
-                    </AdminLayout>
-                  </AuthGuard>
+                  {(profile) => 
+                    profile?.role === 'user' ? (
+                      <UserLayout>
+                        <Chat />
+                      </UserLayout>
+                    ) : (
+                      <AdminLayout>
+                        <Chat />
+                      </AdminLayout>
+                    )
+                  }
                 </AuthGuard>
               } />
               
@@ -121,7 +147,7 @@ const App = () => (
                 </AuthGuard>
               } />
               
-              {/* User Routes */}
+              {/* Keep old user portal route for compatibility */}
               <Route path="/user-portal" element={
                 <AuthGuard requiredRole="user">
                   <UserLayout>

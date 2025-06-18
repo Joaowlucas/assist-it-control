@@ -187,7 +187,6 @@ export default function Users() {
                     </div>
                     <UserActionsDropdown 
                       user={profile}
-                      onEdit={() => setEditingUser(profile)}
                     />
                   </div>
                 )

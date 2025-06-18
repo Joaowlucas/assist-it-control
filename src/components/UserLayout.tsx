@@ -1,49 +1,49 @@
 
-import { ReactNode } from "react"
+import { SidebarProvider } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/AppSidebar"
 import { UserProfileDropdown } from "@/components/UserProfileDropdown"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface UserLayoutProps {
-  children: ReactNode
+  children: React.ReactNode
 }
 
 export function UserLayout({ children }: UserLayoutProps) {
-  const { data: systemSettings } = useSystemSettings()
   const isMobile = useIsMobile()
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground animate-fade-in">
-      <header className="h-14 md:h-16 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 md:px-6 transition-all duration-300 hover:bg-muted/20 sticky top-0 z-40">
-        <div className="flex items-center gap-2 md:gap-3 animate-slide-in-left flex-1 min-w-0">
-          {systemSettings?.company_logo_url && (
-            <img 
-              src={systemSettings.company_logo_url} 
-              alt="Logo da empresa" 
-              className="h-6 md:h-8 w-auto transition-transform duration-300 hover:scale-110 shrink-0"
-            />
-          )}
-          <h1 className="font-semibold text-foreground transition-all duration-300 truncate">
-            {isMobile ? (
-              <span className="text-sm">Portal do Usuário</span>
-            ) : (
-              `Portal do Usuário - ${systemSettings?.department_name || 'Suporte TI'}`
-            )}
-          </h1>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background text-foreground">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col animate-fade-in">
+          <header className="border-b border-border/50 bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 transition-all duration-300 sticky top-0 z-40">
+            <div className="flex h-14 items-center justify-between px-3 md:px-6">
+              {/* Mobile: Sidebar trigger + title */}
+              {isMobile ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <SidebarTrigger className="h-8 w-8 hover:bg-muted/50 transition-colors duration-200 shrink-0" />
+                  <span className="font-semibold text-foreground truncate">Portal do Usuário</span>
+                </div>
+              ) : (
+                <div className="flex-1" />
+              )}
+              
+              {/* Right side: Theme toggle + Profile */}
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <UserProfileDropdown />
+              </div>
+            </div>
+          </header>
+          <main className="flex-1 p-3 md:p-6 overflow-auto animate-in backdrop-blur-sm">
+            <div className="animate-fade-in max-w-full">
+              {children}
+            </div>
+          </main>
         </div>
-        
-        <div className="flex items-center gap-2 animate-slide-in-right shrink-0">
-          <ThemeToggle />
-          <UserProfileDropdown />
-        </div>
-      </header>
-      
-      <main className="flex-1 p-3 md:p-6 animate-fade-in overflow-auto">
-        <div className="animate-in max-w-full">
-          {children}
-        </div>
-      </main>
-    </div>
+      </div>
+    </SidebarProvider>
   )
 }

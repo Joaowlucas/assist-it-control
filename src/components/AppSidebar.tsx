@@ -38,7 +38,9 @@ const technicianItems = [
 ]
 
 const userItems = [
-  { title: "Portal", url: "/user-portal", icon: Monitor },
+  { title: "Dashboard", url: "/user-dashboard", icon: Monitor },
+  { title: "Chamados", url: "/user-tickets", icon: FileText },
+  { title: "Atribuições", url: "/user-assignments", icon: Computer },
   { title: "Chat", url: "/chat", icon: MessageCircle },
 ]
 
