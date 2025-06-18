@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,12 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, MessageCircle, AlertCircle } from 'lucide-react'
-import { useChatRooms, useCreateChatRoom, useDeleteChatRoom } from '@/hooks/useChat'
+import { Trash2, Plus, MessageCircle, AlertCircle, Edit } from 'lucide-react'
+import { useChatRooms, useCreateChatRoom, useDeleteChatRoom, ChatRoom } from '@/hooks/useChat'
 import { useUnits } from '@/hooks/useUnits'
 import { useProfiles } from '@/hooks/useProfiles'
 import { useToast } from '@/hooks/use-toast'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { EditChatRoomDialog } from '@/components/EditChatRoomDialog'
 
 export function ChatManagement() {
   const { toast } = useToast()
@@ -24,6 +24,8 @@ export function ChatManagement() {
   const deleteRoom = useDeleteChatRoom()
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingRoom, setEditingRoom] = useState<ChatRoom | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     unitId: 'general',
@@ -98,6 +100,11 @@ export function ChatManagement() {
     }))
   }
 
+  const handleEditRoom = (room: ChatRoom) => {
+    setEditingRoom(room)
+    setIsEditDialogOpen(true)
+  }
+
   const availableUsers = profiles?.filter(p => 
     formData.unitId === 'general' ? true : p.unit_id === formData.unitId
   )
@@ -129,193 +136,210 @@ export function ChatManagement() {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Gerenciamento de Chat
-          </CardTitle>
-          <CardDescription>
-            Gerencie salas de chat, participantes e configurações
-          </CardDescription>
-        </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Sala
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Criar Nova Sala de Chat</DialogTitle>
-              <DialogDescription>
-                Configure uma nova sala de chat para sua equipe
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nome da Sala</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: Chat Geral, Suporte Técnico..."
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="unit">Unidade (Opcional)</Label>
-                <Select 
-                  value={formData.unitId} 
-                  onValueChange={(value) => setFormData(prev => ({ 
-                    ...prev, 
-                    unitId: value,
-                    participants: [] // Reset participantes quando mudar unidade
-                  }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma unidade ou deixe em branco para chat geral" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">Chat Geral (Todas as unidades)</SelectItem>
-                    {units?.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Participantes</Label>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Você será adicionado automaticamente como participante
-                </p>
-                
-                {(!availableUsers || availableUsers.length === 0) ? (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Nenhum usuário disponível para a unidade selecionada
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
-                    <div className="space-y-2">
-                      {availableUsers.map((user) => (
-                        <div key={user.id} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`user-${user.id}`}
-                            checked={formData.participants.includes(user.id)}
-                            onChange={() => handleParticipantToggle(user.id)}
-                            className="rounded"
-                          />
-                          <label 
-                            htmlFor={`user-${user.id}`}
-                            className="text-sm font-medium flex-1 cursor-pointer"
-                          >
-                            {user.name}
-                            <span className="text-muted-foreground ml-1">
-                              ({user.role})
-                            </span>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {formData.participants.length > 0 && (
-                  <p className="text-sm text-green-600 mt-2">
-                    {formData.participants.length} participante(s) selecionado(s) + você
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                  disabled={createRoom.isPending}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={createRoom.isPending || !availableUsers || availableUsers.length === 0}
-                >
-                  {createRoom.isPending ? 'Criando...' : 'Criar Sala'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome da Sala</TableHead>
-              <TableHead>Unidade</TableHead>
-              <TableHead>Criado por</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rooms?.map((room) => (
-              <TableRow key={room.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4" />
-                    {room.name}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {room.units?.name || (
-                    <Badge variant="secondary">
-                      Chat Geral
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>{room.profiles?.name}</TableCell>
-                <TableCell>
-                  <Badge variant={room.is_active ? "default" : "secondary"}>
-                    {room.is_active ? "Ativo" : "Inativo"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteRoom(room.id, room.name)}
-                    disabled={deleteRoom.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        {(!rooms || rooms.length === 0) && (
-          <div className="text-center py-8 text-muted-foreground">
-            <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Nenhuma sala de chat criada ainda</p>
-            <p className="text-sm">Clique em "Nova Sala" para começar</p>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Gerenciamento de Chat
+            </CardTitle>
+            <CardDescription>
+              Gerencie salas de chat, participantes e configurações
+            </CardDescription>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Sala
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Criar Nova Sala de Chat</DialogTitle>
+                <DialogDescription>
+                  Configure uma nova sala de chat para sua equipe
+                </DialogDescription>
+              </DialogHeader>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome da Sala</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ex: Chat Geral, Suporte Técnico..."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="unit">Unidade (Opcional)</Label>
+                  <Select 
+                    value={formData.unitId} 
+                    onValueChange={(value) => setFormData(prev => ({ 
+                      ...prev, 
+                      unitId: value,
+                      participants: [] // Reset participantes quando mudar unidade
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma unidade ou deixe em branco para chat geral" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">Chat Geral (Todas as unidades)</SelectItem>
+                      {units?.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Participantes</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Você será adicionado automaticamente como participante
+                  </p>
+                  
+                  {(!availableUsers || availableUsers.length === 0) ? (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Nenhum usuário disponível para a unidade selecionada
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
+                      <div className="space-y-2">
+                        {availableUsers.map((user) => (
+                          <div key={user.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`user-${user.id}`}
+                              checked={formData.participants.includes(user.id)}
+                              onChange={() => handleParticipantToggle(user.id)}
+                              className="rounded"
+                            />
+                            <label 
+                              htmlFor={`user-${user.id}`}
+                              className="text-sm font-medium flex-1 cursor-pointer"
+                            >
+                              {user.name}
+                              <span className="text-muted-foreground ml-1">
+                                ({user.role})
+                              </span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {formData.participants.length > 0 && (
+                    <p className="text-sm text-green-600 mt-2">
+                      {formData.participants.length} participante(s) selecionado(s) + você
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsDialogOpen(false)}
+                    disabled={createRoom.isPending}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createRoom.isPending || !availableUsers || availableUsers.length === 0}
+                  >
+                    {createRoom.isPending ? 'Criando...' : 'Criar Sala'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome da Sala</TableHead>
+                <TableHead>Unidade</TableHead>
+                <TableHead>Criado por</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rooms?.map((room) => (
+                <TableRow key={room.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      {room.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {room.units?.name || (
+                      <Badge variant="secondary">
+                        Chat Geral
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>{room.profiles?.name}</TableCell>
+                  <TableCell>
+                    <Badge variant={room.is_active ? "default" : "secondary"}>
+                      {room.is_active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditRoom(room)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteRoom(room.id, room.name)}
+                        disabled={deleteRoom.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          {(!rooms || rooms.length === 0) && (
+            <div className="text-center py-8 text-muted-foreground">
+              <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>Nenhuma sala de chat criada ainda</p>
+              <p className="text-sm">Clique em "Nova Sala" para começar</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <EditChatRoomDialog
+        room={editingRoom}
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+      />
+    </>
   )
 }

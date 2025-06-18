@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -24,6 +23,12 @@ export interface ChatMessage {
   content: string
   created_at: string
   updated_at: string
+  edited_at?: string
+  is_deleted: boolean
+  attachment_url?: string
+  attachment_type?: string
+  attachment_name?: string
+  attachment_size?: number
   profiles?: { name: string; avatar_url: string | null }
 }
 
@@ -138,13 +143,53 @@ export function useSendMessage() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ roomId, content }: { roomId: string; content: string }) => {
+    mutationFn: async ({ 
+      roomId, 
+      content, 
+      attachmentFile 
+    }: { 
+      roomId: string
+      content: string
+      attachmentFile?: File 
+    }) => {
+      let attachmentUrl = null
+      let attachmentType = null
+      let attachmentName = null
+      let attachmentSize = null
+
+      // Upload attachment if provided
+      if (attachmentFile) {
+        const fileExt = attachmentFile.name.split('.').pop()
+        const fileName = `${roomId}/${Date.now()}.${fileExt}`
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('chat-attachments')
+          .upload(fileName, attachmentFile)
+
+        if (uploadError) {
+          throw new Error(`Erro ao fazer upload do arquivo: ${uploadError.message}`)
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(fileName)
+
+        attachmentUrl = urlData.publicUrl
+        attachmentType = attachmentFile.type
+        attachmentName = attachmentFile.name
+        attachmentSize = attachmentFile.size
+      }
+
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
           room_id: roomId,
-          content,
+          content: content || (attachmentFile ? `Enviou um arquivo: ${attachmentFile.name}` : ''),
           sender_id: (await supabase.auth.getUser()).data.user?.id!,
+          attachment_url: attachmentUrl,
+          attachment_type: attachmentType,
+          attachment_name: attachmentName,
+          attachment_size: attachmentSize,
         })
         .select()
         .single()
@@ -160,6 +205,170 @@ export function useSendMessage() {
       toast({
         title: 'Erro ao enviar mensagem',
         description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useEditMessage() {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .update({
+          content,
+          edited_at: new Date().toISOString(),
+        })
+        .eq('id', messageId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
+      toast({
+        title: 'Mensagem editada',
+        description: 'A mensagem foi editada com sucesso.',
+      })
+    },
+    onError: (error: any) => {
+      console.error('Error editing message:', error)
+      toast({
+        title: 'Erro ao editar mensagem',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useDeleteMessage() {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (messageId: string) => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .update({
+          is_deleted: true,
+          content: 'Esta mensagem foi excluída',
+        })
+        .eq('id', messageId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
+      toast({
+        title: 'Mensagem excluída',
+        description: 'A mensagem foi excluída com sucesso.',
+      })
+    },
+    onError: (error: any) => {
+      console.error('Error deleting message:', error)
+      toast({
+        title: 'Erro ao excluir mensagem',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useUpdateChatRoom() {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ 
+      roomId, 
+      name, 
+      unitId, 
+      participants 
+    }: { 
+      roomId: string
+      name: string
+      unitId?: string
+      participants: string[] 
+    }) => {
+      console.log('Updating chat room:', { roomId, name, unitId, participants })
+
+      // Update room basic info
+      const { error: roomError } = await supabase
+        .from('chat_rooms')
+        .update({
+          name,
+          unit_id: unitId || null,
+        })
+        .eq('id', roomId)
+
+      if (roomError) {
+        throw new Error(`Erro ao atualizar sala: ${roomError.message}`)
+      }
+
+      // Get current participants
+      const { data: currentParticipants } = await supabase
+        .from('chat_participants')
+        .select('user_id')
+        .eq('room_id', roomId)
+
+      const currentUserIds = currentParticipants?.map(p => p.user_id) || []
+
+      // Remove participants not in new list
+      const toRemove = currentUserIds.filter(id => !participants.includes(id))
+      if (toRemove.length > 0) {
+        const { error: removeError } = await supabase
+          .from('chat_participants')
+          .delete()
+          .eq('room_id', roomId)
+          .in('user_id', toRemove)
+
+        if (removeError) {
+          throw new Error(`Erro ao remover participantes: ${removeError.message}`)
+        }
+      }
+
+      // Add new participants
+      const toAdd = participants.filter(id => !currentUserIds.includes(id))
+      if (toAdd.length > 0) {
+        const participantsData = toAdd.map(userId => ({
+          room_id: roomId,
+          user_id: userId,
+        }))
+
+        const { error: addError } = await supabase
+          .from('chat_participants')
+          .insert(participantsData)
+
+        if (addError) {
+          throw new Error(`Erro ao adicionar participantes: ${addError.message}`)
+        }
+      }
+
+      return { roomId, name }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      toast({
+        title: 'Sala atualizada com sucesso!',
+        description: 'As alterações foram salvas.',
+      })
+    },
+    onError: (error: any) => {
+      console.error('Chat room update failed:', error)
+      toast({
+        title: 'Erro ao atualizar sala',
+        description: error.message || 'Ocorreu um erro inesperado ao atualizar a sala',
         variant: 'destructive',
       })
     },

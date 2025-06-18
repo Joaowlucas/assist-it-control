@@ -72,25 +72,43 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          attachment_name: string | null
+          attachment_size: number | null
+          attachment_type: string | null
+          attachment_url: string | null
           content: string
           created_at: string
+          edited_at: string | null
           id: string
+          is_deleted: boolean | null
           room_id: string
           sender_id: string
           updated_at: string
         }
         Insert: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           content: string
           created_at?: string
+          edited_at?: string | null
           id?: string
+          is_deleted?: boolean | null
           room_id: string
           sender_id: string
           updated_at?: string
         }
         Update: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           content?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
+          is_deleted?: boolean | null
           room_id?: string
           sender_id?: string
           updated_at?: string

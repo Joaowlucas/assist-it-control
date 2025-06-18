@@ -1,36 +1,71 @@
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Send, MessageCircle, Users } from 'lucide-react'
-import { useChatRooms, useChatMessages, useSendMessage, ChatRoom } from '@/hooks/useChat'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X } from 'lucide-react'
+import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { ChatAttachmentUpload } from '@/components/ChatAttachmentUpload'
+import { ChatMessageAttachment } from '@/components/ChatMessageAttachment'
 
 export default function Chat() {
   const { profile } = useAuth()
   const { data: rooms, isLoading: roomsLoading } = useChatRooms()
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null)
   const [message, setMessage] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [showAttachmentUpload, setShowAttachmentUpload] = useState(false)
+  const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
   const sendMessage = useSendMessage()
+  const editMessage = useEditMessage()
+  const deleteMessage = useDeleteMessage()
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!message.trim() || !selectedRoom) return
+    if ((!message.trim() && !selectedFile) || !selectedRoom) return
 
     await sendMessage.mutateAsync({
       roomId: selectedRoom.id,
       content: message.trim(),
+      attachmentFile: selectedFile || undefined,
     })
     
     setMessage('')
+    setSelectedFile(null)
+    setShowAttachmentUpload(false)
+  }
+
+  const handleEditMessage = async () => {
+    if (!editingMessage || !editingMessage.content.trim()) return
+
+    await editMessage.mutateAsync({
+      messageId: editingMessage.id,
+      content: editingMessage.content,
+    })
+    
+    setEditingMessage(null)
+  }
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (confirm('Tem certeza que deseja excluir esta mensagem?')) {
+      await deleteMessage.mutateAsync(messageId)
+    }
+  }
+
+  const canEditMessage = (senderId: string) => {
+    return profile?.role === 'admin' || senderId === profile?.id
   }
 
   const filteredRooms = rooms?.filter(room => {
@@ -142,7 +177,7 @@ export default function Chat() {
                     <p>Seja o primeiro a enviar uma mensagem!</p>
                   </div>
                 ) : (
-                  messages?.map((msg) => (
+                  messages?.filter(msg => !msg.is_deleted || msg.sender_id === profile?.id || profile?.role === 'admin').map((msg) => (
                     <div
                       key={msg.id}
                       className={`flex gap-3 ${
@@ -158,24 +193,66 @@ export default function Chat() {
                         </Avatar>
                       )}
                       
-                      <div
-                        className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
-                          msg.sender_id === profile?.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        {msg.sender_id !== profile?.id && (
-                          <p className="text-xs font-medium mb-1">
-                            {msg.profiles?.name}
-                          </p>
-                        )}
-                        <p className="text-sm">{msg.content}</p>
+                      <div className="max-w-xs lg:max-w-md">
+                        <div
+                          className={`px-3 py-2 rounded-lg ${
+                            msg.sender_id === profile?.id
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          } ${msg.is_deleted ? 'opacity-60 italic' : ''}`}
+                        >
+                          {msg.sender_id !== profile?.id && (
+                            <p className="text-xs font-medium mb-1">
+                              {msg.profiles?.name}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm">{msg.content}</p>
+                              {msg.edited_at && !msg.is_deleted && (
+                                <p className="text-xs opacity-70 mt-1">(editado)</p>
+                              )}
+                            </div>
+                            
+                            {canEditMessage(msg.sender_id) && !msg.is_deleted && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => setEditingMessage({ id: msg.id, content: msg.content })}
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteMessage(msg.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                          
+                          <ChatMessageAttachment message={msg} />
+                        </div>
+                        
                         <p className={`text-xs mt-1 ${
                           msg.sender_id === profile?.id
-                            ? 'text-primary-foreground/70'
-                            : 'text-muted-foreground'
-                        }`}>
+                            ? 'text-right'
+                            : 'text-left'
+                        } text-muted-foreground`}>
                           {format(new Date(msg.created_at), 'HH:mm', { locale: ptBR })}
                         </p>
                       </div>
@@ -194,9 +271,41 @@ export default function Chat() {
               </div>
             </ScrollArea>
 
+            {/* Área de Upload de Anexos */}
+            {showAttachmentUpload && (
+              <div className="p-4 border-t bg-muted/30">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium">Anexar arquivo</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowAttachmentUpload(false)
+                      setSelectedFile(null)
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <ChatAttachmentUpload
+                  onFileSelect={setSelectedFile}
+                  selectedFile={selectedFile}
+                />
+              </div>
+            )}
+
             {/* Input de Mensagem */}
             <div className="p-4 border-t">
               <form onSubmit={handleSendMessage} className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowAttachmentUpload(!showAttachmentUpload)}
+                  className={showAttachmentUpload ? 'bg-primary text-primary-foreground' : ''}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
                 <Input
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
@@ -205,7 +314,7 @@ export default function Chat() {
                 />
                 <Button 
                   type="submit" 
-                  disabled={!message.trim() || sendMessage.isPending}
+                  disabled={(!message.trim() && !selectedFile) || sendMessage.isPending}
                   size="icon"
                 >
                   <Send className="h-4 w-4" />
@@ -225,6 +334,36 @@ export default function Chat() {
           </div>
         )}
       </div>
+
+      {/* Dialog para Editar Mensagem */}
+      <Dialog open={!!editingMessage} onOpenChange={() => setEditingMessage(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Mensagem</DialogTitle>
+            <DialogDescription>
+              Faça as alterações necessárias na mensagem
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={editingMessage?.content || ''}
+              onChange={(e) => setEditingMessage(prev => 
+                prev ? { ...prev, content: e.target.value } : null
+              )}
+              placeholder="Digite sua mensagem..."
+              rows={3}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingMessage(null)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEditMessage} disabled={editMessage.isPending}>
+                {editMessage.isPending ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
