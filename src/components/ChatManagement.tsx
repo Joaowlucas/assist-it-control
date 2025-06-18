@@ -25,7 +25,7 @@ export function ChatManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
-    unitId: '',
+    unitId: 'general',
     participants: [] as string[],
   })
 
@@ -44,11 +44,11 @@ export function ChatManagement() {
     try {
       await createRoom.mutateAsync({
         name: formData.name,
-        unitId: formData.unitId || undefined,
+        unitId: formData.unitId === 'general' ? undefined : formData.unitId,
         participants: formData.participants,
       })
       
-      setFormData({ name: '', unitId: '', participants: [] })
+      setFormData({ name: '', unitId: 'general', participants: [] })
       setIsDialogOpen(false)
     } catch (error) {
       console.error('Erro ao criar sala:', error)
@@ -71,7 +71,7 @@ export function ChatManagement() {
   }
 
   const availableUsers = profiles?.filter(p => 
-    formData.unitId ? p.unit_id === formData.unitId : true
+    formData.unitId === 'general' ? true : p.unit_id === formData.unitId
   )
 
   if (roomsLoading) {
@@ -139,7 +139,7 @@ export function ChatManagement() {
                     <SelectValue placeholder="Selecione uma unidade ou deixe em branco para chat geral" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Chat Geral (Todas as unidades)</SelectItem>
+                    <SelectItem value="general">Chat Geral (Todas as unidades)</SelectItem>
                     {units?.map((unit) => (
                       <SelectItem key={unit.id} value={unit.id}>
                         {unit.name}
