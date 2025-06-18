@@ -9,13 +9,15 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X } from 'lucide-react'
+import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X, UserPlus } from 'lucide-react'
 import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChatAttachmentUpload } from '@/components/ChatAttachmentUpload'
 import { ChatMessageAttachment } from '@/components/ChatMessageAttachment'
+import { ChatUsersList } from '@/components/ChatUsersList'
+import { DirectChatDialog } from '@/components/DirectChatDialog'
 
 export default function Chat() {
   const { profile } = useAuth()
@@ -25,6 +27,8 @@ export default function Chat() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [showAttachmentUpload, setShowAttachmentUpload] = useState(false)
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null)
+  const [showDirectChatDialog, setShowDirectChatDialog] = useState(false)
+  const [directChatTargetUserId, setDirectChatTargetUserId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
@@ -61,6 +65,19 @@ export default function Chat() {
   const handleDeleteMessage = async (messageId: string) => {
     if (confirm('Tem certeza que deseja excluir esta mensagem?')) {
       await deleteMessage.mutateAsync(messageId)
+    }
+  }
+
+  const handleStartDirectChat = (userId: string) => {
+    setDirectChatTargetUserId(userId)
+    setShowDirectChatDialog(true)
+  }
+
+  const handleRoomCreated = (roomId: string) => {
+    // Encontrar a nova sala e selecioná-la
+    const newRoom = rooms?.find(room => room.id === roomId)
+    if (newRoom) {
+      setSelectedRoom(newRoom)
     }
   }
 
@@ -180,12 +197,12 @@ export default function Chat() {
                   messages?.filter(msg => !msg.is_deleted || msg.sender_id === profile?.id || profile?.role === 'admin').map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex gap-3 ${
+                      className={`flex gap-3 group ${
                         msg.sender_id === profile?.id ? 'justify-end' : 'justify-start'
                       }`}
                     >
                       {msg.sender_id !== profile?.id && (
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={msg.profiles?.avatar_url || undefined} />
                           <AvatarFallback>
                             {msg.profiles?.name?.charAt(0).toUpperCase()}
@@ -195,14 +212,14 @@ export default function Chat() {
                       
                       <div className="max-w-xs lg:max-w-md">
                         <div
-                          className={`px-3 py-2 rounded-lg ${
+                          className={`px-4 py-3 rounded-lg ${
                             msg.sender_id === profile?.id
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
                           } ${msg.is_deleted ? 'opacity-60 italic' : ''}`}
                         >
                           {msg.sender_id !== profile?.id && (
-                            <p className="text-xs font-medium mb-1">
+                            <p className="text-xs font-medium mb-1 opacity-80">
                               {msg.profiles?.name}
                             </p>
                           )}
@@ -258,7 +275,7 @@ export default function Chat() {
                       </div>
                       
                       {msg.sender_id === profile?.id && (
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={profile?.avatar_url || undefined} />
                           <AvatarFallback>
                             {profile?.name?.charAt(0).toUpperCase()}
@@ -327,13 +344,27 @@ export default function Chat() {
             <div className="text-center">
               <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <h3 className="text-lg font-medium mb-2">Selecione uma sala de chat</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 Escolha uma sala na lateral para começar a conversar
               </p>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setShowDirectChatDialog(true)}
+              >
+                <UserPlus className="h-4 w-4" />
+                Iniciar conversa privada
+              </Button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Lista de Usuários */}
+      <ChatUsersList 
+        roomId={selectedRoom?.id || null}
+        onStartDirectChat={handleStartDirectChat}
+      />
 
       {/* Dialog para Editar Mensagem */}
       <Dialog open={!!editingMessage} onOpenChange={() => setEditingMessage(null)}>
@@ -364,6 +395,14 @@ export default function Chat() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog para Conversa Direta */}
+      <DirectChatDialog
+        open={showDirectChatDialog}
+        onOpenChange={setShowDirectChatDialog}
+        targetUserId={directChatTargetUserId}
+        onRoomCreated={handleRoomCreated}
+      />
     </div>
   )
 }

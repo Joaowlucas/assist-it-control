@@ -4,6 +4,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface ConfirmEndAssignmentDialogProps {
   open: boolean
   assignmentId: string | null
+  equipmentName: string
+  userName: string
   onConfirm: () => void
   onCancel: () => void
 }
@@ -11,6 +13,8 @@ interface ConfirmEndAssignmentDialogProps {
 export function ConfirmEndAssignmentDialog({ 
   open, 
   assignmentId, 
+  equipmentName,
+  userName,
   onConfirm, 
   onCancel 
 }: ConfirmEndAssignmentDialogProps) {
@@ -20,7 +24,7 @@ export function ConfirmEndAssignmentDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Finalização</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja finalizar esta atribuição? O equipamento ficará disponível para nova atribuição.
+            Tem certeza que deseja finalizar a atribuição do equipamento "{equipmentName}" para o usuário "{userName}"? O equipamento ficará disponível para nova atribuição.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
