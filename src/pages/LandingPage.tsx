@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
+import {Separator } from "@/components/ui/separator"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { useLandingPagePosts } from "@/hooks/useLandingPagePosts"
-import { supabase } from "@/integrations/supabase/client"
 import { Calendar, Clock, Users, TrendingUp, Image as ImageIcon, Video, BarChart3 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -21,17 +20,6 @@ export default function LandingPage() {
 
   const handleLogin = () => {
     navigate('/login')
-  }
-
-  const handleVote = async (postId: string, optionIndex: number) => {
-    const { error } = await supabase.rpc('vote_in_poll', {
-      post_id: postId,
-      option_index: optionIndex
-    })
-    
-    if (error) {
-      console.error('Erro ao votar:', error)
-    }
   }
 
   const getPostTypeIcon = (type: string) => {
@@ -48,14 +36,14 @@ export default function LandingPage() {
   }
 
   const calculatePollResults = (pollVotes: any, pollOptions: any[]) => {
-    if (!pollVotes || !pollOptions) return []
+    if (!pollVotes || !pollOptions || !Array.isArray(pollOptions)) return []
     
-    const totalVotes = Object.values(pollVotes).reduce((sum: number, votes: any) => sum + (votes || 0), 0)
+    const totalVotes = Object.values(pollVotes as Record<string, number>).reduce((sum: number, votes: number) => sum + (votes || 0), 0)
     
     return pollOptions.map((option: any, index: number) => ({
       option,
-      votes: pollVotes[index] || 0,
-      percentage: totalVotes > 0 ? ((pollVotes[index] || 0) / totalVotes) * 100 : 0
+      votes: (pollVotes as Record<string, number>)[index] || 0,
+      percentage: totalVotes > 0 ? (((pollVotes as Record<string, number>)[index] || 0) / totalVotes) * 100 : 0
     }))
   }
 
@@ -154,7 +142,7 @@ export default function LandingPage() {
                             locale: ptBR 
                           })}
                         </span>
-                        {post.view_count > 0 && (
+                        {post.view_count && post.view_count > 0 && (
                           <>
                             <Separator orientation="vertical" className="h-4" />
                             <Users className="h-4 w-4" />
@@ -202,19 +190,16 @@ export default function LandingPage() {
                 )}
 
                 {/* Poll */}
-                {post.type === 'poll' && post.poll_options && (
+                {post.type === 'poll' && post.poll_options && Array.isArray(post.poll_options) && (
                   <div className="mt-4 space-y-3">
-                    <h5 className="font-medium text-gray-900">Sua opinião:</h5>
+                    <h5 className="font-medium text-gray-900">Enquete:</h5>
                     {calculatePollResults(post.poll_votes, post.poll_options).map((result, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <button
-                            onClick={() => handleVote(post.id, index)}
-                            className="text-left hover:text-blue-600 transition-colors flex-1"
-                          >
+                          <span className="text-sm font-medium">
                             {result.option}
-                          </button>
-                          <span className="text-sm text-gray-500 ml-2">
+                          </span>
+                          <span className="text-sm text-gray-500">
                             {result.votes} votos ({result.percentage.toFixed(1)}%)
                           </span>
                         </div>

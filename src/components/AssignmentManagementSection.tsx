@@ -89,6 +89,11 @@ export function AssignmentManagementSection() {
     }
   }
 
+  const handleEdit = (assignment: any) => {
+    setEditingAssignment(assignment)
+    setIsEditDialogOpen(true)
+  }
+
   const handleEndAssignment = (assignment: any) => {
     setEndingAssignment(assignment)
   }
@@ -507,7 +512,9 @@ export function AssignmentManagementSection() {
       <ConfirmEndAssignmentDialog 
         open={!!endingAssignment}
         onOpenChange={() => setEndingAssignment(null)}
-        assignment={endingAssignment}
+        assignmentId={endingAssignment?.id || ''}
+        equipmentName={endingAssignment?.equipment?.name || ''}
+        userName={endingAssignment?.user?.name || ''}
       />
 
       <AssignmentPDFPreviewDialog
