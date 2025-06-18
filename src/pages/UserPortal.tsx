@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useUserTickets } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { EquipmentRequestDialog } from "@/components/EquipmentRequestDialog"
+import { UserPortalModals } from "@/components/UserPortalModals"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { NavLink } from "react-router-dom"
@@ -20,6 +20,7 @@ export default function UserPortal() {
   const { data: assignments = [], isLoading: assignmentsLoading } = useUserAssignments()
   
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false)
+  const [activeModal, setActiveModal] = useState<'tickets' | 'assignments' | null>(null)
 
   const stats = [
     {
@@ -31,8 +32,8 @@ export default function UserPortal() {
       bgColor: "bg-orange-50 dark:bg-orange-950"
     },
     {
-      title: "Chamados Fechados",
-      value: userTickets.filter(t => t.status === 'fechado').length,
+      title: "Chamados Resolvidos",
+      value: userTickets.filter(t => t.status === 'resolvido').length,
       total: userTickets.length,
       icon: CheckCircle,
       color: "text-green-500",
@@ -54,10 +55,10 @@ export default function UserPortal() {
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
       case 'em_andamento':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-      case 'aguardando':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'fechado':
+      case 'resolvido':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+      case 'fechado':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
     }
@@ -69,8 +70,8 @@ export default function UserPortal() {
         return 'Aberto'
       case 'em_andamento':
         return 'Em Andamento'
-      case 'aguardando':
-        return 'Aguardando'
+      case 'resolvido':
+        return 'Resolvido'
       case 'fechado':
         return 'Fechado'
       default:
@@ -185,14 +186,23 @@ export default function UserPortal() {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Chamados Recentes */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Meus Chamados Recentes
-            </CardTitle>
-            <CardDescription>
-              Seus chamados mais recentes que não foram fechados
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Meus Chamados Recentes
+              </CardTitle>
+              <CardDescription>
+                Seus chamados mais recentes que não foram fechados
+              </CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setActiveModal('tickets')}
+            >
+              Ver Todos
+            </Button>
           </CardHeader>
           <CardContent>
             {ticketsLoading ? (
@@ -237,14 +247,23 @@ export default function UserPortal() {
 
         {/* Equipamentos Ativos */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Laptop className="h-5 w-5" />
-              Meus Equipamentos
-            </CardTitle>
-            <CardDescription>
-              Equipamentos atualmente atribuídos a você
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Laptop className="h-5 w-5" />
+                Meus Equipamentos
+              </CardTitle>
+              <CardDescription>
+                Equipamentos atualmente atribuídos a você
+              </CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setActiveModal('assignments')}
+            >
+              Ver Todos
+            </Button>
           </CardHeader>
           <CardContent>
             {assignmentsLoading ? (
@@ -287,8 +306,18 @@ export default function UserPortal() {
         </Card>
       </div>
 
-      {/* Dialog para solicitação de equipamento */}
-      <EquipmentRequestDialog />
+      {/* Dialogs */}
+      <EquipmentRequestDialog
+        open={isEquipmentDialogOpen}
+        onOpenChange={setIsEquipmentDialogOpen}
+      />
+
+      <UserPortalModals
+        activeModal={activeModal}
+        onModalChange={setActiveModal}
+        tickets={userTickets}
+        assignments={assignments}
+      />
     </div>
   )
 }

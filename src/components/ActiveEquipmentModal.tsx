@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -117,10 +116,10 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {assignment.user?.name || 'Usuário não encontrado'}
+                            {assignment.profiles?.name || 'Usuário não encontrado'}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {assignment.user?.email}
+                            {assignment.profiles?.email}
                           </div>
                         </div>
                       </div>
@@ -145,7 +144,7 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
                         onClick={() => handleEndAssignment(
                           assignment.id,
                           assignment.equipment?.name || 'Equipamento',
-                          assignment.user?.name || 'Usuário'
+                          assignment.profiles?.name || 'Usuário'
                         )}
                       >
                         Finalizar
@@ -165,7 +164,7 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
         equipmentName={confirmEndDialog.equipmentName}
         userName={confirmEndDialog.userName}
         onConfirm={handleConfirmEndAssignment}
-        onCancel={() => setConfirmEndDialog(prev => ({ ...prev, open: false }))}
+        onOpenChange={(open) => setConfirmEndDialog(prev => ({ ...prev, open }))}
       />
     </>
   )

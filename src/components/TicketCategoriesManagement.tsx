@@ -1,104 +1,133 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Pencil, Trash2, Star, Settings } from 'lucide-react'
-import { useTicketCategories, useCreateTicketCategory, useUpdateTicketCategory, useDeleteTicketCategory, useSetDefaultCategory } from '@/hooks/useTicketCategories'
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { useTicketCategories, useCreateTicketCategory, useUpdateTicketCategory, useDeleteTicketCategory } from "@/hooks/useTicketCategories"
+import { Edit, Trash2, Plus } from "lucide-react"
 
 export function TicketCategoriesManagement() {
   const { data: categories = [], isLoading } = useTicketCategories()
   const createCategory = useCreateTicketCategory()
   const updateCategory = useUpdateTicketCategory()
   const deleteCategory = useDeleteTicketCategory()
-  const setDefaultCategory = useSetDefaultCategory()
   
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<any>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: ''
-  })
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<any>(null)
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const formData = new FormData(e.target as HTMLFormElement)
+    
+    const categoryData = {
+      name: formData.get('name') as string,
+      description: formData.get('description') as string || null,
+      is_active: true
+    }
+
     try {
-      await createCategory.mutateAsync({
-        name: formData.name,
-        description: formData.description,
-        is_active: true,
-        is_default: false
-      })
-      setFormData({ name: '', description: '' })
-      setCreateDialogOpen(false)
+      if (editingCategory) {
+        await updateCategory.mutateAsync({ id: editingCategory.id, ...categoryData })
+      } else {
+        await createCategory.mutateAsync(categoryData)
+      }
+      setIsDialogOpen(false)
+      setEditingCategory(null)
+      ;(e.target as HTMLFormElement).reset()
     } catch (error) {
-      console.error('Error creating category:', error)
+      console.error('Error saving category:', error)
     }
   }
 
-  const handleEditClick = (category: any) => {
-    setSelectedCategory(category)
-    setFormData({
-      name: category.name,
-      description: category.description || ''
-    })
-    setEditDialogOpen(true)
-  }
-
-  const handleUpdateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedCategory) return
-
-    try {
-      await updateCategory.mutateAsync({
-        id: selectedCategory.id,
-        name: formData.name,
-        description: formData.description
-      })
-      setFormData({ name: '', description: '' })
-      setEditDialogOpen(false)
-    } catch (error) {
-      console.error('Error updating category:', error)
+  const handleEdit = (category: any) => {
+    if (category.is_default) {
+      return // Não permitir editar categorias padrão
     }
+    setEditingCategory(category)
+    setIsDialogOpen(true)
   }
 
-  const handleDeleteClick = async (categoryId: string) => {
+  const handleDelete = async (id: string) => {
     try {
-      await deleteCategory.mutateAsync(categoryId)
+      await deleteCategory.mutateAsync(id)
     } catch (error) {
       console.error('Error deleting category:', error)
     }
   }
 
-  const handleSetDefaultClick = async (categoryId: string) => {
-    try {
-      await setDefaultCategory.mutateAsync(categoryId)
-    } catch (error) {
-      console.error('Error setting default category:', error)
-    }
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false)
+    setEditingCategory(null)
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center p-4">Carregando...</div>
   }
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Gerenciamento de Categorias
-          </CardTitle>
+          <CardTitle>Categorias de Chamados</CardTitle>
           <CardDescription>
-            Gerencie as categorias de chamados do sistema
+            Gerencie as categorias disponíveis para classificar chamados
           </CardDescription>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Categoria
-        </Button>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Categoria
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</DialogTitle>
+              <DialogDescription>
+                Configure uma nova categoria para classificar chamados
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nome da Categoria</Label>
+                <Input 
+                  id="name" 
+                  name="name" 
+                  defaultValue={editingCategory?.name}
+                  placeholder="Ex: seguranca, telefonia, etc."
+                  required 
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea 
+                  id="description" 
+                  name="description" 
+                  defaultValue={editingCategory?.description}
+                  placeholder="Descreva quando usar esta categoria..."
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createCategory.isPending || updateCategory.isPending}>
+                  {editingCategory ? 'Atualizar' : 'Criar'} Categoria
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
         <Table>
@@ -106,129 +135,66 @@ export function TicketCategoriesManagement() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
-              <TableHead>Padrão</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {categories.map((category) => (
               <TableRow key={category.id}>
-                <TableCell>{category.name}</TableCell>
-                <TableCell>{category.description}</TableCell>
+                <TableCell className="font-medium capitalize">{category.name}</TableCell>
+                <TableCell>{category.description || '-'}</TableCell>
                 <TableCell>
-                  {category.is_default ? (
-                    <Badge variant="secondary">
-                      <Star className="h-3 w-3 mr-1" />
-                      Padrão
-                    </Badge>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSetDefaultClick(category.id)}
-                    >
-                      Definir como Padrão
-                    </Button>
-                  )}
+                  <Badge variant={category.is_default ? 'default' : 'secondary'}>
+                    {category.is_default ? 'Padrão' : 'Personalizada'}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditClick(category)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteClick(category.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!category.is_default && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(category)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita e só é permitida se não houver chamados usando esta categoria.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(category.id)}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    )}
+                    {category.is_default && (
+                      <span className="text-sm text-muted-foreground">Categoria padrão</span>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-
-        {categories.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhuma categoria encontrada</p>
-          </div>
-        )}
       </CardContent>
-
-      {/* Create Category Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Criar Nova Categoria</DialogTitle>
-            <DialogDescription>
-              Adicione uma nova categoria para classificar os chamados.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Criar Categoria
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Category Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Categoria</DialogTitle>
-            <DialogDescription>
-              Edite os detalhes da categoria selecionada.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdateSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Nome</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Descrição</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Salvar Alterações
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </Card>
   )
 }
