@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MessageCircle, Users } from 'lucide-react'
@@ -32,17 +31,21 @@ export function ChatUsersList({ onDirectChat }: ChatUsersListProps) {
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
         const userIds = Object.keys(state).map(key => {
-          const presences = state[key] as Array<{ user_id: string }>
+          const presences = state[key] as Array<{ user_id?: string }>
           return presences[0]?.user_id
-        }).filter(Boolean)
+        }).filter(Boolean) as string[]
         setOnlineUsers(userIds)
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        const userIds = newPresences.map((presence: any) => presence.user_id).filter(Boolean)
+        const userIds = (newPresences as Array<{ user_id?: string }>)
+          .map((presence) => presence.user_id)
+          .filter(Boolean) as string[]
         setOnlineUsers(prev => [...new Set([...prev, ...userIds])])
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        const userIds = leftPresences.map((presence: any) => presence.user_id).filter(Boolean)
+        const userIds = (leftPresences as Array<{ user_id?: string }>)
+          .map((presence) => presence.user_id)
+          .filter(Boolean) as string[]
         setOnlineUsers(prev => prev.filter(id => !userIds.includes(id)))
       })
       .subscribe()

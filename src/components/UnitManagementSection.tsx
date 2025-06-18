@@ -298,7 +298,7 @@ export function UnitManagementSection() {
         title="Confirmar Exclusão"
         description={`Tem certeza que deseja excluir a unidade "${deleteDialog.unitName}"? Esta ação não pode ser desfeita.`}
         onConfirm={confirmDelete}
-        onCancel={() => setDeleteDialog({ open: false, unitId: null, unitName: "" })}
+        onOpenChange={(open) => setDeleteDialog({ open: false, unitId: null, unitName: "" })}
       />
     </div>
   )

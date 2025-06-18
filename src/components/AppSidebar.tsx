@@ -39,7 +39,7 @@ const technicianItems = [
 
 const userItems = [
   { title: "Portal", url: "/user-portal", icon: Monitor },
-  { title: "Chat", url: "/user-chat", icon: MessageCircle },
+  { title: "Chat", url: "/chat", icon: MessageCircle },
 ]
 
 export function AppSidebar() {

@@ -361,10 +361,7 @@ export default function Chat() {
       </div>
 
       {/* Lista de Usuários */}
-      <ChatUsersList 
-        roomId={selectedRoom?.id || null}
-        onStartDirectChat={handleStartDirectChat}
-      />
+      <ChatUsersList onDirectChat={handleRoomCreated} />
 
       {/* Dialog para Editar Mensagem */}
       <Dialog open={!!editingMessage} onOpenChange={() => setEditingMessage(null)}>

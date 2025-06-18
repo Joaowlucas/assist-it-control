@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -87,11 +88,21 @@ const App = () => (
                   </AdminLayout>
                 </AuthGuard>
               } />
+              
+              {/* Chat Route - Available for all users */}
               <Route path="/chat" element={
-                <AuthGuard requiredRole="admin_tech">
-                  <AdminLayout>
-                    <Chat />
-                  </AdminLayout>
+                <AuthGuard>
+                  {(profile) => 
+                    profile?.role === 'user' ? (
+                      <UserLayout>
+                        <Chat />
+                      </UserLayout>
+                    ) : (
+                      <AdminLayout>
+                        <Chat />
+                      </AdminLayout>
+                    )
+                  }
                 </AuthGuard>
               } />
               
@@ -116,13 +127,6 @@ const App = () => (
                 <AuthGuard requiredRole="user">
                   <UserLayout>
                     <UserPortal />
-                  </UserLayout>
-                </AuthGuard>
-              } />
-              <Route path="/user-chat" element={
-                <AuthGuard requiredRole="user">
-                  <UserLayout>
-                    <Chat />
                   </UserLayout>
                 </AuthGuard>
               } />
