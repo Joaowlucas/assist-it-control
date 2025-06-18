@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2, FileText, Filter } from "lucide-react"
 import { useAssignments } from "@/hooks/useAssignments"
 import { useDeleteAssignment } from "@/hooks/useDeleteAssignment"
+import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
 import { AssignmentPDFPreviewDialog } from "@/components/AssignmentPDFPreviewDialog"
@@ -15,6 +16,7 @@ import { ptBR } from "date-fns/locale"
 
 export function AssignmentManagementSection() {
   const { data: assignments = [], isLoading } = useAssignments()
+  const { data: systemSettings } = useSystemSettings()
   const deleteAssignmentMutation = useDeleteAssignment()
   
   const [searchTerm, setSearchTerm] = useState("")
@@ -120,7 +122,9 @@ export function AssignmentManagementSection() {
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-2">
                         <h3 className="font-semibold">{assignment.equipment?.name}</h3>
-                        <Badge variant="outline">{assignment.equipment?.tombamento}</Badge>
+                        {assignment.equipment?.tombamento && (
+                          <Badge variant="outline">{assignment.equipment.tombamento}</Badge>
+                        )}
                         {getStatusBadge(assignment.status)}
                       </div>
                       <div className="text-sm text-muted-foreground space-y-1">
@@ -219,10 +223,11 @@ export function AssignmentManagementSection() {
             setPdfDialogOpen(open)
             if (!open) setSelectedAssignment(null)
           }}
+          assignment={selectedAssignment}
           assignmentId={selectedAssignment.id}
           equipmentName={selectedAssignment.equipment?.name || ''}
           userName={selectedAssignment.user?.name || ''}
-          systemSettings={null}
+          systemSettings={systemSettings || null}
         />
       )}
     </div>
