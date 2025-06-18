@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,8 +28,7 @@ export function TicketCategoriesManagement() {
     const categoryData = {
       name: formData.get('name') as string,
       description: formData.get('description') as string || null,
-      is_active: true,
-      is_default: false
+      is_active: true
     }
 
     try {

@@ -77,7 +77,7 @@ export function PredefinedTextsManagement() {
         <div>
           <CardTitle>Textos Pré-definidos</CardTitle>
           <CardDescription>
-            Gerencie textos pré-definidos para agilizar a criação de chamados
+            Gerencie textos pré-definidos para títulos e descrições de chamados
           </CardDescription>
         </div>
         
@@ -88,42 +88,44 @@ export function PredefinedTextsManagement() {
               Novo Texto
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingText ? 'Editar Texto' : 'Novo Texto'}</DialogTitle>
+              <DialogTitle>{editingText ? 'Editar Texto' : 'Novo Texto Pré-definido'}</DialogTitle>
               <DialogDescription>
-                Configure um novo texto pré-definido para agilizar a criação de chamados
+                Configure um texto pré-definido para uso em chamados
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="type">Tipo</Label>
-                <Select name="type" defaultValue={editingText?.type} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="title">Título</SelectItem>
-                    <SelectItem value="description">Descrição</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="category">Categoria</Label>
-                <Select name="category" defaultValue={editingText?.category}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a categoria (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Todas as categorias</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="type">Tipo</Label>
+                  <Select name="type" defaultValue={editingText?.type} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="title">Título</SelectItem>
+                      <SelectItem value="description">Descrição</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="category">Categoria (Opcional)</Label>
+                  <Select name="category" defaultValue={editingText?.category || 'generic'}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Categoria específica ou genérico" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="generic">Genérico (todas as categorias)</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name.charAt(0).toUpperCase() + category.name.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div>
@@ -134,7 +136,7 @@ export function PredefinedTextsManagement() {
                   defaultValue={editingText?.text_content}
                   placeholder="Digite o texto pré-definido..."
                   rows={4}
-                  required
+                  required 
                 />
               </div>
               
@@ -168,7 +170,9 @@ export function PredefinedTextsManagement() {
                     {text.type === 'title' ? 'Título' : 'Descrição'}
                   </Badge>
                 </TableCell>
-                <TableCell>{text.category || 'Todas'}</TableCell>
+                <TableCell className="capitalize">
+                  {text.category || 'Genérico'}
+                </TableCell>
                 <TableCell className="max-w-xs truncate">{text.text_content}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">

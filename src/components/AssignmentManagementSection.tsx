@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, CalendarDays, User, Package, MapPin, Wrench } from "lucide-react"
-import { useAssignments, useCreateAssignment } from "@/hooks/useAssignments"
+import { useAssignments, useCreateAssignment, useEndAssignment } from "@/hooks/useAssignments"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
@@ -22,12 +22,21 @@ export function AssignmentManagementSection() {
   const { data: availableEquipment = [] } = useAvailableEquipment()
   const { data: availableUsers = [] } = useAvailableUsers()
   const createAssignment = useCreateAssignment()
+  const endAssignment = useEndAssignment()
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState("")
   const [selectedUser, setSelectedUser] = useState("")
   const [startDate, setStartDate] = useState("")
   const [notes, setNotes] = useState("")
+  
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    assignmentId: string | null
+  }>({
+    open: false,
+    assignmentId: null
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,6 +58,28 @@ export function AssignmentManagementSection() {
     } catch (error) {
       console.error('Error creating assignment:', error)
     }
+  }
+
+  const handleEndAssignment = (assignmentId: string) => {
+    setConfirmDialog({
+      open: true,
+      assignmentId
+    })
+  }
+
+  const confirmEndAssignment = async () => {
+    if (confirmDialog.assignmentId) {
+      try {
+        await endAssignment.mutateAsync(confirmDialog.assignmentId)
+        setConfirmDialog({ open: false, assignmentId: null })
+      } catch (error) {
+        console.error('Error ending assignment:', error)
+      }
+    }
+  }
+
+  const cancelEndAssignment = () => {
+    setConfirmDialog({ open: false, assignmentId: null })
   }
 
   if (loadingAssignments) {
@@ -166,8 +197,8 @@ export function AssignmentManagementSection() {
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       <div>
-                        <div className="font-medium">{assignment.user?.name}</div>
-                        <div className="text-sm text-muted-foreground">{assignment.user?.email}</div>
+                        <div className="font-medium">{assignment.profiles?.name}</div>
+                        <div className="text-sm text-muted-foreground">{assignment.profiles?.email}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -200,16 +231,15 @@ export function AssignmentManagementSection() {
                   </TableCell>
                   <TableCell>
                     {assignment.status === 'ativo' && (
-                      <ConfirmEndAssignmentDialog
-                        assignmentId={assignment.id}
-                        equipmentName={assignment.equipment?.name || 'Equipamento'}
-                        userName={assignment.user?.name || 'Usuário'}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEndAssignment(assignment.id)}
+                        disabled={endAssignment.isPending}
                       >
-                        <Button variant="outline" size="sm">
-                          <CalendarDays className="h-4 w-4 mr-2" />
-                          Finalizar
-                        </Button>
-                      </ConfirmEndAssignmentDialog>
+                        <CalendarDays className="h-4 w-4 mr-2" />
+                        Finalizar
+                      </Button>
                     )}
                   </TableCell>
                 </TableRow>
@@ -226,6 +256,13 @@ export function AssignmentManagementSection() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmEndAssignmentDialog
+        open={confirmDialog.open}
+        assignmentId={confirmDialog.assignmentId}
+        onConfirm={confirmEndAssignment}
+        onCancel={cancelEndAssignment}
+      />
     </div>
   )
 }

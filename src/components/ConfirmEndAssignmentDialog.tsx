@@ -1,45 +1,32 @@
 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { useEndAssignment } from "@/hooks/useAssignments"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 interface ConfirmEndAssignmentDialogProps {
+  open: boolean
   assignmentId: string | null
-  equipmentName: string
-  userName: string
-  children: React.ReactNode
+  onConfirm: () => void
+  onCancel: () => void
 }
 
 export function ConfirmEndAssignmentDialog({ 
+  open, 
   assignmentId, 
-  equipmentName,
-  userName,
-  children
+  onConfirm, 
+  onCancel 
 }: ConfirmEndAssignmentDialogProps) {
-  const endAssignment = useEndAssignment()
-
-  const handleConfirm = async () => {
-    if (assignmentId) {
-      await endAssignment.mutateAsync(assignmentId)
-    }
-  }
-
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        {children}
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Finalização</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja finalizar a atribuição do equipamento "{equipmentName}" para o usuário "{userName}"? O equipamento ficará disponível para nova atribuição.
+            Tem certeza que deseja finalizar esta atribuição? O equipamento ficará disponível para nova atribuição.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirm} disabled={endAssignment.isPending}>
-            {endAssignment.isPending ? 'Finalizando...' : 'Finalizar Atribuição'}
+          <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>
+            Finalizar Atribuição
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

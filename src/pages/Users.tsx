@@ -7,14 +7,12 @@ import { useProfiles, useUpdateProfile } from "@/hooks/useProfiles"
 import { useUnits } from "@/hooks/useUnits"
 import { CreateUserDialog } from "@/components/CreateUserDialog"
 import { UserActionsDropdown } from "@/components/UserActionsDropdown"
-import { Loader2, User, Shield, Wrench, Calendar, Plus } from "lucide-react"
-import { useState } from "react"
+import { Loader2, User, Shield, Wrench, Calendar } from "lucide-react"
 
 export default function Users() {
   const { data: profiles, isLoading } = useProfiles()
   const { data: units } = useUnits()
   const updateProfile = useUpdateProfile()
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -88,11 +86,9 @@ export default function Users() {
             Gerencie usuários e suas permissões no sistema
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Usuário
-        </Button>
       </div>
+
+      <CreateUserDialog />
 
       <div className="grid gap-4">
         {profiles?.map((profile) => (
@@ -187,11 +183,6 @@ export default function Users() {
           </CardContent>
         </Card>
       )}
-
-      <CreateUserDialog 
-        open={showCreateDialog} 
-        onOpenChange={setShowCreateDialog}
-      />
     </div>
   )
 }

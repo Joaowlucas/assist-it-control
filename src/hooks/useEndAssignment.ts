@@ -23,6 +23,7 @@ export function useEndAssignment() {
       return data
     },
     onSuccess: () => {
+      // Invalidar queries relacionadas para refletir as mudanças
       queryClient.invalidateQueries({ queryKey: ['assignments'] })
       queryClient.invalidateQueries({ queryKey: ['available-equipment'] })
       queryClient.invalidateQueries({ queryKey: ['equipment'] })
