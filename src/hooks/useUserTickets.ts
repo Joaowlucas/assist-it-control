@@ -10,11 +10,14 @@ export interface UserTicket {
   title: string
   description: string
   priority: 'baixa' | 'media' | 'alta' | 'critica'
-  category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
+  category: string
   status: 'aberto' | 'em_andamento' | 'aguardando' | 'fechado'
   created_at: string
   updated_at: string
+  unit_id: string
+  resolved_at: string | null
   unit?: {
+    id: string
     name: string
   }
   requester?: {
@@ -41,7 +44,7 @@ export interface CreateTicketData {
   title: string
   description: string
   priority: 'baixa' | 'media' | 'alta' | 'critica'
-  category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
+  category: string
   unit_id?: string
   images?: File[]
 }
@@ -60,7 +63,7 @@ export function useUserTickets() {
         .from('tickets')
         .select(`
           *,
-          unit:units(name),
+          unit:units(id, name),
           requester:profiles!tickets_requester_id_fkey(name, email),
           assignee:profiles!tickets_assignee_id_fkey(name, email),
           attachments:ticket_attachments(
@@ -79,6 +82,8 @@ export function useUserTickets() {
       // Gerar URLs públicas para os anexos
       const ticketsWithAttachments = data?.map(ticket => ({
         ...ticket,
+        unit_id: ticket.unit?.id || '',
+        resolved_at: ticket.resolved_at || null,
         attachments: ticket.attachments?.map(attachment => {
           const { data: urlData } = supabase.storage
             .from('ticket-attachments')
