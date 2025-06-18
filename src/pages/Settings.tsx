@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UserManagement } from "@/components/UserManagement"
@@ -24,16 +25,14 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(false)
 
   const [companyName, setCompanyName] = useState(settings?.company_name || "")
-  const [primaryColor, setPrimaryColor] = useState(settings?.primary_color || "#000000")
-  const [secondaryColor, setSecondaryColor] = useState(settings?.secondary_color || "#000000")
-  const [enableDarkMode, setEnableDarkMode] = useState(settings?.enable_dark_mode || false)
+  const [whatsappEnabled, setWhatsappEnabled] = useState(settings?.whatsapp_enabled || false)
+  const [landingPageEnabled, setLandingPageEnabled] = useState(settings?.landing_page_enabled || false)
 
   useEffect(() => {
     if (settings) {
       setCompanyName(settings.company_name || "")
-      setPrimaryColor(settings.primary_color || "#000000")
-      setSecondaryColor(settings.secondary_color || "#000000")
-      setEnableDarkMode(settings.enable_dark_mode || false)
+      setWhatsappEnabled(settings.whatsapp_enabled || false)
+      setLandingPageEnabled(settings.landing_page_enabled || false)
     }
   }, [settings])
 
@@ -44,9 +43,8 @@ export default function Settings() {
     try {
       const updates = {
         company_name: companyName,
-        primary_color: primaryColor,
-        secondary_color: secondaryColor,
-        enable_dark_mode: enableDarkMode,
+        whatsapp_enabled: whatsappEnabled,
+        landing_page_enabled: landingPageEnabled,
       }
 
       const { error } = await supabase
@@ -125,34 +123,21 @@ export default function Settings() {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="primaryColor">Cor Primária</Label>
-                    <Input
-                      type="color"
-                      id="primaryColor"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="secondaryColor">Cor Secundária</Label>
-                    <Input
-                      type="color"
-                      id="secondaryColor"
-                      value={secondaryColor}
-                      onChange={(e) => setSecondaryColor(e.target.value)}
-                      required
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="whatsappEnabled">WhatsApp Habilitado</Label>
+                    <Switch
+                      id="whatsappEnabled"
+                      checked={whatsappEnabled}
+                      onCheckedChange={(checked) => setWhatsappEnabled(checked)}
                     />
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <Label htmlFor="enableDarkMode">Modo Escuro</Label>
+                    <Label htmlFor="landingPageEnabled">Landing Page Habilitada</Label>
                     <Switch
-                      id="enableDarkMode"
-                      checked={enableDarkMode}
-                      onCheckedChange={(checked) => setEnableDarkMode(checked)}
+                      id="landingPageEnabled"
+                      checked={landingPageEnabled}
+                      onCheckedChange={(checked) => setLandingPageEnabled(checked)}
                     />
                   </div>
                 </div>

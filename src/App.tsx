@@ -36,28 +36,31 @@ function App() {
             
             {/* Admin Routes */}
             <Route path="/admin" element={
-              <AuthGuard allowedRoles={['admin', 'technician']}>
-                <AdminLayout />
+              <AuthGuard requiredRole="admin">
+                <AdminLayout>
+                  <Routes>
+                    <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="equipment" element={<Equipment />} />
+                    <Route path="assignments" element={<Assignments />} />
+                    <Route path="tickets" element={<Tickets />} />
+                    <Route path="chat" element={<Chat />} />
+                    <Route path="users" element={<Users />} />
+                    <Route path="settings" element={<Settings />} />
+                  </Routes>
+                </AdminLayout>
               </AuthGuard>
             }>
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="equipment" element={<Equipment />} />
-              <Route path="assignments" element={<Assignments />} />
-              <Route path="tickets" element={<Tickets />} />
-              <Route path="chat" element={<Chat />} />
-              <Route path="users" element={<Users />} />
-              <Route path="settings" element={<Settings />} />
             </Route>
 
             {/* User Routes */}
             <Route path="/portal" element={
-              <AuthGuard allowedRoles={['user']}>
-                <UserLayout />
+              <AuthGuard requiredRole="user">
+                <UserLayout>
+                  <UserPortal />
+                </UserLayout>
               </AuthGuard>
-            }>
-              <Route index element={<UserPortal />} />
-            </Route>
+            } />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
