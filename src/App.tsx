@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -18,7 +17,6 @@ import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import UserPortal from "./pages/UserPortal";
 import Chat from "./pages/Chat";
-import Tutorials from "./pages/Tutorials";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -96,13 +94,6 @@ const App = () => (
                   </AdminLayout>
                 </AuthGuard>
               } />
-              <Route path="/tutorials" element={
-                <AuthGuard>
-                  <AdminLayout>
-                    <Tutorials />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
               
               {/* Admin Only Routes */}
               <Route path="/users" element={
@@ -132,13 +123,6 @@ const App = () => (
                 <AuthGuard requiredRole="user">
                   <UserLayout>
                     <Chat />
-                  </UserLayout>
-                </AuthGuard>
-              } />
-              <Route path="/user-tutorials" element={
-                <AuthGuard requiredRole="user">
-                  <UserLayout>
-                    <Tutorials />
                   </UserLayout>
                 </AuthGuard>
               } />

@@ -423,65 +423,6 @@ export type Database = {
         }
         Relationships: []
       }
-      landing_page_posts: {
-        Row: {
-          author_id: string
-          content: string
-          created_at: string
-          id: string
-          is_featured: boolean | null
-          is_published: boolean | null
-          media_url: string | null
-          poll_options: Json | null
-          poll_votes: Json | null
-          scheduled_for: string | null
-          title: string
-          type: string
-          updated_at: string
-          view_count: number | null
-        }
-        Insert: {
-          author_id: string
-          content: string
-          created_at?: string
-          id?: string
-          is_featured?: boolean | null
-          is_published?: boolean | null
-          media_url?: string | null
-          poll_options?: Json | null
-          poll_votes?: Json | null
-          scheduled_for?: string | null
-          title: string
-          type?: string
-          updated_at?: string
-          view_count?: number | null
-        }
-        Update: {
-          author_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-          is_featured?: boolean | null
-          is_published?: boolean | null
-          media_url?: string | null
-          poll_options?: Json | null
-          poll_votes?: Json | null
-          scheduled_for?: string | null
-          title?: string
-          type?: string
-          updated_at?: string
-          view_count?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "landing_page_posts_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notification_logs: {
         Row: {
           created_at: string
@@ -903,48 +844,6 @@ export type Database = {
           },
         ]
       }
-      tutorials: {
-        Row: {
-          author_id: string
-          category: string | null
-          created_at: string
-          description: string | null
-          id: string
-          is_published: boolean
-          thumbnail_url: string | null
-          title: string
-          updated_at: string
-          video_url: string
-          view_count: number
-        }
-        Insert: {
-          author_id: string
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_published?: boolean
-          thumbnail_url?: string | null
-          title: string
-          updated_at?: string
-          video_url: string
-          view_count?: number
-        }
-        Update: {
-          author_id?: string
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_published?: boolean
-          thumbnail_url?: string | null
-          title?: string
-          updated_at?: string
-          video_url?: string
-          view_count?: number
-        }
-        Relationships: []
-      }
       units: {
         Row: {
           address: string | null
@@ -1070,10 +969,6 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
-      }
-      increment_tutorial_views: {
-        Args: { tutorial_id: string }
-        Returns: undefined
       }
       reject_equipment_request: {
         Args: { request_id: string; admin_comments?: string }

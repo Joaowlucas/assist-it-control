@@ -11,12 +11,11 @@ import { useToast } from "@/hooks/use-toast"
 import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSettings"
 import { useUnits } from "@/hooks/useUnits"
 import { useCreateUnit, useDeleteUnit } from "@/hooks/useUnitManagement"
-import { Loader2, Trash2, Settings as SettingsIcon, Building2, MessageSquare, VideoIcon } from "lucide-react"
+import { Loader2, Trash2, Settings as SettingsIcon, Building2, MessageSquare } from "lucide-react"
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload"
 import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection"
 import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 import { ChatManagement } from "@/components/ChatManagement"
-import { TutorialManagement } from "@/components/TutorialManagement"
 
 export default function Settings() {
   const { toast } = useToast()
@@ -97,7 +96,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <SettingsIcon className="h-4 w-4" />
             Geral
@@ -105,10 +104,6 @@ export default function Settings() {
           <TabsTrigger value="units" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Unidades
-          </TabsTrigger>
-          <TabsTrigger value="tutorials" className="flex items-center gap-2">
-            <VideoIcon className="h-4 w-4" />
-            Tutoriais
           </TabsTrigger>
           <TabsTrigger value="chat" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -335,10 +330,6 @@ export default function Settings() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="tutorials" className="space-y-6">
-          <TutorialManagement />
         </TabsContent>
 
         <TabsContent value="chat" className="space-y-6">
