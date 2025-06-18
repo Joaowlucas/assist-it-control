@@ -16,6 +16,7 @@ import { useEndAssignment } from "@/hooks/useEndAssignment"
 import { useDeleteAssignment } from "@/hooks/useDeleteAssignment"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
+import { useAuth } from "@/hooks/useAuth"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
 import { AssignmentPDFPreviewDialog } from "@/components/AssignmentPDFPreviewDialog"
 import { Edit, Trash2, FileText, Calendar, CalendarX } from "lucide-react"
@@ -23,6 +24,7 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 export function AssignmentManagementSection() {
+  const { profile } = useAuth()
   const { data: assignments = [], isLoading } = useAssignments()
   const { data: availableEquipment = [] } = useAvailableEquipment()
   const { data: availableUsers = [] } = useAvailableUsers()
@@ -42,7 +44,7 @@ export function AssignmentManagementSection() {
       user_id: formData.get('user_id') as string,
       equipment_id: formData.get('equipment_id') as string,
       notes: formData.get('notes') as string || undefined,
-      assigned_by: 'current-user-id' // This should be the current user's ID
+      assigned_by: profile?.id || ''
     }
 
     try {
@@ -56,7 +58,7 @@ export function AssignmentManagementSection() {
 
   const handleEndAssignment = async (assignmentId: string, reason?: string) => {
     try {
-      await endAssignmentMutation.mutateAsync({ assignmentId, reason })
+      await endAssignmentMutation.mutateAsync(assignmentId)
       setEndingAssignment(null)
     } catch (error) {
       console.error('Error ending assignment:', error)
@@ -114,7 +116,7 @@ export function AssignmentManagementSection() {
                   <SelectContent>
                     {availableEquipment.map((equipment) => (
                       <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.name} - {equipment.tombamento}
+                        {equipment.name} - {equipment.serial_number || 'S/N não informado'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -181,7 +183,7 @@ export function AssignmentManagementSection() {
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {assignment.equipment?.tombamento}
+                          {assignment.equipment?.serial_number || 'S/N não informado'}
                         </div>
                       </div>
                     </TableCell>
@@ -272,7 +274,7 @@ export function AssignmentManagementSection() {
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {assignment.equipment?.tombamento}
+                          {assignment.equipment?.serial_number || 'S/N não informado'}
                         </div>
                       </div>
                     </TableCell>
@@ -340,7 +342,7 @@ export function AssignmentManagementSection() {
 
       {endingAssignment && (
         <ConfirmEndAssignmentDialog
-          assignment={endingAssignment}
+          assignmentId={endingAssignment.id}
           onConfirm={handleEndAssignment}
           onCancel={() => setEndingAssignment(null)}
         />
@@ -349,7 +351,8 @@ export function AssignmentManagementSection() {
       {pdfPreviewAssignment && (
         <AssignmentPDFPreviewDialog
           assignment={pdfPreviewAssignment}
-          onClose={() => setPdfPreviewAssignment(null)}
+          open={true}
+          onOpenChange={(open) => !open && setPdfPreviewAssignment(null)}
         />
       )}
     </div>

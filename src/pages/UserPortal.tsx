@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,11 +14,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { ImageUpload } from "@/components/ImageUpload"
 import { UserProfileSection } from "@/components/UserProfileSection"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
+import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
 import { EquipmentRequestsSection } from "@/components/EquipmentRequestsSection"
 import { OpenTicketsModal, ClosedTicketsModal, ActiveEquipmentModal, AllAssignmentsModal } from "@/components/UserPortalModals"
 import { useUserTickets, useCreateUserTicket, useDeleteUserTicket, UserTicket } from "@/hooks/useUserTickets"
 import { useUserAssignments } from "@/hooks/useUserAssignments"
 import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
+import { useUnits } from "@/hooks/useUnits"
+import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
 import { Edit, Trash2, Eye, Plus } from "lucide-react"
 
@@ -28,6 +30,8 @@ export default function UserPortal() {
   const { data: tickets = [], isLoading: ticketsLoading } = useUserTickets()
   const { data: assignments = [], isLoading: assignmentsLoading } = useUserAssignments()
   const { data: technicianUnits = [] } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
+  const { data: allUnits = [] } = useUnits()
+  const { data: profiles = [] } = useProfiles()
   const createTicketMutation = useCreateUserTicket()
   const deleteTicketMutation = useDeleteUserTicket()
   
@@ -35,6 +39,8 @@ export default function UserPortal() {
   const [images, setImages] = useState<File[]>([])
   const [editingTicket, setEditingTicket] = useState<UserTicket | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState<UserTicket | null>(null)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   const [selectedUnitId, setSelectedUnitId] = useState<string>("")
 
   // Estados para os modais
@@ -42,6 +48,15 @@ export default function UserPortal() {
   const [closedTicketsModalOpen, setClosedTicketsModalOpen] = useState(false)
   const [activeEquipmentModalOpen, setActiveEquipmentModalOpen] = useState(false)
   const [allAssignmentsModalOpen, setAllAssignmentsModalOpen] = useState(false)
+
+  // Preparar dados para o TicketDetailsDialog
+  const availableUnits = profile?.role === 'admin' 
+    ? allUnits 
+    : technicianUnits.map(tu => ({ id: tu.unit_id, name: tu.unit?.name || '' }))
+
+  const technicians = profiles.filter(profile => 
+    profile.role === 'technician' || profile.role === 'admin'
+  )
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -139,6 +154,11 @@ export default function UserPortal() {
     setIsEditDialogOpen(true)
   }
 
+  const handleViewTicket = (ticket: UserTicket) => {
+    setSelectedTicket(ticket)
+    setIsDetailsDialogOpen(true)
+  }
+
   const handleDeleteTicket = async (ticketId: string) => {
     try {
       await deleteTicketMutation.mutateAsync(ticketId)
@@ -157,7 +177,7 @@ export default function UserPortal() {
 
   // Verificar se é técnico e tem unidades atribuídas
   const isTechnician = profile?.role === 'technician'
-  const availableUnits = isTechnician ? technicianUnits : []
+  const availableUnitsForCreation = isTechnician ? technicianUnits : []
 
   if (ticketsLoading || assignmentsLoading) {
     return (
@@ -256,13 +276,13 @@ export default function UserPortal() {
                 
                 <div>
                   <Label className="text-foreground">Unidade</Label>
-                  {isTechnician && availableUnits.length > 0 ? (
+                  {isTechnician && availableUnitsForCreation.length > 0 ? (
                     <Select value={selectedUnitId} onValueChange={setSelectedUnitId} required>
                       <SelectTrigger className="bg-background border-border text-foreground">
                         <SelectValue placeholder="Selecione a unidade" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border">
-                        {availableUnits.map((unit) => (
+                        {availableUnitsForCreation.map((unit) => (
                           <SelectItem key={unit.unit_id} value={unit.unit_id}>
                             {unit.unit?.name}
                           </SelectItem>
@@ -419,6 +439,14 @@ export default function UserPortal() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewTicket(ticket)}
+                                className="h-6 w-6 p-0 md:h-8 md:w-8"
+                              >
+                                <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
                               {canEditOrDelete(ticket) && (
                                 <>
                                   <Button
@@ -568,6 +596,17 @@ export default function UserPortal() {
           setIsEditDialogOpen(open)
           if (!open) setEditingTicket(null)
         }}
+      />
+
+      <TicketDetailsDialog
+        ticket={selectedTicket}
+        open={isDetailsDialogOpen}
+        onOpenChange={(open) => {
+          setIsDetailsDialogOpen(open)
+          if (!open) setSelectedTicket(null)
+        }}
+        units={availableUnits}
+        technicians={technicians}
       />
     </div>
   )

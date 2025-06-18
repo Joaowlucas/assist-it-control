@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,7 +20,7 @@ import { TicketFilters } from "@/components/TicketFilters"
 import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
 import { EditTicketDialog } from "@/components/EditTicketDialog"
 import { useUpdateTicketStatus, useAssignTicket } from "@/hooks/useTicketStatus"
-import { Edit, Plus, Eye, Clock, User, MapPin, Trash2 } from "lucide-react"
+import { Edit, Plus, Eye, Clock, User, MapPin, Trash2, UserCheck } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
@@ -73,10 +74,14 @@ export default function Tickets() {
     const matchesCategory = categoryFilter === 'all' || ticket.category === categoryFilter
     const matchesAssignee = assigneeFilter === 'all' || 
       (assigneeFilter === 'unassigned' && !ticket.assignee_id) ||
+      (assigneeFilter === 'pending' && !ticket.assignee_id) ||
       ticket.assignee_id === assigneeFilter
 
     return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesAssignee
   })
+
+  // Calcular estatísticas incluindo pendentes
+  const pendingTickets = tickets.filter(t => !t.assignee_id)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -96,6 +101,10 @@ export default function Tickets() {
       case 'baixa': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
       default: return 'bg-muted text-muted-foreground border-border'
     }
+  }
+
+  const isPendingTicket = (ticket: any) => {
+    return !ticket.assignee_id
   }
 
   const handleCreateTicket = async (e: React.FormEvent) => {
@@ -131,6 +140,11 @@ export default function Tickets() {
     await assignTicket.mutateAsync({ id: ticketId, assigneeId: actualAssigneeId })
   }
 
+  const handleAssignToSelf = async (ticketId: string) => {
+    if (!profile?.id) return
+    await assignTicket.mutateAsync({ id: ticketId, assigneeId: profile.id })
+  }
+
   const handleDeleteTicket = async (ticketId: string) => {
     await deleteTicket.mutateAsync(ticketId)
   }
@@ -156,6 +170,11 @@ export default function Tickets() {
   // Verificar se o usuário pode editar/excluir chamados
   const canEditTicket = (ticket: any) => {
     return profile?.role === 'admin'
+  }
+
+  // Verificar se o usuário pode se atribuir ao chamado
+  const canAssignToSelf = (ticket: any) => {
+    return (profile?.role === 'technician' || profile?.role === 'admin') && !ticket.assignee_id
   }
 
   if (ticketsLoading) {
@@ -325,8 +344,19 @@ export default function Tickets() {
         technicians={technicians}
       />
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      {/* Estatísticas - Incluindo chamados pendentes */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+              <span className="text-xs md:text-sm text-muted-foreground">Pendentes</span>
+            </div>
+            <p className="text-xl md:text-2xl font-bold text-foreground">
+              {pendingTickets.length}
+            </p>
+          </CardContent>
+        </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center gap-2">
@@ -379,6 +409,11 @@ export default function Tickets() {
           <CardTitle className="text-foreground text-lg md:text-xl">Lista de Chamados</CardTitle>
           <CardDescription className="text-muted-foreground">
             {filteredTickets.length} de {tickets.length} chamados
+            {pendingTickets.length > 0 && (
+              <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs dark:bg-orange-900/20 dark:text-orange-400">
+                {pendingTickets.length} pendente(s)
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -401,8 +436,15 @@ export default function Tickets() {
               </TableHeader>
               <TableBody>
                 {filteredTickets.map((ticket) => (
-                  <TableRow key={ticket.id} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-medium text-foreground">#{ticket.ticket_number}</TableCell>
+                  <TableRow key={ticket.id} className={`border-border hover:bg-muted/50 ${isPendingTicket(ticket) ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}>
+                    <TableCell className="font-medium text-foreground">
+                      #{ticket.ticket_number}
+                      {isPendingTicket(ticket) && (
+                        <Badge variant="outline" className="ml-2 text-xs bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800">
+                          Pendente
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium text-foreground">{ticket.title}</div>
@@ -487,6 +529,17 @@ export default function Tickets() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {canAssignToSelf(ticket) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAssignToSelf(ticket.id)}
+                            className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30"
+                            title="Assumir chamado"
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canEditTicket(ticket) && (
                           <>
                             <Button
@@ -539,12 +592,19 @@ export default function Tickets() {
           {/* Cards para mobile e tablet */}
           <div className="lg:hidden space-y-4 p-4">
             {filteredTickets.map((ticket) => (
-              <Card key={ticket.id} className="border border-border">
+              <Card key={ticket.id} className={`border border-border ${isPendingTicket(ticket) ? 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800' : ''}`}>
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="font-medium text-foreground">#{ticket.ticket_number} - {ticket.title}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-foreground">#{ticket.ticket_number} - {ticket.title}</h3>
+                          {isPendingTicket(ticket) && (
+                            <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800">
+                              Pendente
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           {ticket.description.length > 100 
                             ? `${ticket.description.substring(0, 100)}...` 
@@ -560,6 +620,17 @@ export default function Tickets() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {canAssignToSelf(ticket) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAssignToSelf(ticket.id)}
+                            className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30"
+                            title="Assumir chamado"
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canEditTicket(ticket) && (
                           <>
                             <Button
@@ -644,7 +715,7 @@ export default function Tickets() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Detalhes - CORRIGIDO: Adicionando props faltantes */}
+      {/* Dialog de Detalhes */}
       <TicketDetailsDialog
         ticket={selectedTicket}
         open={isDetailsDialogOpen}
