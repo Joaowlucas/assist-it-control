@@ -570,6 +570,36 @@ export type Database = {
           },
         ]
       }
+      predefined_texts: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          text_content: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          text_content: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          text_content?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -791,6 +821,36 @@ export type Database = {
           },
         ]
       }
+      ticket_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ticket_comments: {
         Row: {
           content: string
@@ -832,6 +892,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ticket_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description_template: string
+          id: string
+          is_active: boolean
+          name: string
+          priority: string
+          title_template: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description_template: string
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: string
+          title_template: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description_template?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: string
+          title_template?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tickets: {
         Row: {

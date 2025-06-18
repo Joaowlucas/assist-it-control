@@ -1,366 +1,268 @@
 
-import { useState } from "react"
+import React, { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { useAssignments } from "@/hooks/useAssignments"
-import { useCreateAssignment } from "@/hooks/useCreateAssignment"
-import { useEndAssignment } from "@/hooks/useEndAssignment"
-import { useDeleteAssignment } from "@/hooks/useDeleteAssignment"
+import { Badge } from "@/components/ui/badge"
+import { Calendar, CalendarDays, User, Package, MapPin, Wrench } from "lucide-react"
+import { useAssignments, useCreateAssignment, useEndAssignment } from "@/hooks/useAssignments"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
-import { useAuth } from "@/hooks/useAuth"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
-import { AssignmentPDFPreviewDialog } from "@/components/AssignmentPDFPreviewDialog"
-import { useSystemSettings } from "@/hooks/useSystemSettings"
-import { Edit, Trash2, FileText, Calendar, CalendarX } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 export function AssignmentManagementSection() {
-  const { profile } = useAuth()
-  const { data: assignments = [], isLoading } = useAssignments()
+  const { data: assignments = [], isLoading: loadingAssignments } = useAssignments()
   const { data: availableEquipment = [] } = useAvailableEquipment()
   const { data: availableUsers = [] } = useAvailableUsers()
-  const { data: systemSettings } = useSystemSettings()
-  const createAssignmentMutation = useCreateAssignment()
-  const endAssignmentMutation = useEndAssignment()
-  const deleteAssignmentMutation = useDeleteAssignment()
+  const createAssignment = useCreateAssignment()
+  const endAssignment = useEndAssignment()
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [endingAssignment, setEndingAssignment] = useState<any>(null)
-  const [pdfPreviewAssignment, setPdfPreviewAssignment] = useState<any>(null)
+  const [selectedEquipment, setSelectedEquipment] = useState("")
+  const [selectedUser, setSelectedUser] = useState("")
+  const [startDate, setStartDate] = useState("")
+  const [notes, setNotes] = useState("")
+  
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    assignmentId: string | null
+  }>({
+    open: false,
+    assignmentId: null
+  })
 
-  const handleCreateAssignment = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
     
-    const assignmentData = {
-      user_id: formData.get('user_id') as string,
-      equipment_id: formData.get('equipment_id') as string,
-      notes: formData.get('notes') as string || undefined,
-      assigned_by: profile?.id || ''
-    }
-
     try {
-      await createAssignmentMutation.mutateAsync(assignmentData)
+      await createAssignment.mutateAsync({
+        equipment_id: selectedEquipment,
+        user_id: selectedUser,
+        start_date: startDate,
+        notes: notes || null
+      })
+      
+      // Reset form
+      setSelectedEquipment("")
+      setSelectedUser("")
+      setStartDate("")
+      setNotes("")
       setIsDialogOpen(false)
-      ;(e.target as HTMLFormElement).reset()
     } catch (error) {
       console.error('Error creating assignment:', error)
     }
   }
 
-  const handleEndAssignment = async (assignmentId: string) => {
-    try {
-      await endAssignmentMutation.mutateAsync(assignmentId)
-      setEndingAssignment(null)
-    } catch (error) {
-      console.error('Error ending assignment:', error)
+  const handleEndAssignment = (assignmentId: string) => {
+    setConfirmDialog({
+      open: true,
+      assignmentId
+    })
+  }
+
+  const confirmEndAssignment = async () => {
+    if (confirmDialog.assignmentId) {
+      try {
+        await endAssignment.mutateAsync(confirmDialog.assignmentId)
+        setConfirmDialog({ open: false, assignmentId: null })
+      } catch (error) {
+        console.error('Error ending assignment:', error)
+      }
     }
   }
 
-  const handleDeleteAssignment = async (assignmentId: string) => {
-    try {
-      await deleteAssignmentMutation.mutateAsync(assignmentId)
-    } catch (error) {
-      console.error('Error deleting assignment:', error)
-    }
+  const cancelEndAssignment = () => {
+    setConfirmDialog({ open: false, assignmentId: null })
   }
 
-  const handlePDFPreview = (assignment: any) => {
-    setPdfPreviewAssignment(assignment)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    )
+  if (loadingAssignments) {
+    return <div className="flex justify-center p-4">Carregando...</div>
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-medium">Gerenciamento de Atribuições</h3>
-          <p className="text-sm text-muted-foreground">
-            Gerencie as atribuições de equipamentos aos usuários
-          </p>
-        </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>Nova Atribuição</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Nova Atribuição</DialogTitle>
-              <DialogDescription>
-                Atribua um equipamento disponível a um usuário
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateAssignment} className="space-y-4">
-              <div>
-                <Label htmlFor="equipment_id">Equipamento</Label>
-                <Select name="equipment_id" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um equipamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableEquipment.map((equipment) => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.name} - {equipment.serial_number || 'S/N não informado'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="user_id">Usuário</Label>
-                <Select name="user_id" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um usuário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableUsers.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} - {user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea 
-                  name="notes" 
-                  placeholder="Observações sobre a atribuição (opcional)"
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createAssignmentMutation.isPending}>
-                  {createAssignmentMutation.isPending ? 'Criando...' : 'Criar Atribuição'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
       <Card>
-        <CardHeader>
-          <CardTitle>Atribuições Ativas</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Gerenciar Atribuições</CardTitle>
+            <CardDescription>
+              Controle a atribuição de equipamentos para usuários
+            </CardDescription>
+          </div>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Package className="h-4 w-4 mr-2" />
+                Nova Atribuição
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nova Atribuição de Equipamento</DialogTitle>
+                <DialogDescription>
+                  Atribua um equipamento disponível para um usuário
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="equipment">Equipamento</Label>
+                  <Select value={selectedEquipment} onValueChange={setSelectedEquipment} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um equipamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableEquipment.map((equipment) => (
+                        <SelectItem key={equipment.id} value={equipment.id}>
+                          {equipment.name} - {equipment.type} ({equipment.brand || 'Sem marca'} {equipment.model || ''})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="user">Usuário</Label>
+                  <Select value={selectedUser} onValueChange={setSelectedUser} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um usuário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} ({user.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="start_date">Data de Início</Label>
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="notes">Observações (opcional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Adicione observações sobre esta atribuição..."
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createAssignment.isPending}>
+                    {createAssignment.isPending ? 'Criando...' : 'Criar Atribuição'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Data de Início</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.filter(a => a.status === 'ativo').map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Usuário</TableHead>
+                <TableHead>Equipamento</TableHead>
+                <TableHead>Data Início</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Observações</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {assignments.map((assignment) => (
+                <TableRow key={assignment.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <div>
+                        <div className="font-medium">{assignment.profiles?.name}</div>
+                        <div className="text-sm text-muted-foreground">{assignment.profiles?.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {assignment.equipment?.serial_number || 'S/N não informado'}
+                          {assignment.equipment?.type} - {assignment.equipment?.brand || 'Sem marca'} {assignment.equipment?.model || ''}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.user?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.user?.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(assignment.start_date), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="default">Ativo</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePDFPreview(assignment)}
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEndingAssignment(assignment)}
-                        >
-                          <CalendarX className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir esta atribuição? 
-                                Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteAssignment(assignment.id)}
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Histórico de Atribuições</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Período</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {format(new Date(assignment.start_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={assignment.status === 'ativo' ? 'default' : 'secondary'}>
+                      {assignment.status === 'ativo' ? 'Ativo' : 'Finalizado'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-xs truncate">
+                      {assignment.notes || 'Sem observações'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {assignment.status === 'ativo' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEndAssignment(assignment.id)}
+                        disabled={endAssignment.isPending}
+                      >
+                        <CalendarDays className="h-4 w-4 mr-2" />
+                        Finalizar
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.filter(a => a.status === 'finalizado').map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.equipment?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.equipment?.serial_number || 'S/N não informado'}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.user?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.user?.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>Início: {format(new Date(assignment.start_date), "dd/MM/yyyy", { locale: ptBR })}</div>
-                        {assignment.end_date && (
-                          <div>Fim: {format(new Date(assignment.end_date), "dd/MM/yyyy", { locale: ptBR })}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">Finalizado</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePDFPreview(assignment)}
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir esta atribuição? 
-                                Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteAssignment(assignment.id)}
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
+          
+          {assignments.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhuma atribuição encontrada</p>
+              <p className="text-sm">Crie uma nova atribuição para começar</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {endingAssignment && (
-        <ConfirmEndAssignmentDialog
-          assignmentId={endingAssignment.id}
-          onConfirm={handleEndAssignment}
-          onCancel={() => setEndingAssignment(null)}
-        />
-      )}
-
-      {pdfPreviewAssignment && systemSettings && (
-        <AssignmentPDFPreviewDialog
-          assignment={pdfPreviewAssignment}
-          systemSettings={systemSettings}
-          assignmentId={pdfPreviewAssignment.id}
-          equipmentName={pdfPreviewAssignment.equipment?.name}
-          userName={pdfPreviewAssignment.user?.name}
-          open={true}
-          onOpenChange={(open) => !open && setPdfPreviewAssignment(null)}
-        />
-      )}
+      <ConfirmEndAssignmentDialog
+        open={confirmDialog.open}
+        assignmentId={confirmDialog.assignmentId}
+        onConfirm={confirmEndAssignment}
+        onCancel={cancelEndAssignment}
+      />
     </div>
   )
 }
