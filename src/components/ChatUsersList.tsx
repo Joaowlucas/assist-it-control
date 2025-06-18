@@ -1,194 +1,190 @@
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { MessageCircle, Users, Dot } from 'lucide-react'
-import { useAvailableUsers } from '@/hooks/useAvailableUsers'
-import { useChatParticipants } from '@/hooks/useChat'
+import { MessageCircle, Users } from 'lucide-react'
+import { useProfiles } from '@/hooks/useProfiles'
+import { DirectChatDialog } from '@/components/DirectChatDialog'
 import { supabase } from '@/integrations/supabase/client'
-import { useAuth } from '@/hooks/useAuth'
 
 interface ChatUsersListProps {
-  roomId: string | null
-  onStartDirectChat?: (userId: string) => void
+  onDirectChat?: (roomId: string) => void
 }
 
-interface UserPresence {
-  user: string
-  online_at: string
-}
-
-export function ChatUsersList({ roomId, onStartDirectChat }: ChatUsersListProps) {
-  const { profile } = useAuth()
-  const { data: allUsers } = useAvailableUsers()
-  const { data: participants } = useChatParticipants(roomId || '')
+export function ChatUsersList({ onDirectChat }: ChatUsersListProps) {
+  const { data: profiles = [] } = useProfiles()
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
+  const [directChatDialog, setDirectChatDialog] = useState<{
+    open: boolean
+    targetUserId: string | null
+  }>({
+    open: false,
+    targetUserId: null
+  })
 
   useEffect(() => {
-    if (!roomId) return
-
-    const channel = supabase.channel(`presence-${roomId}`)
-
+    const channel = supabase.channel('online-users')
+    
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        const userIds = Object.keys(state).flatMap(key => 
-          state[key].map((presence: UserPresence) => presence.user)
-        )
+        const userIds = Object.keys(state).map(key => {
+          const presences = state[key] as Array<{ user_id: string }>
+          return presences[0]?.user_id
+        }).filter(Boolean)
         setOnlineUsers(userIds)
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        const userIds = newPresences.map((presence: UserPresence) => presence.user)
+        const userIds = newPresences.map((presence: any) => presence.user_id).filter(Boolean)
         setOnlineUsers(prev => [...new Set([...prev, ...userIds])])
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        const userIds = leftPresences.map((presence: UserPresence) => presence.user)
+        const userIds = leftPresences.map((presence: any) => presence.user_id).filter(Boolean)
         setOnlineUsers(prev => prev.filter(id => !userIds.includes(id)))
       })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED' && profile) {
-          await channel.track({
-            user: profile.id,
-            online_at: new Date().toISOString(),
-          })
-        }
-      })
+      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [roomId, profile])
+  }, [])
 
-  const roomParticipants = participants?.map(p => ({
-    id: p.user_id,
-    name: p.profiles?.name || 'Usuário',
-    avatar_url: p.profiles?.avatar_url,
-    isOnline: onlineUsers.includes(p.user_id)
-  })) || []
+  const handleStartDirectChat = (userId: string) => {
+    setDirectChatDialog({
+      open: true,
+      targetUserId: userId
+    })
+  }
 
-  const otherUsers = allUsers?.filter(user => 
-    user.id !== profile?.id &&
-    !roomParticipants.some(p => p.id === user.id)
-  ).map(user => ({
-    id: user.id,
-    name: user.name,
-    avatar_url: null,
-    isOnline: onlineUsers.includes(user.id),
-    role: user.role
-  })) || []
+  const handleRoomCreated = (roomId: string) => {
+    onDirectChat?.(roomId)
+  }
+
+  const onlineProfiles = profiles.filter(profile => 
+    onlineUsers.includes(profile.id) && profile.status === 'ativo'
+  )
+
+  const offlineProfiles = profiles.filter(profile => 
+    !onlineUsers.includes(profile.id) && profile.status === 'ativo'
+  )
 
   return (
-    <div className="w-80 border-l bg-muted/30">
-      <div className="p-4 border-b">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Usuários
-        </h3>
-      </div>
-
-      <ScrollArea className="h-full">
-        <div className="p-4 space-y-4">
-          {/* Participantes da sala atual */}
-          {roomId && roomParticipants.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                Nesta conversa ({roomParticipants.length})
-              </h4>
-              <div className="space-y-2">
-                {roomParticipants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer"
-                    onClick={() => onStartDirectChat?.(participant.id)}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={participant.avatar_url || undefined} />
-                        <AvatarFallback>
-                          {participant.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {participant.isOnline && (
-                        <Dot className="absolute -top-1 -right-1 h-4 w-4 text-green-500 fill-current" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {participant.name}
-                        {participant.id === profile?.id && ' (você)'}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={participant.isOnline ? 'default' : 'secondary'} className="text-xs">
-                          {participant.isOnline ? 'Online' : 'Offline'}
-                        </Badge>
+    <>
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Usuários
+          </CardTitle>
+          <CardDescription>
+            {onlineProfiles.length} usuários online
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[400px]">
+            <div className="p-4 space-y-4">
+              {onlineProfiles.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-green-600 mb-2 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    Online ({onlineProfiles.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {onlineProfiles.map((profile) => (
+                      <div key={profile.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={profile.avatar_url || undefined} />
+                              <AvatarFallback>
+                                {profile.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{profile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {profile.role === 'admin' ? 'Administrador' : 
+                               profile.role === 'technician' ? 'Técnico' : 'Usuário'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleStartDirectChat(profile.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </div>
-                    {participant.id !== profile?.id && (
-                      <Button variant="ghost" size="sm">
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Outros usuários do sistema */}
-          {otherUsers.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                Outros usuários ({otherUsers.length})
-              </h4>
-              <div className="space-y-2">
-                {otherUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer"
-                    onClick={() => onStartDirectChat?.(user.id)}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar_url || undefined} />
-                        <AvatarFallback>
-                          {user.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.isOnline && (
-                        <Dot className="absolute -top-1 -right-1 h-4 w-4 text-green-500 fill-current" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{user.name}</p>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={user.isOnline ? 'default' : 'secondary'} className="text-xs">
-                          {user.isOnline ? 'Online' : 'Offline'}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {user.role === 'admin' ? 'Admin' : user.role === 'technician' ? 'Técnico' : 'Usuário'}
-                        </Badge>
+              {offlineProfiles.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                    Offline ({offlineProfiles.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {offlineProfiles.map((profile) => (
+                      <div key={profile.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 group">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Avatar className="h-8 w-8 opacity-60">
+                              <AvatarImage src={profile.avatar_url || undefined} />
+                              <AvatarFallback>
+                                {profile.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-gray-400 border-2 border-background rounded-full" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium opacity-60">{profile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {profile.role === 'admin' ? 'Administrador' : 
+                               profile.role === 'technician' ? 'Técnico' : 'Usuário'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleStartDirectChat(profile.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {roomParticipants.length === 0 && otherUsers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Nenhum usuário encontrado</p>
+              {profiles.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum usuário encontrado</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </ScrollArea>
-    </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <DirectChatDialog
+        open={directChatDialog.open}
+        onOpenChange={(open) => setDirectChatDialog(prev => ({ ...prev, open }))}
+        targetUserId={directChatDialog.targetUserId}
+        onRoomCreated={handleRoomCreated}
+      />
+    </>
   )
 }

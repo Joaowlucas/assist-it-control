@@ -1,46 +1,40 @@
 
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
 import { useToast } from '@/hooks/use-toast'
 
-interface CreateUnitData {
-  name: string
-  description: string
-}
-
-interface UpdateUnitData {
-  id: string
-  name?: string
-  description?: string
-}
+type Unit = Tables<'units'>
+type UnitInsert = TablesInsert<'units'>
+type UnitUpdate = TablesUpdate<'units'>
 
 export function useCreateUnit() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: async (unitData: CreateUnitData) => {
+    mutationFn: async (unit: UnitInsert) => {
       const { data, error } = await supabase
         .from('units')
-        .insert([unitData])
+        .insert(unit)
         .select()
         .single()
-
+      
       if (error) throw error
       return data
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] })
       toast({
-        title: "Unidade criada com sucesso!",
-        description: `A unidade ${data.name} foi adicionada.`,
+        title: 'Sucesso',
+        description: 'Unidade criada com sucesso',
       })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
-        title: "Erro ao criar unidade",
-        description: error.message || "Erro ao criar a unidade.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Erro ao criar unidade: ' + error.message,
+        variant: 'destructive',
       })
     },
   })
@@ -51,29 +45,29 @@ export function useUpdateUnit() {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: async ({ id, ...updateData }: UpdateUnitData) => {
+    mutationFn: async ({ id, ...updates }: UnitUpdate & { id: string }) => {
       const { data, error } = await supabase
         .from('units')
-        .update(updateData)
+        .update(updates)
         .eq('id', id)
         .select()
         .single()
-
+      
       if (error) throw error
       return data
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] })
       toast({
-        title: "Unidade atualizada!",
-        description: `A unidade ${data.name} foi atualizada com sucesso.`,
+        title: 'Sucesso',
+        description: 'Unidade atualizada com sucesso',
       })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
-        title: "Erro ao atualizar unidade",
-        description: error.message || "Erro ao atualizar a unidade.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Erro ao atualizar unidade: ' + error.message,
+        variant: 'destructive',
       })
     },
   })
@@ -84,26 +78,26 @@ export function useDeleteUnit() {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: async (unitId: string) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('units')
         .delete()
-        .eq('id', unitId)
-
+        .eq('id', id)
+      
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] })
       toast({
-        title: "Unidade removida!",
-        description: "A unidade foi removida com sucesso.",
+        title: 'Sucesso',
+        description: 'Unidade excluída com sucesso',
       })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
-        title: "Erro ao remover unidade",
-        description: error.message || "Erro ao remover a unidade.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Erro ao excluir unidade: ' + error.message,
+        variant: 'destructive',
       })
     },
   })
