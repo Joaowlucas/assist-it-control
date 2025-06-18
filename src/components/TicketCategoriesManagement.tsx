@@ -28,7 +28,8 @@ export function TicketCategoriesManagement() {
     const categoryData = {
       name: formData.get('name') as string,
       description: formData.get('description') as string || null,
-      is_active: true
+      is_active: true,
+      is_default: false
     }
 
     try {

@@ -2,9 +2,6 @@
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -14,12 +11,12 @@ import { useUnits } from '@/hooks/useUnits'
 import { CreateUserDialog } from '@/components/CreateUserDialog'
 import { EditUserDialog } from '@/components/EditUserDialog'
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog'
-import { useUserManagement } from '@/hooks/useUserManagement'
+import { useDeleteUser } from '@/hooks/useUserManagement'
 
 export function UserManagement() {
   const { data: profiles = [], isLoading } = useProfiles()
   const { data: units = [] } = useUnits()
-  const { deleteUser } = useUserManagement()
+  const deleteUser = useDeleteUser()
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -198,14 +195,12 @@ export function UserManagement() {
       <CreateUserDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        units={units}
       />
 
       <EditUserDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         user={selectedUser}
-        units={units}
       />
 
       <ConfirmDeleteDialog

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -52,6 +53,15 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
   }
 
   const handleConfirmEndAssignment = () => {
+    setConfirmEndDialog({
+      open: false,
+      assignmentId: '',
+      equipmentName: '',
+      userName: ''
+    })
+  }
+
+  const handleCancelEndAssignment = () => {
     setConfirmEndDialog({
       open: false,
       assignmentId: '',
@@ -116,10 +126,10 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {assignment.profiles?.name || 'Usuário não encontrado'}
+                            {assignment.user?.name || 'Usuário não encontrado'}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {assignment.profiles?.email}
+                            {assignment.user?.email}
                           </div>
                         </div>
                       </div>
@@ -144,7 +154,7 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
                         onClick={() => handleEndAssignment(
                           assignment.id,
                           assignment.equipment?.name || 'Equipamento',
-                          assignment.profiles?.name || 'Usuário'
+                          assignment.user?.name || 'Usuário'
                         )}
                       >
                         Finalizar
@@ -164,7 +174,7 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
         equipmentName={confirmEndDialog.equipmentName}
         userName={confirmEndDialog.userName}
         onConfirm={handleConfirmEndAssignment}
-        onOpenChange={(open) => setConfirmEndDialog(prev => ({ ...prev, open }))}
+        onCancel={handleCancelEndAssignment}
       />
     </>
   )
