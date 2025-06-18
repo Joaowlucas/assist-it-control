@@ -1,7 +1,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription,CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { useTicketTemplates, useCreateTicketTemplate, useUpdateTicketTemplate, useDeleteTicketTemplate } from "@/hooks/useTicketTemplates"
 import { useTicketCategories } from "@/hooks/useTicketCategories"
 import { Edit, Trash2, Plus } from "lucide-react"
@@ -68,6 +69,26 @@ export function TicketTemplateManagement() {
     setEditingTemplate(null)
   }
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "critica": return "destructive"
+      case "alta": return "destructive"
+      case "media": return "default"
+      case "baixa": return "secondary"
+      default: return "default"
+    }
+  }
+
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case "critica": return "Crítica"
+      case "alta": return "Alta"
+      case "media": return "Média"
+      case "baixa": return "Baixa"
+      default: return priority
+    }
+  }
+
   if (isLoading) {
     return <div className="flex justify-center p-4">Carregando...</div>
   }
@@ -78,7 +99,7 @@ export function TicketTemplateManagement() {
         <div>
           <CardTitle>Templates de Chamados</CardTitle>
           <CardDescription>
-            Crie templates pré-configurados para facilitar a criação de chamados
+            Gerencie templates pré-configurados para agilizar a criação de chamados
           </CardDescription>
         </div>
         
@@ -93,7 +114,7 @@ export function TicketTemplateManagement() {
             <DialogHeader>
               <DialogTitle>{editingTemplate ? 'Editar Template' : 'Novo Template'}</DialogTitle>
               <DialogDescription>
-                Configure um template para facilitar a criação de chamados
+                Configure um novo template para agilizar a criação de chamados
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -104,6 +125,7 @@ export function TicketTemplateManagement() {
                     id="name" 
                     name="name" 
                     defaultValue={editingTemplate?.name}
+                    placeholder="Ex: Problema de Impressora"
                     required 
                   />
                 </div>
@@ -112,12 +134,12 @@ export function TicketTemplateManagement() {
                   <Label htmlFor="category">Categoria</Label>
                   <Select name="category" defaultValue={editingTemplate?.category} required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma categoria" />
+                      <SelectValue placeholder="Selecione a categoria" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
                         <SelectItem key={category.id} value={category.name}>
-                          {category.name.charAt(0).toUpperCase() + category.name.slice(1)}
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -126,10 +148,10 @@ export function TicketTemplateManagement() {
               </div>
               
               <div>
-                <Label htmlFor="priority">Prioridade Padrão</Label>
-                <Select name="priority" defaultValue={editingTemplate?.priority || 'media'} required>
+                <Label htmlFor="priority">Prioridade</Label>
+                <Select name="priority" defaultValue={editingTemplate?.priority} required>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione a prioridade" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="baixa">Baixa</SelectItem>
@@ -141,26 +163,32 @@ export function TicketTemplateManagement() {
               </div>
               
               <div>
-                <Label htmlFor="title_template">Título do Template</Label>
+                <Label htmlFor="title_template">Template do Título</Label>
                 <Input 
                   id="title_template" 
                   name="title_template" 
                   defaultValue={editingTemplate?.title_template}
-                  placeholder="Ex: Problema com impressora [MODELO]"
+                  placeholder="Ex: Problema com impressora [MODEL0]"
                   required 
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use colchetes para criar campos editáveis: [CAMPO]
+                </p>
               </div>
               
               <div>
-                <Label htmlFor="description_template">Descrição do Template</Label>
+                <Label htmlFor="description_template">Template da Descrição</Label>
                 <Textarea 
                   id="description_template" 
                   name="description_template" 
                   defaultValue={editingTemplate?.description_template}
-                  placeholder="Descreva o template da descrição do chamado..."
+                  placeholder="Descreva o template da descrição..."
                   rows={4}
-                  required 
+                  required
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use colchetes para criar campos editáveis: [CAMPO]
+                </p>
               </div>
               
               <div className="flex justify-end gap-2">
@@ -182,7 +210,7 @@ export function TicketTemplateManagement() {
               <TableHead>Nome</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Prioridade</TableHead>
-              <TableHead>Título</TableHead>
+              <TableHead>Template do Título</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -190,8 +218,12 @@ export function TicketTemplateManagement() {
             {templates.map((template) => (
               <TableRow key={template.id}>
                 <TableCell className="font-medium">{template.name}</TableCell>
-                <TableCell className="capitalize">{template.category}</TableCell>
-                <TableCell className="capitalize">{template.priority}</TableCell>
+                <TableCell>{template.category}</TableCell>
+                <TableCell>
+                  <Badge variant={getPriorityColor(template.priority) as any}>
+                    {getPriorityLabel(template.priority)}
+                  </Badge>
+                </TableCell>
                 <TableCell className="max-w-xs truncate">{template.title_template}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">

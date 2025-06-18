@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,7 +24,10 @@ import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
 import { useUnits } from "@/hooks/useUnits"
 import { useProfiles } from "@/hooks/useProfiles"
 import { useAuth } from "@/hooks/useAuth"
-import { Edit, Trash2, Eye, Plus } from "lucide-react"
+import { useTicketCategories } from "@/hooks/useTicketCategories"
+import { useTicketTemplates } from "@/hooks/useTicketTemplates"
+import { usePredefinedTexts } from "@/hooks/usePredefinedTexts"
+import { Edit, Trash2, Eye, Plus, FileText } from "lucide-react"
 
 export default function UserPortal() {
   const { profile } = useAuth()
@@ -32,6 +36,9 @@ export default function UserPortal() {
   const { data: technicianUnits = [] } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
   const { data: allUnits = [] } = useUnits()
   const { data: profiles = [] } = useProfiles()
+  const { data: categories = [] } = useTicketCategories()
+  const { data: templates = [] } = useTicketTemplates()
+  const { data: predefinedTexts = [] } = usePredefinedTexts()
   const createTicketMutation = useCreateUserTicket()
   const deleteTicketMutation = useDeleteUserTicket()
   
@@ -42,6 +49,13 @@ export default function UserPortal() {
   const [selectedTicket, setSelectedTicket] = useState<UserTicket | null>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   const [selectedUnitId, setSelectedUnitId] = useState<string>("")
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    priority: 'media' as 'baixa' | 'media' | 'alta' | 'critica'
+  })
 
   // Estados para os modais
   const [openTicketsModalOpen, setOpenTicketsModalOpen] = useState(false)
@@ -57,6 +71,17 @@ export default function UserPortal() {
   const technicians = profiles.filter(profile => 
     profile.role === 'technician' || profile.role === 'admin'
   )
+
+  // Filtrar textos pré-definidos pela categoria selecionada
+  const filteredTexts = useMemo(() => {
+    if (!selectedCategory) return predefinedTexts
+    return predefinedTexts.filter(text => 
+      !text.category || text.category === selectedCategory
+    )
+  }, [predefinedTexts, selectedCategory])
+
+  const titleTexts = filteredTexts.filter(text => text.type === 'title')
+  const descriptionTexts = filteredTexts.filter(text => text.type === 'description')
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -107,19 +132,41 @@ export default function UserPortal() {
   }
 
   const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case "hardware": return "Hardware"
-      case "software": return "Software"
-      case "rede": return "Rede"
-      case "acesso": return "Acesso"
-      case "outros": return "Outros"
-      default: return category
+    const categoryObj = categories.find(cat => cat.name === category)
+    return categoryObj ? categoryObj.name : category
+  }
+
+  // Lidar com seleção de template
+  const handleTemplateSelect = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId)
+    if (template) {
+      setSelectedCategory(template.category)
+      setFormData({
+        title: template.title_template,
+        description: template.description_template,
+        priority: template.priority as 'baixa' | 'media' | 'alta' | 'critica'
+      })
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'media'
+      })
+    }
+    setSelectedTemplate(templateId)
+  }
+
+  // Lidar com inserção de texto pré-definido
+  const handleInsertPredefinedText = (textContent: string, type: 'title' | 'description') => {
+    if (type === 'title') {
+      setFormData(prev => ({ ...prev, title: textContent }))
+    } else {
+      setFormData(prev => ({ ...prev, description: textContent }))
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
     
     // Para técnicos, usar a unidade selecionada, para usuários normais usar sua unidade
     const unitId = profile?.role === 'technician' ? selectedUnitId : profile?.unit_id
@@ -130,10 +177,10 @@ export default function UserPortal() {
     }
     
     const ticketData = {
-      title: formData.get('title') as string,
-      description: formData.get('description') as string,
-      priority: formData.get('priority') as 'baixa' | 'media' | 'alta' | 'critica',
-      category: formData.get('category') as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
+      category: selectedCategory as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
       unit_id: unitId,
       images: images.length > 0 ? images : undefined
     }
@@ -143,7 +190,13 @@ export default function UserPortal() {
       setIsDialogOpen(false)
       setImages([])
       setSelectedUnitId("")
-      ;(e.target as HTMLFormElement).reset()
+      setSelectedTemplate("")
+      setSelectedCategory("")
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'media'
+      })
     } catch (error) {
       console.error('Error creating ticket:', error)
     }
@@ -171,8 +224,16 @@ export default function UserPortal() {
     return ticket.status === 'aberto'
   }
 
-  const openTickets = tickets.filter(t => t.status !== "fechado")
-  const closedTickets = tickets.filter(t => t.status === "fechado")
+  const userTickets = useMemo(() => {
+    return allTickets.map(ticket => ({
+      ...ticket,
+      unit_id: ticket.unit?.id || '',
+      resolved_at: ticket.resolved_at || null
+    }))
+  }, [allTickets])
+
+  const openTickets = userTickets.filter(t => t.status !== "fechado")
+  const closedTickets = userTickets.filter(t => t.status === "fechado")
   const activeAssignments = assignments.filter(a => a.status === "ativo")
 
   // Verificar se é técnico e tem unidades atribuídas
@@ -186,14 +247,6 @@ export default function UserPortal() {
       </div>
     )
   }
-
-  const userTickets = useMemo(() => {
-    return allTickets.map(ticket => ({
-      ...ticket,
-      unit_id: ticket.unit_id || '',
-      resolved_at: ticket.resolved_at || null
-    }))
-  }, [allTickets])
 
   return (
     <div className="space-y-4 md:space-y-6 p-2 md:p-0">
@@ -221,34 +274,95 @@ export default function UserPortal() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-4">
+                {/* Template Selector */}
+                <div>
+                  <Label htmlFor="template" className="text-foreground">Template (Opcional)</Label>
+                  <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+                    <SelectTrigger className="bg-background border-border text-foreground">
+                      <SelectValue placeholder="Selecione um template para agilizar o preenchimento" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="">Sem template</SelectItem>
+                      {templates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name} - {template.category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <Label htmlFor="title" className="text-foreground">Título</Label>
-                  <Input 
-                    id="title" 
-                    name="title" 
-                    placeholder="Descreva brevemente o problema"
-                    required 
-                    className="bg-background border-border text-foreground"
-                  />
+                  <div className="space-y-2">
+                    <Input 
+                      id="title" 
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="Descreva brevemente o problema"
+                      required 
+                      className="bg-background border-border text-foreground"
+                    />
+                    {titleTexts.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {titleTexts.slice(0, 3).map((text) => (
+                          <Button
+                            key={text.id}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleInsertPredefinedText(text.text_content, 'title')}
+                            className="text-xs"
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            {text.text_content.substring(0, 20)}...
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div>
                   <Label htmlFor="description" className="text-foreground">Descrição</Label>
-                  <Textarea 
-                    id="description" 
-                    name="description" 
-                    placeholder="Descreva detalhadamente o problema"
-                    required 
-                    className="bg-background border-border text-foreground"
-                  />
+                  <div className="space-y-2">
+                    <Textarea 
+                      id="description" 
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Descreva detalhadamente o problema"
+                      required 
+                      className="bg-background border-border text-foreground"
+                    />
+                    {descriptionTexts.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {descriptionTexts.slice(0, 2).map((text) => (
+                          <Button
+                            key={text.id}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleInsertPredefinedText(text.text_content, 'description')}
+                            className="text-xs"
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            {text.text_content.substring(0, 25)}...
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="priority" className="text-foreground">Prioridade</Label>
-                    <Select name="priority" required>
+                    <Select 
+                      value={formData.priority} 
+                      onValueChange={(value) => setFormData({ ...formData, priority: value as any })}
+                    >
                       <SelectTrigger className="bg-background border-border text-foreground">
-                        <SelectValue placeholder="Selecione a prioridade" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border">
                         <SelectItem value="baixa">Baixa</SelectItem>
@@ -261,16 +375,20 @@ export default function UserPortal() {
                   
                   <div>
                     <Label htmlFor="category" className="text-foreground">Categoria</Label>
-                    <Select name="category" required>
+                    <Select 
+                      value={selectedCategory} 
+                      onValueChange={setSelectedCategory}
+                      required
+                    >
                       <SelectTrigger className="bg-background border-border text-foreground">
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border">
-                        <SelectItem value="hardware">Hardware</SelectItem>
-                        <SelectItem value="software">Software</SelectItem>
-                        <SelectItem value="rede">Rede</SelectItem>
-                        <SelectItem value="acesso">Acesso</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -325,7 +443,7 @@ export default function UserPortal() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={createTicketMutation.isPending || (isTechnician && !selectedUnitId)}
+                  disabled={createTicketMutation.isPending || (isTechnician && !selectedUnitId) || !selectedCategory}
                   className="w-full sm:w-auto"
                 >
                   {createTicketMutation.isPending ? 'Criando...' : 'Criar Chamado'}
