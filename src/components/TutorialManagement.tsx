@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { useAllTutorials, useCreateTutorial, useUpdateTutorial, useDeleteTutorial } from "@/hooks/useTutorialManagement"
+import { useAllTutorials, useCreateTutorial, useUpdateTutorial, useDeleteTutorial, TutorialWithAuthor } from "@/hooks/useTutorialManagement"
 import { Loader2, Plus, Edit, Trash2, Eye, VideoIcon } from "lucide-react"
 
 const categories = [
@@ -31,7 +31,7 @@ export function TutorialManagement() {
   const deleteTutorial = useDeleteTutorial()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingTutorial, setEditingTutorial] = useState<any>(null)
+  const [editingTutorial, setEditingTutorial] = useState<TutorialWithAuthor | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -69,7 +69,7 @@ export function TutorialManagement() {
     resetForm()
   }
 
-  const handleEdit = (tutorial: any) => {
+  const handleEdit = (tutorial: TutorialWithAuthor) => {
     setEditingTutorial(tutorial)
     setFormData({
       title: tutorial.title,
@@ -261,7 +261,7 @@ export function TutorialManagement() {
                       {tutorial.category}
                     </Badge>
                   </TableCell>
-                  <TableCell>{tutorial.author?.name}</TableCell>
+                  <TableCell>{tutorial.author?.name || 'Autor desconhecido'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Eye className="h-4 w-4 text-muted-foreground" />

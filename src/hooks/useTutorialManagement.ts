@@ -16,6 +16,24 @@ export interface UpdateTutorialData extends CreateTutorialData {
   id: string
 }
 
+export interface TutorialWithAuthor {
+  id: string
+  title: string
+  description: string | null
+  video_url: string
+  thumbnail_url: string | null
+  author_id: string
+  category: string
+  is_published: boolean
+  view_count: number
+  created_at: string
+  updated_at: string
+  author?: {
+    name: string
+    email: string
+  } | null
+}
+
 export function useAllTutorials() {
   return useQuery({
     queryKey: ['tutorials', 'admin'],
@@ -24,12 +42,22 @@ export function useAllTutorials() {
         .from('tutorials')
         .select(`
           *,
-          author:profiles!author_id(name, email)
+          author:author_id(name, email)
         `)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data
+      
+      // Transform data to match TutorialWithAuthor interface
+      return (data || []).map(tutorial => ({
+        ...tutorial,
+        author: tutorial.author && !Array.isArray(tutorial.author) 
+          ? { 
+              name: (tutorial.author as any)?.name || 'Autor desconhecido',
+              email: (tutorial.author as any)?.email || ''
+            }
+          : null
+      })) as TutorialWithAuthor[]
     },
   })
 }

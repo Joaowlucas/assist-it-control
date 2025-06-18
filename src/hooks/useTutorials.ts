@@ -18,7 +18,7 @@ export interface Tutorial {
   author?: {
     name: string
     email: string
-  }
+  } | null
 }
 
 export function useTutorials() {
@@ -29,13 +29,23 @@ export function useTutorials() {
         .from('tutorials')
         .select(`
           *,
-          author:profiles!author_id(name, email)
+          author:author_id(name, email)
         `)
         .eq('is_published', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as Tutorial[]
+      
+      // Transform data to match Tutorial interface
+      return (data || []).map(tutorial => ({
+        ...tutorial,
+        author: tutorial.author && !Array.isArray(tutorial.author) 
+          ? { 
+              name: (tutorial.author as any)?.name || 'Autor desconhecido',
+              email: (tutorial.author as any)?.email || ''
+            }
+          : null
+      })) as Tutorial[]
     },
   })
 }
@@ -74,7 +84,7 @@ export function useTutorialsByCategory(category?: string) {
         .from('tutorials')
         .select(`
           *,
-          author:profiles!author_id(name, email)
+          author:author_id(name, email)
         `)
         .eq('is_published', true)
 
@@ -85,7 +95,17 @@ export function useTutorialsByCategory(category?: string) {
       const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as Tutorial[]
+      
+      // Transform data to match Tutorial interface
+      return (data || []).map(tutorial => ({
+        ...tutorial,
+        author: tutorial.author && !Array.isArray(tutorial.author) 
+          ? { 
+              name: (tutorial.author as any)?.name || 'Autor desconhecido',
+              email: (tutorial.author as any)?.email || ''
+            }
+          : null
+      })) as Tutorial[]
     },
     enabled: !!category,
   })

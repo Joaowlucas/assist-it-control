@@ -97,7 +97,7 @@ const App = () => (
                 </AuthGuard>
               } />
               <Route path="/tutorials" element={
-                <AuthGuard requiredRole="admin_tech_user">
+                <AuthGuard>
                   <AdminLayout>
                     <Tutorials />
                   </AdminLayout>

@@ -15,12 +15,14 @@ import { useDeleteAssignment } from "@/hooks/useDeleteAssignment"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
 import { useAssignmentPDF } from "@/hooks/useAssignmentPDF"
+import { useAuth } from "@/hooks/useAuth"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
 import { AssignmentPDFPreviewDialog } from "@/components/AssignmentPDFPreviewDialog"
 import { Loader2, Plus, Calendar, User, Settings, FileText, Trash2 } from "lucide-react"
 
 export function AssignmentManagementSection() {
   const { toast } = useToast()
+  const { user } = useAuth()
   const { data: assignments, isLoading } = useAssignments()
   const { data: availableEquipment } = useAvailableEquipment()
   const { data: availableUsers } = useAvailableUsers()
@@ -38,10 +40,20 @@ export function AssignmentManagementSection() {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
     
+    if (!user?.id) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      })
+      return
+    }
+    
     createAssignment.mutate({
       user_id: formData.get('user_id') as string,
       equipment_id: formData.get('equipment_id') as string,
       notes: formData.get('notes') as string,
+      assigned_by: user.id,
     })
 
     setIsDialogOpen(false)
