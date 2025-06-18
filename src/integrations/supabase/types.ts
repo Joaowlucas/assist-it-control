@@ -423,6 +423,65 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_page_posts: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          is_featured: boolean | null
+          is_published: boolean | null
+          media_url: string | null
+          poll_options: Json | null
+          poll_votes: Json | null
+          scheduled_for: string | null
+          title: string
+          type: string
+          updated_at: string
+          view_count: number | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          media_url?: string | null
+          poll_options?: Json | null
+          poll_votes?: Json | null
+          scheduled_for?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          media_url?: string | null
+          poll_options?: Json | null
+          poll_votes?: Json | null
+          scheduled_for?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_logs: {
         Row: {
           created_at: string
