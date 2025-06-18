@@ -19,6 +19,7 @@ import { useAvailableUsers } from "@/hooks/useAvailableUsers"
 import { useAuth } from "@/hooks/useAuth"
 import { ConfirmEndAssignmentDialog } from "@/components/ConfirmEndAssignmentDialog"
 import { AssignmentPDFPreviewDialog } from "@/components/AssignmentPDFPreviewDialog"
+import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { Edit, Trash2, FileText, Calendar, CalendarX } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -28,6 +29,7 @@ export function AssignmentManagementSection() {
   const { data: assignments = [], isLoading } = useAssignments()
   const { data: availableEquipment = [] } = useAvailableEquipment()
   const { data: availableUsers = [] } = useAvailableUsers()
+  const { data: systemSettings } = useSystemSettings()
   const createAssignmentMutation = useCreateAssignment()
   const endAssignmentMutation = useEndAssignment()
   const deleteAssignmentMutation = useDeleteAssignment()
@@ -56,7 +58,7 @@ export function AssignmentManagementSection() {
     }
   }
 
-  const handleEndAssignment = async (assignmentId: string, reason?: string) => {
+  const handleEndAssignment = async (assignmentId: string) => {
     try {
       await endAssignmentMutation.mutateAsync(assignmentId)
       setEndingAssignment(null)
@@ -348,9 +350,13 @@ export function AssignmentManagementSection() {
         />
       )}
 
-      {pdfPreviewAssignment && (
+      {pdfPreviewAssignment && systemSettings && (
         <AssignmentPDFPreviewDialog
           assignment={pdfPreviewAssignment}
+          systemSettings={systemSettings}
+          assignmentId={pdfPreviewAssignment.id}
+          equipmentName={pdfPreviewAssignment.equipment?.name}
+          userName={pdfPreviewAssignment.user?.name}
           open={true}
           onOpenChange={(open) => !open && setPdfPreviewAssignment(null)}
         />

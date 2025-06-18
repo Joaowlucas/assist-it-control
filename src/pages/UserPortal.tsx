@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +27,7 @@ import { Edit, Trash2, Eye, Plus } from "lucide-react"
 
 export default function UserPortal() {
   const { profile } = useAuth()
-  const { data: tickets = [], isLoading: ticketsLoading } = useUserTickets()
+  const { data: allTickets = [], isLoading: ticketsLoading } = useUserTickets()
   const { data: assignments = [], isLoading: assignmentsLoading } = useUserAssignments()
   const { data: technicianUnits = [] } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
   const { data: allUnits = [] } = useUnits()
@@ -186,6 +186,14 @@ export default function UserPortal() {
       </div>
     )
   }
+
+  const userTickets = useMemo(() => {
+    return allTickets.map(ticket => ({
+      ...ticket,
+      unit_id: ticket.unit_id || '',
+      resolved_at: ticket.resolved_at || null
+    }))
+  }, [allTickets])
 
   return (
     <div className="space-y-4 md:space-y-6 p-2 md:p-0">
@@ -407,7 +415,7 @@ export default function UserPortal() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tickets.map((ticket) => (
+                      {userTickets.map((ticket) => (
                         <TableRow key={ticket.id} className="border-border hover:bg-muted/50">
                           <TableCell className="font-medium text-foreground text-xs md:text-sm">
                             #{ticket.ticket_number}

@@ -11,11 +11,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSettings"
 import { useUnits } from "@/hooks/useUnits"
 import { useCreateUnit, useDeleteUnit } from "@/hooks/useUnitManagement"
-import { Loader2, Trash2, Settings as SettingsIcon, Building2, MessageSquare } from "lucide-react"
+import { Loader2, Trash2, Settings as SettingsIcon, Building2, MessageSquare, Ticket } from "lucide-react"
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload"
 import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection"
 import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 import { ChatManagement } from "@/components/ChatManagement"
+import { TicketTemplateManagement } from "@/components/TicketTemplateManagement"
+import { PredefinedTextsManagement } from "@/components/PredefinedTextsManagement"
+import { TicketCategoriesManagement } from "@/components/TicketCategoriesManagement"
 
 export default function Settings() {
   const { toast } = useToast()
@@ -96,7 +99,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <SettingsIcon className="h-4 w-4" />
             Geral
@@ -104,6 +107,10 @@ export default function Settings() {
           <TabsTrigger value="units" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Unidades
+          </TabsTrigger>
+          <TabsTrigger value="tickets" className="flex items-center gap-2">
+            <Ticket className="h-4 w-4" />
+            Chamados
           </TabsTrigger>
           <TabsTrigger value="chat" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -330,6 +337,14 @@ export default function Settings() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="tickets" className="space-y-6">
+          <div className="space-y-6">
+            <TicketTemplateManagement />
+            <PredefinedTextsManagement />
+            <TicketCategoriesManagement />
+          </div>
         </TabsContent>
 
         <TabsContent value="chat" className="space-y-6">
