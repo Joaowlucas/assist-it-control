@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, MessageCircle, Users, Settings, AlertCircle } from 'lucide-react'
+import { Trash2, Plus, MessageCircle, AlertCircle } from 'lucide-react'
 import { useChatRooms, useCreateChatRoom, useDeleteChatRoom } from '@/hooks/useChat'
 import { useUnits } from '@/hooks/useUnits'
 import { useProfiles } from '@/hooks/useProfiles'
@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export function ChatManagement() {
   const { toast } = useToast()
-  const { data: rooms, isLoading: roomsLoading } = useChatRooms()
+  const { data: rooms, isLoading: roomsLoading, error: roomsError } = useChatRooms()
   const { data: units } = useUnits()
   const { data: profiles } = useProfiles()
   const createRoom = useCreateChatRoom()
@@ -110,6 +110,21 @@ export function ChatManagement() {
           <p>Carregando salas de chat...</p>
         </div>
       </div>
+    )
+  }
+
+  if (roomsError) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Erro ao carregar salas de chat. Tente recarregar a página.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     )
   }
 

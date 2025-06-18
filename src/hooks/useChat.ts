@@ -156,6 +156,7 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
     },
     onError: (error: any) => {
+      console.error('Error sending message:', error)
       toast({
         title: 'Erro ao enviar mensagem',
         description: error.message,
@@ -282,6 +283,7 @@ export function useDeleteChatRoom() {
       })
     },
     onError: (error: any) => {
+      console.error('Error deleting chat room:', error)
       toast({
         title: 'Erro ao excluir sala',
         description: error.message,
