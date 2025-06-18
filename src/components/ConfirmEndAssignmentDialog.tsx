@@ -1,44 +1,30 @@
 
-import React from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
-export interface ConfirmEndAssignmentDialogProps {
+interface ConfirmEndAssignmentDialogProps {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  assignmentId: string | null
   onConfirm: () => void
-  assignmentId: string
-  equipmentName: string
-  userName: string
+  onCancel: () => void
 }
 
-export function ConfirmEndAssignmentDialog({
-  open,
-  onOpenChange,
-  onConfirm,
-  equipmentName,
-  userName
+export function ConfirmEndAssignmentDialog({ 
+  open, 
+  assignmentId, 
+  onConfirm, 
+  onCancel 
 }: ConfirmEndAssignmentDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Finalização</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja finalizar a atribuição do equipamento "{equipmentName}" 
-            para o usuário "{userName}"? Esta ação não pode ser desfeita.
+            Tem certeza que deseja finalizar esta atribuição? O equipamento ficará disponível para nova atribuição.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm}>
             Finalizar Atribuição
           </AlertDialogAction>
