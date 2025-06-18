@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -67,6 +68,11 @@ export function AssignmentManagementSection() {
     } catch (error) {
       console.error('Error creating assignment:', error)
     }
+  }
+
+  const handleEdit = (assignment: any) => {
+    setEditingAssignment(assignment)
+    setIsEditDialogOpen(true)
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -382,82 +388,6 @@ export function AssignmentManagementSection() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className={`${isMobile ? 'w-[95vw] max-w-[95vw] h-[90vh]' : 'sm:max-w-[700px]'} max-h-[90vh] overflow-y-auto`}>
-          <DialogHeader>
-            <DialogTitle>Atribuir Novo Equipamento</DialogTitle>
-            <DialogDescription>
-              Atribua um equipamento a um usuário
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4">
-              <div>
-                <Label htmlFor="userId">Usuário</Label>
-                <Select name="userId" required>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Selecione o usuário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableUsers.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="equipmentId">Equipamento</Label>
-                <Select name="equipmentId" required>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Selecione o equipamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableEquipment.map((equipment) => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.name} ({equipment.type})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="startDate">Data de Início</Label>
-                <Input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  required
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  name="notes"
-                  placeholder="Observações sobre a atribuição"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'justify-end'}`}>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className={isMobile ? 'w-full' : ''}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={createAssignment.isPending} className={isMobile ? 'w-full' : ''}>
-                {createAssignment.isPending ? 'Atribuindo...' : 'Atribuir Equipamento'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className={`${isMobile ? 'w-[95vw] max-w-[95vw] h-[90vh]' : 'sm:max-w-[700px]'} max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
@@ -505,18 +435,19 @@ export function AssignmentManagementSection() {
       />
 
       <ConfirmEndAssignmentDialog 
+        assignmentId={endingAssignment?.id || ''}
+        equipmentName={endingAssignment?.equipment?.name || ''}
+        userName={endingAssignment?.user?.name || ''}
         open={!!endingAssignment}
         onOpenChange={() => setEndingAssignment(null)}
-        assignment={endingAssignment}
-      />
+      >
+        <></>
+      </ConfirmEndAssignmentDialog>
 
       <AssignmentPDFPreviewDialog
         open={isPDFPreviewOpen}
         onOpenChange={() => setIsPDFPreviewOpen(false)}
         assignment={previewData?.assignment}
-        equipment={previewData?.equipment}
-        user={previewData?.user}
-        assignedByUser={previewData?.assignedByUser}
       />
     </div>
   )
