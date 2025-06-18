@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,12 +13,12 @@ import { useUnits } from '@/hooks/useUnits'
 import { CreateUserDialog } from '@/components/CreateUserDialog'
 import { EditUserDialog } from '@/components/EditUserDialog'
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog'
-import { useUserManagement } from '@/hooks/useUserManagement'
+import { useDeleteUser } from '@/hooks/useUserManagement'
 
 export function UserManagement() {
   const { data: profiles = [], isLoading } = useProfiles()
   const { data: units = [] } = useUnits()
-  const { deleteUser } = useUserManagement()
+  const deleteUser = useDeleteUser()
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -195,17 +194,12 @@ export function UserManagement() {
         </CardContent>
       </Card>
 
-      <CreateUserDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        units={units}
-      />
+      <CreateUserDialog />
 
       <EditUserDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         user={selectedUser}
-        units={units}
       />
 
       <ConfirmDeleteDialog
