@@ -942,6 +942,12 @@ export type Database = {
           unit_name: string
         }[]
       }
+      get_user_chat_rooms: {
+        Args: { user_id: string }
+        Returns: {
+          room_id: string
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
