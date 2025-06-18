@@ -1,19 +1,19 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useToast } from "@/hooks/use-toast"
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/integrations/supabase/client'
+import { useToast } from '@/hooks/use-toast'
 
-export interface TicketCategory {
+export type TicketCategory = {
   id: string
   name: string
   description: string | null
-  is_default: boolean
   is_active: boolean
+  is_default: boolean
   created_at: string
   updated_at: string
 }
 
-export const useTicketCategories = () => {
+export function useTicketCategories() {
   return useQuery({
     queryKey: ['ticket-categories'],
     queryFn: async () => {
@@ -21,24 +21,23 @@ export const useTicketCategories = () => {
         .from('ticket_categories')
         .select('*')
         .eq('is_active', true)
-        .order('is_default', { ascending: false })
         .order('name')
       
       if (error) throw error
       return data as TicketCategory[]
-    }
+    },
   })
 }
 
-export const useCreateTicketCategory = () => {
+export function useCreateTicketCategory() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  
+
   return useMutation({
-    mutationFn: async (category: Omit<TicketCategory, 'id' | 'created_at' | 'updated_at' | 'is_default'>) => {
+    mutationFn: async (category: Omit<TicketCategory, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('ticket_categories')
-        .insert({ ...category, is_default: false })
+        .insert(category)
         .select()
         .single()
       
@@ -48,17 +47,24 @@ export const useCreateTicketCategory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket-categories'] })
       toast({
-        title: "Categoria criada",
-        description: "Nova categoria de chamado criada com sucesso!"
+        title: 'Sucesso',
+        description: 'Categoria criada com sucesso',
       })
-    }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar categoria: ' + error.message,
+        variant: 'destructive',
+      })
+    },
   })
 }
 
-export const useUpdateTicketCategory = () => {
+export function useUpdateTicketCategory() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TicketCategory> & { id: string }) => {
       const { data, error } = await supabase
@@ -71,56 +77,49 @@ export const useUpdateTicketCategory = () => {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
+    on̂Success: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket-categories'] })
       toast({
-        title: "Categoria atualizada",
-        description: "Categoria de chamado atualizada com sucesso!"
+        title: 'Sucesso',
+        description: 'Categoria atualizada com sucesso',
       })
-    }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar categoria: ' + error.message,
+        variant: 'destructive',
+      })
+    },
   })
 }
 
-export const useDeleteTicketCategory = () => {
+export function useDeleteTicketCategory() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
-      // Primeiro verificar se a categoria está sendo usada
-      const { data: ticketsUsingCategory, error: checkError } = await supabase
-        .from('tickets')
-        .select('id')
-        .eq('category', id)
-        .limit(1)
-      
-      if (checkError) throw checkError
-      
-      if (ticketsUsingCategory && ticketsUsingCategory.length > 0) {
-        throw new Error('Não é possível excluir uma categoria que está sendo usada em chamados.')
-      }
-      
       const { error } = await supabase
         .from('ticket_categories')
         .update({ is_active: false })
         .eq('id', id)
-        .eq('is_default', false) // Não permitir excluir categorias padrão
       
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket-categories'] })
       toast({
-        title: "Categoria removida",
-        description: "Categoria de chamado removida com sucesso!"
+        title: 'Sucesso',
+        description: 'Categoria removida com sucesso',
       })
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Erro ao remover categoria: ' + error.message,
+        variant: 'destructive',
       })
-    }
+    },
   })
 }

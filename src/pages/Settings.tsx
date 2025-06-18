@@ -1,15 +1,15 @@
 
-import { AdminGuard } from "@/components/AuthGuard"
+import { AdminGuard } from "@/components/AdminGuard"
 import { AdminLayout } from "@/components/AdminLayout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssignmentManagementSection } from "@/components/AssignmentManagementSection"
 import { TicketConfigurationTabs } from "@/components/TicketConfigurationTabs"
-import { UserManagement } from "@/hooks/useUserManagement"
+import { UserManagement } from "@/components/UserManagement"
 import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection"
 import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload"
-import { UnitManagementSection } from "@/hooks/useUnitManagement"
+import { UnitManagementSection } from "@/components/UnitManagementSection"
 import { Settings as SettingsIcon, Users, Package, MessageSquare, Building, Ticket } from "lucide-react"
 
 export default function Settings() {
