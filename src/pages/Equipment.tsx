@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ImageIcon, Plus, Calendar, MapPin, Edit, FileText, Printer } from "lucide-react"
-import { useEquipment, useCreateEquipment, useUpdateEquipment } from "@/hooks/useEquipment"
+import { ImageIcon, Plus, Calendar, MapPin, Edit, FileText, Printer, Trash } from "lucide-react"
+import { useEquipment, useCreateEquipment, useUpdateEquipment, useDeleteEquipment } from "@/hooks/useEquipment"
 import { useUnits } from "@/hooks/useUnits"
 import { useUploadEquipmentPhoto } from "@/hooks/useEquipmentPhotos"
 import { useAuth } from "@/hooks/useAuth"
@@ -18,6 +18,7 @@ import { useEquipmentPDF } from "@/hooks/useEquipmentPDF"
 import { ImageUpload } from "@/components/ImageUpload"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
 import { EquipmentPDFPreviewDialog } from "@/components/EquipmentPDFPreviewDialog"
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog"
 import { Tables } from "@/integrations/supabase/types"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -30,6 +31,7 @@ export default function Equipment() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null)
+  const [deletingEquipment, setDeletingEquipment] = useState<Equipment | null>(null)
   const [images, setImages] = useState<File[]>([])
   const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false)
   const [previewData, setPreviewData] = useState<{
@@ -45,10 +47,12 @@ export default function Equipment() {
   const isMobile = useIsMobile()
   const createEquipment = useCreateEquipment()
   const updateEquipment = useUpdateEquipment()
+  const deleteEquipment = useDeleteEquipment()
   const uploadPhoto = useUploadEquipmentPhoto()
   const { previewEquipmentPDF, isLoadingPreview } = useEquipmentPDF()
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'technician'
+  const canDelete = profile?.role === 'admin'
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -73,6 +77,25 @@ export default function Equipment() {
   const handleEdit = (item: Equipment) => {
     setEditingEquipment(item)
     setIsEditDialogOpen(true)
+  }
+
+  const handleDelete = (item: Equipment) => {
+    // Verificar se o equipamento está em uso
+    if (item.status === 'em_uso') {
+      return
+    }
+    setDeletingEquipment(item)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingEquipment) return
+    
+    try {
+      await deleteEquipment.mutateAsync(deletingEquipment.id)
+      setDeletingEquipment(null)
+    } catch (error) {
+      console.error('Error deleting equipment:', error)
+    }
   }
 
   const handlePreviewPDF = async (item: Equipment) => {
@@ -446,6 +469,18 @@ export default function Equipment() {
                           <FileText className="h-4 w-4 mr-1" />
                           {isLoadingPreview ? 'Carregando...' : 'Visualizar PDF'}
                         </Button>
+                        {canDelete && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(item)}
+                            disabled={item.status === 'em_uso'}
+                            className={item.status === 'em_uso' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-destructive hover:text-destructive-foreground'}
+                          >
+                            <Trash className="h-4 w-4 mr-1" />
+                            Excluir
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -535,6 +570,22 @@ export default function Equipment() {
                       <FileText className="h-4 w-4 mr-2" />
                       {isLoadingPreview ? 'Carregando...' : 'Visualizar PDF'}
                     </Button>
+                    {canDelete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(item)}
+                        disabled={item.status === 'em_uso'}
+                        className={`w-full justify-start ${
+                          item.status === 'em_uso' 
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : 'hover:bg-destructive hover:text-destructive-foreground'
+                        }`}
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        Excluir
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -751,6 +802,16 @@ export default function Equipment() {
           tombamento={previewData.tombamento}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDeleteDialog
+        open={!!deletingEquipment}
+        onOpenChange={() => setDeletingEquipment(null)}
+        onConfirm={confirmDelete}
+        title="Excluir Equipamento"
+        description={`Tem certeza que deseja excluir o equipamento "${deletingEquipment?.name}"? Esta ação não pode ser desfeita.`}
+        isLoading={deleteEquipment.isPending}
+      />
     </div>
   )
 }

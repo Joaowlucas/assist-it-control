@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
@@ -119,6 +120,37 @@ export function useUpdateAssignment() {
       toast({
         title: 'Erro',
         description: 'Erro ao atualizar atribuição: ' + error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useDeleteAssignment() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['equipment'] })
+      toast({
+        title: 'Sucesso',
+        description: 'Atribuição excluída com sucesso',
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao excluir atribuição: ' + error.message,
         variant: 'destructive',
       })
     },
