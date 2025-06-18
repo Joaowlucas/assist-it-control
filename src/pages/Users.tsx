@@ -178,15 +178,15 @@ export default function Users() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{profile.email}</p>
-                        {profile.unit && (
+                        {profile.unit_id && (
                           <p className="text-xs text-muted-foreground">
-                            Unidade: {profile.unit.name}
+                            Unidade: {units.find(u => u.id === profile.unit_id)?.name || 'N/A'}
                           </p>
                         )}
                       </div>
                     </div>
                     <UserActionsDropdown 
-                      user={profile} 
+                      user={profile}
                       onEdit={() => setEditingUser(profile)}
                     />
                   </div>

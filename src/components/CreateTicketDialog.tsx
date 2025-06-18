@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useTickets } from '@/hooks/useTickets'
+import { useUserTickets } from '@/hooks/useUserTickets'
 import { useTicketCategories } from '@/hooks/useTicketCategories'
 import { useToast } from '@/hooks/use-toast'
 
@@ -23,7 +23,7 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
     priority: 'media' as 'baixa' | 'media' | 'alta'
   })
   
-  const { createTicket } = useTickets()
+  const { createTicket } = useUserTickets()
   const { data: categories = [] } = useTicketCategories()
   const { toast } = useToast()
 

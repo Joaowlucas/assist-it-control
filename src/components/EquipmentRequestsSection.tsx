@@ -4,13 +4,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { useUserEquipmentRequests, useDeleteEquipmentRequest, EquipmentRequest } from "@/hooks/useEquipmentRequests"
+import { useEquipmentRequests, EquipmentRequest } from "@/hooks/useEquipmentRequests"
 import { EquipmentRequestDialog } from "@/components/EquipmentRequestDialog"
 import { Trash2 } from "lucide-react"
+import { useState } from "react"
 
 export function EquipmentRequestsSection() {
-  const { data: requests = [], isLoading } = useUserEquipmentRequests()
-  const deleteRequestMutation = useDeleteEquipmentRequest()
+  const { data: requests = [], isLoading, deleteRequest } = useEquipmentRequests()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -73,7 +74,7 @@ export function EquipmentRequestsSection() {
 
   const handleCancelRequest = async (requestId: string) => {
     try {
-      await deleteRequestMutation.mutateAsync(requestId)
+      await deleteRequest.mutateAsync(requestId)
     } catch (error) {
       console.error('Error canceling request:', error)
     }
@@ -106,7 +107,10 @@ export function EquipmentRequestsSection() {
               Gerencie suas solicitações de novos equipamentos
             </CardDescription>
           </div>
-          <EquipmentRequestDialog />
+          <EquipmentRequestDialog 
+            open={isDialogOpen} 
+            onOpenChange={setIsDialogOpen}
+          />
         </div>
       </CardHeader>
       <CardContent>

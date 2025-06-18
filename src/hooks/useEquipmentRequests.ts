@@ -18,6 +18,7 @@ export interface EquipmentRequest {
   admin_comments?: string
   created_at: string
   updated_at: string
+  specifications: Record<string, any>
   requester?: {
     name: string
     email: string
@@ -35,6 +36,7 @@ export interface CreateEquipmentRequestData {
   description: string
   justification: string
   priority: 'baixa' | 'media' | 'alta'
+  specifications?: Record<string, any>
 }
 
 export function useEquipmentRequests() {
@@ -67,6 +69,8 @@ export function useEquipmentRequests() {
     enabled: !!profile?.id,
   })
 
+  const queryClient = useQueryClient()
+
   const createRequest = useMutation({
     mutationFn: async (data: CreateEquipmentRequestData) => {
       if (!profile?.id) throw new Error('User not authenticated')
@@ -79,6 +83,7 @@ export function useEquipmentRequests() {
           description: data.description,
           justification: data.justification,
           priority: data.priority,
+          specifications: data.specifications || {},
         })
         .select()
         .single()
@@ -103,10 +108,42 @@ export function useEquipmentRequests() {
     },
   })
 
-  const queryClient = useQueryClient()
+  const deleteRequest = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { error } = await supabase
+        .from('equipment_requests')
+        .delete()
+        .eq('id', requestId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-equipment-requests'] })
+      toast({
+        title: "Solicitação cancelada",
+        description: "Sua solicitação foi cancelada com sucesso.",
+      })
+    },
+    onError: (error) => {
+      console.error('Error deleting equipment request:', error)
+      toast({
+        title: "Erro ao cancelar",
+        description: "Não foi possível cancelar a solicitação.",
+        variant: "destructive",
+      })
+    },
+  })
 
   return {
     ...query,
-    createRequest
+    createRequest,
+    deleteRequest
   }
+}
+
+// Alias para compatibilidade
+export const useUserEquipmentRequests = useEquipmentRequests
+export const useDeleteEquipmentRequest = () => {
+  const { deleteRequest } = useEquipmentRequests()
+  return deleteRequest
 }
