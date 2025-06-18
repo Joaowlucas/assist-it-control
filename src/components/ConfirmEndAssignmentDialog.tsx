@@ -9,40 +9,42 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import { useEndAssignment } from "@/hooks/useEndAssignment"
 
 interface ConfirmEndAssignmentDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
   assignmentId: string
   equipmentName: string
   userName: string
-  children?: React.ReactNode
+  children: React.ReactNode
 }
 
 export function ConfirmEndAssignmentDialog({
-  open,
-  onOpenChange,
   assignmentId,
   equipmentName,
   userName,
   children
 }: ConfirmEndAssignmentDialogProps) {
+  const [open, setOpen] = useState(false)
   const endAssignmentMutation = useEndAssignment()
 
   const handleConfirm = async () => {
     try {
       await endAssignmentMutation.mutateAsync(assignmentId)
-      onOpenChange(false)
+      setOpen(false)
     } catch (error) {
+      // O erro já é tratado no hook
       console.error('Erro ao finalizar atribuição:', error)
     }
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      {children}
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        {children}
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Finalização da Atribuição</AlertDialogTitle>

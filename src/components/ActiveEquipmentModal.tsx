@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -26,8 +25,6 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null)
   const [previewData, setPreviewData] = useState<any>(null)
-  const [endAssignmentDialogOpen, setEndAssignmentDialogOpen] = useState(false)
-  const [assignmentToEnd, setAssignmentToEnd] = useState<any>(null)
 
   if (!data) return null
 
@@ -53,17 +50,16 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
   const handlePreviewAssignment = async (assignment: any) => {
     try {
       setSelectedAssignment(assignment)
-      const data = await previewAssignmentPDF(assignment.id)
+      const data = await previewAssignmentPDF(
+        assignment.id,
+        assignment.equipment?.name || 'Equipamento',
+        assignment.user?.name || 'Usuário'
+      )
       setPreviewData(data)
       setPreviewModalOpen(true)
     } catch (error) {
       console.error('Erro ao carregar preview:', error)
     }
-  }
-
-  const handleEndAssignment = (assignment: any) => {
-    setAssignmentToEnd(assignment)
-    setEndAssignmentDialogOpen(true)
   }
 
   return (
@@ -194,13 +190,15 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleEndAssignment(assignment)}
+                            <ConfirmEndAssignmentDialog
+                              assignmentId={assignment.id}
+                              equipmentName={assignment.equipment?.name || 'Equipamento'}
+                              userName={assignment.user?.name || 'Usuário'}
                             >
-                              Finalizar
-                            </Button>
+                              <Button variant="outline" size="sm">
+                                Finalizar
+                              </Button>
+                            </ConfirmEndAssignmentDialog>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -219,20 +217,12 @@ export function ActiveEquipmentModal({ open, onOpenChange }: ActiveEquipmentModa
           open={previewModalOpen}
           onOpenChange={setPreviewModalOpen}
           assignment={previewData.assignment}
-          equipment={previewData.equipment}
-          user={previewData.user}
-          assignedByUser={previewData.assignedByUser}
+          systemSettings={previewData.systemSettings}
+          assignmentId={selectedAssignment.id}
+          equipmentName={selectedAssignment.equipment?.name || 'Equipamento'}
+          userName={selectedAssignment.user?.name || 'Usuário'}
         />
       )}
-
-      {/* Modal de Finalizar Atribuição */}
-      <ConfirmEndAssignmentDialog
-        open={endAssignmentDialogOpen}
-        onOpenChange={setEndAssignmentDialogOpen}
-        assignmentId={assignmentToEnd?.id || ''}
-        equipmentName={assignmentToEnd?.equipment?.name || ''}
-        userName={assignmentToEnd?.user?.name || ''}
-      />
     </>
   )
 }
