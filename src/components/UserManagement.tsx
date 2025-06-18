@@ -68,7 +68,7 @@ export function UserManagement() {
                   {user.status}
                 </Badge>
               </TableCell>
-              <TableCell>{user.unit?.name || 'Não definida'}</TableCell>
+              <TableCell>{user.unit_id || 'Não definida'}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm">

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useUnits } from "@/hooks/useUnits"
-import { useUserManagement } from "@/hooks/useUserManagement"
+import { useCreateUser } from "@/hooks/useUserManagement"
 
 interface CreateUserDialogProps {
   open: boolean
@@ -15,11 +15,12 @@ interface CreateUserDialogProps {
 
 export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) {
   const { data: units = [] } = useUnits()
-  const { createUser } = useUserManagement()
+  const { mutateAsync: createUser, isPending } = useCreateUser()
   
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     phone: '',
     role: 'user' as 'admin' | 'user' | 'technician',
     unit_id: ''
@@ -29,11 +30,15 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     e.preventDefault()
     
     try {
-      await createUser.mutateAsync(formData)
+      await createUser({
+        ...formData,
+        unit_id: formData.unit_id || null
+      })
       onOpenChange(false)
       setFormData({
         name: '',
         email: '',
+        password: '',
         phone: '',
         role: 'user',
         unit_id: ''
@@ -71,6 +76,17 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
               type="email"
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="password">Senha</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
               required
             />
           </div>
@@ -118,8 +134,8 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createUser.isPending}>
-              {createUser.isPending ? 'Criando...' : 'Criar Usuário'}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? 'Criando...' : 'Criar Usuário'}
             </Button>
           </div>
         </form>

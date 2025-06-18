@@ -12,21 +12,24 @@ export type UserTicket = {
   status: 'aberto' | 'em_andamento' | 'aguardando' | 'fechado'
   category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
   priority: 'baixa' | 'media' | 'alta' | 'critica'
-  created_at: string | null
+  created_at: string
   updated_at: string | null
   resolved_at: string | null
   requester_id: string
   assignee_id: string | null
   unit_id: string
   requester?: {
+    id: string
     name: string
     email: string
   }
   assignee?: {
+    id: string
     name: string
     email: string
   }
   unit?: {
+    id: string
     name: string
   }
 }
@@ -43,9 +46,9 @@ export function useUserTickets() {
         .from('tickets')
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name)
+          requester:profiles!tickets_requester_id_fkey(id, name, email),
+          assignee:profiles!tickets_assignee_id_fkey(id, name, email),
+          unit:units(id, name)
         `)
         .eq('requester_id', profile.id)
         .order('created_at', { ascending: false })
@@ -68,15 +71,22 @@ export function useCreateUserTicket() {
       description: string
       category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
       priority: 'baixa' | 'media' | 'alta' | 'critica'
+      unit_id?: string
     }) => {
-      if (!profile?.id || !profile?.unit_id) throw new Error('User not authenticated or no unit')
+      if (!profile?.id) throw new Error('User not authenticated')
+      
+      const unitId = ticket.unit_id || profile?.unit_id
+      if (!unitId) throw new Error('Unit not defined')
       
       const { data, error } = await supabase
         .from('tickets')
         .insert({
-          ...ticket,
+          title: ticket.title,
+          description: ticket.description,
+          category: ticket.category,
+          priority: ticket.priority,
           requester_id: profile.id,
-          unit_id: profile.unit_id
+          unit_id: unitId
         })
         .select()
         .single()
