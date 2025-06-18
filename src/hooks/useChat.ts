@@ -42,6 +42,7 @@ export function useChatRooms() {
   return useQuery({
     queryKey: ['chat-rooms'],
     queryFn: async () => {
+      console.log('Fetching chat rooms...')
       const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
@@ -52,7 +53,11 @@ export function useChatRooms() {
         .eq('is_active', true)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching chat rooms:', error)
+        throw error
+      }
+      console.log('Chat rooms fetched:', data)
       return data as ChatRoom[]
     },
     enabled: !!profile,
@@ -170,44 +175,86 @@ export function useCreateChatRoom() {
       unitId?: string; 
       participants: string[] 
     }) => {
-      // Criar a sala
-      const { data: room, error: roomError } = await supabase
-        .from('chat_rooms')
-        .insert({
-          name,
-          unit_id: unitId || null,
-          created_by: (await supabase.auth.getUser()).data.user?.id!,
-        })
-        .select()
-        .single()
+      console.log('Creating chat room:', { name, unitId, participants })
+      
+      // Obter o usuário atual
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError || !userData.user) {
+        console.error('Error getting current user:', userError)
+        throw new Error('Usuário não autenticado')
+      }
 
-      if (roomError) throw roomError
+      const currentUserId = userData.user.id
+      console.log('Current user ID:', currentUserId)
 
-      // Adicionar participantes
-      const participantsData = participants.map(userId => ({
-        room_id: room.id,
-        user_id: userId,
-      }))
+      // Verificar se há participantes selecionados
+      if (!participants || participants.length === 0) {
+        throw new Error('É necessário selecionar pelo menos um participante')
+      }
 
-      const { error: participantsError } = await supabase
-        .from('chat_participants')
-        .insert(participantsData)
+      // Garantir que o criador esteja na lista de participantes
+      const allParticipants = [...new Set([currentUserId, ...participants])]
+      console.log('All participants (including creator):', allParticipants)
 
-      if (participantsError) throw participantsError
+      try {
+        // Criar a sala
+        console.log('Creating room...')
+        const { data: room, error: roomError } = await supabase
+          .from('chat_rooms')
+          .insert({
+            name,
+            unit_id: unitId || null,
+            created_by: currentUserId,
+          })
+          .select()
+          .single()
 
-      return room
+        if (roomError) {
+          console.error('Error creating room:', roomError)
+          throw new Error(`Erro ao criar sala: ${roomError.message}`)
+        }
+
+        console.log('Room created successfully:', room)
+
+        // Adicionar todos os participantes (incluindo o criador)
+        console.log('Adding participants...')
+        const participantsData = allParticipants.map(userId => ({
+          room_id: room.id,
+          user_id: userId,
+        }))
+
+        console.log('Participants data to insert:', participantsData)
+
+        const { error: participantsError } = await supabase
+          .from('chat_participants')
+          .insert(participantsData)
+
+        if (participantsError) {
+          console.error('Error adding participants:', participantsError)
+          // Se falhar ao adicionar participantes, tentar excluir a sala criada
+          await supabase.from('chat_rooms').delete().eq('id', room.id)
+          throw new Error(`Erro ao adicionar participantes: ${participantsError.message}`)
+        }
+
+        console.log('Participants added successfully')
+        return room
+      } catch (error) {
+        console.error('Error in chat room creation process:', error)
+        throw error
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
       toast({
         title: 'Sala criada com sucesso!',
-        description: 'A nova sala de chat foi criada.',
+        description: 'A nova sala de chat foi criada e você foi adicionado automaticamente.',
       })
     },
     onError: (error: any) => {
+      console.error('Chat room creation failed:', error)
       toast({
         title: 'Erro ao criar sala',
-        description: error.message,
+        description: error.message || 'Ocorreu um erro inesperado ao criar a sala',
         variant: 'destructive',
       })
     },

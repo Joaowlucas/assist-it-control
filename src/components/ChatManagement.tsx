@@ -8,11 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, MessageCircle, Users, Settings } from 'lucide-react'
+import { Trash2, Plus, MessageCircle, Users, Settings, AlertCircle } from 'lucide-react'
 import { useChatRooms, useCreateChatRoom, useDeleteChatRoom } from '@/hooks/useChat'
 import { useUnits } from '@/hooks/useUnits'
 import { useProfiles } from '@/hooks/useProfiles'
 import { useToast } from '@/hooks/use-toast'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export function ChatManagement() {
   const { toast } = useToast()
@@ -32,6 +33,8 @@ export function ChatManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log('Form submission started:', formData)
+    
     if (!formData.name.trim()) {
       toast({
         title: 'Nome obrigatório',
@@ -41,17 +44,42 @@ export function ChatManagement() {
       return
     }
 
+    // Validar se há participantes disponíveis
+    const availableUsers = profiles?.filter(p => 
+      formData.unitId === 'general' ? true : p.unit_id === formData.unitId
+    )
+
+    if (!availableUsers || availableUsers.length === 0) {
+      toast({
+        title: 'Nenhum usuário disponível',
+        description: 'Não há usuários disponíveis para a unidade selecionada.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (formData.participants.length === 0) {
+      toast({
+        title: 'Selecione participantes',
+        description: 'É necessário selecionar pelo menos um participante para a sala.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     try {
+      console.log('Calling createRoom mutation...')
       await createRoom.mutateAsync({
         name: formData.name,
         unitId: formData.unitId === 'general' ? undefined : formData.unitId,
         participants: formData.participants,
       })
       
+      console.log('Room created successfully, resetting form')
       setFormData({ name: '', unitId: 'general', participants: [] })
       setIsDialogOpen(false)
     } catch (error) {
-      console.error('Erro ao criar sala:', error)
+      console.error('Error in form submission:', error)
     }
   }
 
@@ -151,14 +179,21 @@ export function ChatManagement() {
 
               <div>
                 <Label>Participantes</Label>
-                <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
-                  {availableUsers?.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum usuário disponível
-                    </p>
-                  ) : (
+                <p className="text-sm text-muted-foreground mb-2">
+                  Você será adicionado automaticamente como participante
+                </p>
+                
+                {(!availableUsers || availableUsers.length === 0) ? (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Nenhum usuário disponível para a unidade selecionada
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
                     <div className="space-y-2">
-                      {availableUsers?.map((user) => (
+                      {availableUsers.map((user) => (
                         <div key={user.id} className="flex items-center space-x-2">
                           <input
                             type="checkbox"
@@ -179,8 +214,14 @@ export function ChatManagement() {
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+                
+                {formData.participants.length > 0 && (
+                  <p className="text-sm text-green-600 mt-2">
+                    {formData.participants.length} participante(s) selecionado(s) + você
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-2">
@@ -188,12 +229,13 @@ export function ChatManagement() {
                   type="button" 
                   variant="outline" 
                   onClick={() => setIsDialogOpen(false)}
+                  disabled={createRoom.isPending}
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={createRoom.isPending}
+                  disabled={createRoom.isPending || !availableUsers || availableUsers.length === 0}
                 >
                   {createRoom.isPending ? 'Criando...' : 'Criar Sala'}
                 </Button>
