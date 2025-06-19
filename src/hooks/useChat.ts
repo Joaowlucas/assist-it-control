@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -72,7 +71,8 @@ export function useChatRooms() {
 
       console.log('Fetching chat rooms for user:', profile.id, 'with role:', profile.role)
 
-      // Query base para buscar todas as salas acessíveis ao usuário
+      // Com as novas políticas RLS, a query básica já filtra automaticamente
+      // baseado nas permissões do usuário
       const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
@@ -97,7 +97,7 @@ export function useChatRooms() {
     },
     enabled: !!profile?.id,
     refetchOnWindowFocus: false,
-    staleTime: 30000, // 30 segundos
+    staleTime: 30000,
   })
 
   // Configurar subscription para tempo real
@@ -453,6 +453,22 @@ export function useDeleteChatRoom() {
     mutationFn: async (roomId: string) => {
       console.log('Deleting chat room:', roomId)
 
+      // Verificar se o usuário pode excluir a sala
+      const { data: canDelete, error: checkError } = await supabase
+        .rpc('can_delete_chat_room', { 
+          room_id: roomId, 
+          user_id: (await supabase.auth.getUser()).data.user?.id 
+        })
+
+      if (checkError) {
+        console.error('Error checking delete permission:', checkError)
+        throw new Error('Erro ao verificar permissões: ' + checkError.message)
+      }
+
+      if (!canDelete) {
+        throw new Error('Você não tem permissão para excluir esta conversa')
+      }
+
       const { data, error } = await supabase
         .from('chat_rooms')
         .update({ is_active: false })
@@ -471,8 +487,8 @@ export function useDeleteChatRoom() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
       toast({
-        title: 'Sala removida',
-        description: 'A sala de chat foi removida com sucesso',
+        title: 'Conversa removida',
+        description: 'A conversa foi removida com sucesso',
       })
     },
     onError: (error) => {
@@ -761,5 +777,31 @@ export function useAvailableChatUsers() {
       return data || []
     },
     enabled: !!profile?.id,
+  })
+}
+
+// Nova função para verificar se o usuário pode excluir uma sala
+export function useCanDeleteChatRoom(roomId: string) {
+  const { profile } = useAuth()
+
+  return useQuery({
+    queryKey: ['can-delete-chat-room', roomId, profile?.id],
+    queryFn: async () => {
+      if (!profile?.id || !roomId) return false
+
+      const { data, error } = await supabase
+        .rpc('can_delete_chat_room', { 
+          room_id: roomId, 
+          user_id: profile.id 
+        })
+
+      if (error) {
+        console.error('Error checking delete permission:', error)
+        return false
+      }
+
+      return data
+    },
+    enabled: !!profile?.id && !!roomId,
   })
 }

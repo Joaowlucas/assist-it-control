@@ -1145,7 +1145,19 @@ export type Database = {
         Args: { room_id: string; user_id: string }
         Returns: boolean
       }
+      can_access_chat_room_secure: {
+        Args: { room_id: string; user_id: string }
+        Returns: boolean
+      }
+      can_delete_chat_room: {
+        Args: { room_id: string; user_id: string }
+        Returns: boolean
+      }
       generate_tombamento: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

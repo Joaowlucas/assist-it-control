@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X, UserPlus, Building2, Search } from 'lucide-react'
-import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, ChatRoom } from '@/hooks/useChat'
+import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, useDeleteChatRoom, useCanDeleteChatRoom, ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -33,9 +32,11 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
+  const { data: canDeleteRoom } = useCanDeleteChatRoom(selectedRoom?.id || '')
   const sendMessage = useSendMessage()
   const editMessage = useEditMessage()
   const deleteMessage = useDeleteMessage()
+  const deleteChatRoom = useDeleteChatRoom()
 
   // Auto-scroll para a última mensagem
   useEffect(() => {
@@ -77,6 +78,20 @@ export default function Chat() {
   const handleDeleteMessage = async (messageId: string) => {
     if (confirm('Tem certeza que deseja excluir esta mensagem?')) {
       await deleteMessage.mutateAsync(messageId)
+    }
+  }
+
+  const handleDeleteRoom = async () => {
+    if (!selectedRoom) return
+    
+    if (confirm('Tem certeza que deseja excluir esta conversa? Esta ação não pode ser desfeita.')) {
+      try {
+        await deleteChatRoom.mutateAsync(selectedRoom.id)
+        setSelectedRoom(null)
+        setShowRoomsList(true)
+      } catch (error) {
+        console.error('Error deleting room:', error)
+      }
     }
   }
 
@@ -189,6 +204,11 @@ export default function Chat() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium text-xs lg:text-sm truncate">{getRoomDisplayName(room)}</h3>
+                        {!room.unit_id && (
+                          <Badge variant="secondary" className="text-xs px-1">
+                            Privada
+                          </Badge>
+                        )}
                       </div>
                       
                       {room.unit_id && room.units?.name && (
@@ -263,6 +283,26 @@ export default function Chat() {
                     <Users className="h-2 w-2 lg:h-3 lg:w-3" />
                     {getParticipantCount(selectedRoom)}
                   </Badge>
+                  
+                  {/* Opção de excluir conversa - apenas para criadores ou admins */}
+                  {canDeleteRoom && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="p-1">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={handleDeleteRoom}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir Conversa
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
             </div>
