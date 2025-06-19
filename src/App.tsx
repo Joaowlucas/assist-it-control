@@ -50,6 +50,22 @@ queryClient.prefetchQuery({
   staleTime: 60 * 60 * 1000, // 1 hora
 })
 
+// Component to handle chat layout based on user role
+const ChatWithLayout = () => (
+  <AuthGuard>
+    <AuthGuard requiredRole="user">
+      <UserLayout>
+        <Chat />
+      </UserLayout>
+    </AuthGuard>
+    <AuthGuard requiredRole="admin_tech">
+      <AdminLayout>
+        <Chat />
+      </AdminLayout>
+    </AuthGuard>
+  </AuthGuard>
+)
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="assist-it-theme">
@@ -115,21 +131,7 @@ const App = () => (
               } />
               
               {/* Chat Route - Available for all users with role-based layout */}
-              <Route path="/chat" element={
-                <AuthGuard>
-                  {(profile) => 
-                    profile?.role === 'user' ? (
-                      <UserLayout>
-                        <Chat />
-                      </UserLayout>
-                    ) : (
-                      <AdminLayout>
-                        <Chat />
-                      </AdminLayout>
-                    )
-                  }
-                </AuthGuard>
-              } />
+              <Route path="/chat" element={<ChatWithLayout />} />
               
               {/* Admin Only Routes */}
               <Route path="/users" element={
