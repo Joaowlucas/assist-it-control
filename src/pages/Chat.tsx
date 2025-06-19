@@ -19,7 +19,7 @@ interface ChatRoom {
   id: string
   created_at: string
   name: string
-  type: 'group' | 'direct'
+  type: 'group' | 'private'
   created_by: string
   is_active: boolean
   members?: {
@@ -97,7 +97,7 @@ export default function Chat() {
             ...room,
             is_active: room.is_active ?? true,
             created_by: room.created_by ?? user.id,
-            type: room.type === 'direct' ? 'direct' : 'group'
+            type: room.type === 'private' ? 'private' : 'group'
           })) as ChatRoom[]
           setRooms(formattedRooms)
         }
@@ -117,11 +117,12 @@ export default function Chat() {
       .channel('public:chat_rooms')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_rooms' }, async (payload) => {
         if (payload.new && typeof payload.new === 'object') {
+          const newRoomData = payload.new as any
           const newRoom = {
-            ...payload.new,
-            is_active: payload.new.is_active ?? true,
-            created_by: payload.new.created_by ?? user.id,
-            type: payload.new.type === 'direct' ? 'direct' : 'group'
+            ...newRoomData,
+            is_active: newRoomData.is_active ?? true,
+            created_by: newRoomData.created_by ?? user.id,
+            type: newRoomData.type === 'private' ? 'private' : 'group'
           } as ChatRoom
           if (newRoom.type === 'group') {
             setRooms(prevRooms => [...prevRooms, newRoom])
@@ -293,7 +294,7 @@ export default function Chat() {
             ...room,
             is_active: room.is_active ?? true,
             created_by: room.created_by ?? user!.id,
-            type: room.type === 'direct' ? 'direct' : 'group'
+            type: room.type === 'private' ? 'private' : 'group'
           })) as ChatRoom[]
           setRooms(formattedRooms)
         }
@@ -444,9 +445,9 @@ export default function Chat() {
                         </div>
                         {message.attachment_url && (
                           <ChatMessageAttachment 
-                            attachment_url={message.attachment_url}
-                            attachment_name={message.attachment_name || ''}
-                            attachment_size={message.attachment_size || 0}
+                            attachmentUrl={message.attachment_url}
+                            attachmentName={message.attachment_name || ''}
+                            attachmentSize={message.attachment_size || 0}
                           />
                         )}
                         <div className="text-xs opacity-70 mt-1">
@@ -511,14 +512,14 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        open={showCreateRoomDialog}
-        onOpenChange={setShowCreateRoomDialog}
+        isOpen={showCreateRoomDialog}
+        onClose={() => setShowCreateRoomDialog(false)}
         onRoomCreated={handleCreateRoom}
       />
 
       <DirectChatDialog
-        open={showDirectChatDialog}
-        onOpenChange={setShowDirectChatDialog}
+        isOpen={showDirectChatDialog}
+        onClose={() => setShowDirectChatDialog(false)}
         onChatCreated={handleDirectChatCreated}
       />
 

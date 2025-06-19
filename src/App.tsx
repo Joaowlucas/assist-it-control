@@ -33,39 +33,31 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={
-                <AuthGuard>
-                  <AdminGuard>
-                    <AdminLayout>
-                      <Dashboard />
-                    </AdminLayout>
-                  </AdminGuard>
+                <AuthGuard requiredRole="admin_tech">
+                  <AdminLayout>
+                    <Dashboard />
+                  </AdminLayout>
                 </AuthGuard>
               } />
               <Route path="/tickets" element={
-                <AuthGuard>
-                  <AdminGuard>
-                    <AdminLayout>
-                      <Tickets />
-                    </AdminLayout>
-                  </AdminGuard>
+                <AuthGuard requiredRole="admin_tech">
+                  <AdminLayout>
+                    <Tickets />
+                  </AdminLayout>
                 </AuthGuard>
               } />
               <Route path="/equipment" element={
-                <AuthGuard>
-                  <AdminGuard>
-                    <AdminLayout>
-                      <Equipment />
-                    </AdminLayout>
-                  </AdminGuard>
+                <AuthGuard requiredRole="admin_tech">
+                  <AdminLayout>
+                    <Equipment />
+                  </AdminLayout>
                 </AuthGuard>
               } />
               <Route path="/assignments" element={
-                <AuthGuard>
-                  <AdminGuard>
-                    <AdminLayout>
-                      <Assignments />
-                    </AdminLayout>
-                  </AdminGuard>
+                <AuthGuard requiredRole="admin_tech">
+                  <AdminLayout>
+                    <Assignments />
+                  </AdminLayout>
                 </AuthGuard>
               } />
               <Route path="/settings" element={
@@ -79,9 +71,7 @@ function App() {
               } />
               <Route path="/chat" element={
                 <AuthGuard>
-                  <ChatWithRoleLayout>
-                    <Chat />
-                  </ChatWithRoleLayout>
+                  <ChatWithRoleLayout />
                 </AuthGuard>
               } />
               
