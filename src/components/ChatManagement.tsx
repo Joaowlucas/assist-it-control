@@ -8,16 +8,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, MessageCircle, AlertCircle, Edit } from 'lucide-react'
+import { Trash2, Plus, MessageCircle, AlertCircle, Edit, Users, Shield, Settings, User } from 'lucide-react'
 import { useChatRooms, useCreateChatRoom, useDeleteChatRoom, ChatRoom } from '@/hooks/useChat'
 import { useUnits } from '@/hooks/useUnits'
 import { useProfiles } from '@/hooks/useProfiles'
 import { useToast } from '@/hooks/use-toast'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { EditChatRoomDialog } from '@/components/EditChatRoomDialog'
+import { useAuth } from '@/hooks/useAuth'
 
 export function ChatManagement() {
   const { toast } = useToast()
+  const { profile } = useAuth()
   const { data: rooms, isLoading: roomsLoading, error: roomsError } = useChatRooms()
   const { data: units } = useUnits()
   const { data: profiles } = useProfiles()
@@ -47,10 +49,8 @@ export function ChatManagement() {
       return
     }
 
-    // Validar se há participantes disponíveis
-    const availableUsers = profiles?.filter(p => 
-      formData.unitId === 'general' ? true : p.unit_id === formData.unitId
-    )
+    // Validar se há participantes disponíveis baseado no role do usuário
+    const availableUsers = getAvailableUsers()
 
     if (!availableUsers || availableUsers.length === 0) {
       toast({
@@ -106,9 +106,66 @@ export function ChatManagement() {
     setIsEditDialogOpen(true)
   }
 
-  const availableUsers = profiles?.filter(p => 
-    formData.unitId === 'general' ? true : p.unit_id === formData.unitId
-  )
+  const getAvailableUsers = () => {
+    if (!profiles) return []
+
+    // Admin pode ver todos os usuários
+    if (profile?.role === 'admin') {
+      return formData.unitId === 'general' 
+        ? profiles 
+        : profiles.filter(p => p.unit_id === formData.unitId)
+    }
+
+    // Técnico pode ver usuários de suas unidades
+    if (profile?.role === 'technician') {
+      return formData.unitId === 'general' 
+        ? profiles.filter(p => p.unit_id === profile.unit_id || p.role === 'technician' || p.role === 'admin')
+        : profiles.filter(p => p.unit_id === formData.unitId)
+    }
+
+    // Usuário regular pode ver apenas usuários de sua unidade
+    return formData.unitId === 'general' 
+      ? profiles.filter(p => p.unit_id === profile?.unit_id)
+      : profiles.filter(p => p.unit_id === formData.unitId)
+  }
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return Shield
+      case 'technician':
+        return Settings
+      case 'user':
+        return User
+      default:
+        return User
+    }
+  }
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'text-red-500'
+      case 'technician':
+        return 'text-blue-500'
+      case 'user':
+        return 'text-green-500'
+      default:
+        return 'text-gray-500'
+    }
+  }
+
+  const canManageRoom = (room: ChatRoom) => {
+    // Admin pode gerenciar todas as salas
+    if (profile?.role === 'admin') return true
+    
+    // Criador da sala pode gerenciá-la
+    if (room.created_by === profile?.id) return true
+    
+    return false
+  }
+
+  const availableUsers = getAvailableUsers()
 
   if (roomsLoading) {
     return (
@@ -217,26 +274,30 @@ export function ChatManagement() {
                   ) : (
                     <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
                       <div className="space-y-2">
-                        {availableUsers.map((user) => (
-                          <div key={user.id} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id={`user-${user.id}`}
-                              checked={formData.participantIds.includes(user.id)}
-                              onChange={() => handleParticipantToggle(user.id)}
-                              className="rounded"
-                            />
-                            <label 
-                              htmlFor={`user-${user.id}`}
-                              className="text-sm font-medium flex-1 cursor-pointer"
-                            >
-                              {user.name}
-                              <span className="text-muted-foreground ml-1">
-                                ({user.role})
-                              </span>
-                            </label>
-                          </div>
-                        ))}
+                        {availableUsers.map((user) => {
+                          const RoleIcon = getRoleIcon(user.role)
+                          return (
+                            <div key={user.id} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`user-${user.id}`}
+                                checked={formData.participantIds.includes(user.id)}
+                                onChange={() => handleParticipantToggle(user.id)}
+                                className="rounded"
+                              />
+                              <label 
+                                htmlFor={`user-${user.id}`}
+                                className="text-sm font-medium flex-1 cursor-pointer flex items-center gap-2"
+                              >
+                                <RoleIcon className={`h-3 w-3 ${getRoleColor(user.role)}`} />
+                                {user.name}
+                                <span className="text-muted-foreground text-xs">
+                                  ({user.role})
+                                </span>
+                              </label>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -275,6 +336,7 @@ export function ChatManagement() {
               <TableRow>
                 <TableHead>Nome da Sala</TableHead>
                 <TableHead>Unidade</TableHead>
+                <TableHead>Participantes</TableHead>
                 <TableHead>Criado por</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
@@ -296,6 +358,12 @@ export function ChatManagement() {
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span className="text-sm">{room.participants?.length || 0}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{room.profiles?.name || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={room.is_active ? "default" : "secondary"}>
@@ -304,21 +372,30 @@ export function ChatManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditRoom(room)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteRoom(room.id, room.name)}
-                        disabled={deleteRoom.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canManageRoom(room) && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditRoom(room)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteRoom(room.id, room.name)}
+                            disabled={deleteRoom.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      {!canManageRoom(room) && (
+                        <Badge variant="outline" className="text-xs">
+                          Apenas leitura
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

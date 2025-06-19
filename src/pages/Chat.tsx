@@ -1,5 +1,4 @@
-
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,11 +27,17 @@ export default function Chat() {
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null)
   const [showContactsSidebar, setShowContactsSidebar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
   const sendMessage = useSendMessage()
   const editMessage = useEditMessage()
   const deleteMessage = useDeleteMessage()
+
+  // Auto-scroll para a última mensagem
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,18 +83,21 @@ export default function Chat() {
     return profile?.role === 'admin' || senderId === profile?.id
   }
 
-  const filteredRooms = rooms?.filter(room => {
-    // Admin vê todas as salas
-    if (profile?.role === 'admin') return true
-    
-    // Técnico vê salas de suas unidades
-    if (profile?.role === 'technician') {
-      return room.unit_id === profile.unit_id || room.unit_id === null
+  const canCreateNewChat = () => {
+    // Todos os usuários autenticados podem criar chats
+    return !!profile
+  }
+
+  const getRoomDisplayName = (room: ChatRoom) => {
+    // Se for conversa privada (2 participantes), mostrar nome do outro usuário
+    if (room.participants && room.participants.length === 2) {
+      const otherParticipant = room.participants.find(p => p.user_id !== profile?.id)
+      if (otherParticipant) {
+        return `Chat com ${otherParticipant.profiles.name}`
+      }
     }
-    
-    // Usuário vê apenas salas de sua unidade
-    return room.unit_id === profile?.unit_id
-  })
+    return room.name
+  }
 
   if (roomsLoading) {
     return (
@@ -112,21 +120,23 @@ export default function Chat() {
               <MessageCircle className="h-5 w-5" />
               Chat Interno
             </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowContactsSidebar(true)}
-              className="flex items-center gap-2"
-            >
-              <UserPlus className="h-4 w-4" />
-              Nova Conversa
-            </Button>
+            {canCreateNewChat() && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowContactsSidebar(true)}
+                className="flex items-center gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Nova Conversa
+              </Button>
+            )}
           </div>
         </div>
         
         <ScrollArea className="h-full">
           <div className="p-4 space-y-2">
-            {filteredRooms?.map((room) => (
+            {rooms?.map((room) => (
               <Card
                 key={room.id}
                 className={`cursor-pointer transition-colors hover:bg-accent ${
@@ -137,26 +147,34 @@ export default function Chat() {
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <h3 className="font-medium">{room.name}</h3>
+                      <h3 className="font-medium">{getRoomDisplayName(room)}</h3>
                       {room.units?.name && (
                         <p className="text-sm text-muted-foreground">
                           {room.units.name}
                         </p>
                       )}
                     </div>
-                    <Badge variant="secondary">
-                      <Users className="h-3 w-3 mr-1" />
-                      Chat
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="secondary" className="text-xs">
+                        <Users className="h-3 w-3 mr-1" />
+                        {room.participants?.length || 0}
+                      </Badge>
+                      {room.created_by === profile?.id && (
+                        <Badge variant="outline" className="text-xs">
+                          Criador
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
             
-            {(!filteredRooms || filteredRooms.length === 0) && (
+            {(!rooms || rooms.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>Nenhuma sala de chat disponível</p>
+                <p className="text-sm">Clique em "Nova Conversa" para começar</p>
               </div>
             )}
           </div>
@@ -171,7 +189,7 @@ export default function Chat() {
             <div className="p-4 border-b bg-background">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">{selectedRoom.name}</h2>
+                  <h2 className="text-lg font-semibold">{getRoomDisplayName(selectedRoom)}</h2>
                   {selectedRoom.units?.name && (
                     <p className="text-sm text-muted-foreground">
                       {selectedRoom.units.name}
@@ -179,18 +197,20 @@ export default function Chat() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowContactsSidebar(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Nova Conversa
-                  </Button>
+                  {canCreateNewChat() && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowContactsSidebar(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Nova Conversa
+                    </Button>
+                  )}
                   <Badge variant="outline">
                     <Users className="h-3 w-3 mr-1" />
-                    Chat Ativo
+                    {selectedRoom.participants?.length || 0} participantes
                   </Badge>
                 </div>
               </div>
@@ -300,6 +320,7 @@ export default function Chat() {
                     </div>
                   ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 

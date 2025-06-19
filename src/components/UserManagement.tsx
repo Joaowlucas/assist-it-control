@@ -5,22 +5,25 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Shield, User, Settings } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Pencil, Trash2, Shield, User, Settings, Search, UserCheck, UserX } from 'lucide-react'
 import { useProfiles } from '@/hooks/useProfiles'
 import { useUnits } from '@/hooks/useUnits'
 import { CreateUserDialog } from '@/components/CreateUserDialog'
 import { EditUserDialog } from '@/components/EditUserDialog'
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog'
-import { useDeleteUser } from '@/hooks/useUserManagement'
+import { useDeleteUser, useToggleUserStatus } from '@/hooks/useUserManagement'
 
 export function UserManagement() {
   const { data: profiles = [], isLoading } = useProfiles()
   const { data: units = [] } = useUnits()
   const deleteUser = useDeleteUser()
+  const toggleUserStatus = useToggleUserStatus()
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean
     userId: string | null
@@ -30,6 +33,11 @@ export function UserManagement() {
     userId: null,
     userName: ''
   })
+
+  const filteredProfiles = profiles.filter(profile =>
+    profile.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    profile.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -81,6 +89,14 @@ export function UserManagement() {
     })
   }
 
+  const handleToggleStatus = async (userId: string, currentStatus: string) => {
+    try {
+      await toggleUserStatus.mutateAsync({ userId, currentStatus })
+    } catch (error) {
+      console.error('Error toggling user status:', error)
+    }
+  }
+
   const confirmDelete = async () => {
     if (deleteDialog.userId) {
       try {
@@ -92,12 +108,61 @@ export function UserManagement() {
     }
   }
 
+  const stats = [
+    {
+      title: "Total de Usuários",
+      value: profiles.length,
+      icon: User,
+      color: "text-blue-500"
+    },
+    {
+      title: "Administradores",
+      value: profiles.filter(p => p.role === 'admin').length,
+      icon: Shield,
+      color: "text-red-500"
+    },
+    {
+      title: "Técnicos",
+      value: profiles.filter(p => p.role === 'technician').length,
+      icon: Settings,
+      color: "text-blue-500"
+    },
+    {
+      title: "Usuários Ativos",
+      value: profiles.filter(p => p.status === 'ativo').length,
+      icon: UserCheck,
+      color: "text-green-500"
+    }
+  ]
+
   if (isLoading) {
     return <div className="flex justify-center p-4">Carregando usuários...</div>
   }
 
   return (
     <>
+      {/* Cards de Estatísticas */}
+      <div className="grid gap-4 md:grid-cols-4 mb-6">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon
+          return (
+            <Card key={index}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </p>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                  </div>
+                  <Icon className={`h-8 w-8 ${stat.color}`} />
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -115,6 +180,17 @@ export function UserManagement() {
           </Button>
         </CardHeader>
         <CardContent>
+          {/* Barra de Pesquisa */}
+          <div className="flex items-center space-x-2 mb-4">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar usuários..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -126,7 +202,7 @@ export function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {profiles.map((user) => (
+              {filteredProfiles.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -166,13 +242,28 @@ export function UserManagement() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditUser(user)}
+                        title="Editar usuário"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleToggleStatus(user.id, user.status)}
+                        disabled={toggleUserStatus.isPending}
+                        title={user.status === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
+                      >
+                        {user.status === 'ativo' ? (
+                          <UserX className="h-4 w-4" />
+                        ) : (
+                          <UserCheck className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleDeleteUser(user.id, user.name)}
+                        title="Excluir usuário"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -183,10 +274,10 @@ export function UserManagement() {
             </TableBody>
           </Table>
           
-          {profiles.length === 0 && (
+          {filteredProfiles.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum usuário encontrado</p>
+              <p>{searchTerm ? 'Nenhum usuário encontrado para a busca' : 'Nenhum usuário encontrado'}</p>
             </div>
           )}
         </CardContent>

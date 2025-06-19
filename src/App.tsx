@@ -15,7 +15,6 @@ import Tickets from "./pages/Tickets";
 import Equipment from "./pages/Equipment";
 import Assignments from "./pages/Assignments";
 import Settings from "./pages/Settings";
-import Users from "./pages/Users";
 import UserPortal from "./pages/UserPortal";
 import UserDashboard from "./pages/UserDashboard";
 import UserTickets from "./pages/UserTickets";
@@ -121,14 +120,7 @@ const App = () => (
                 </AuthGuard>
               } />
               
-              {/* Admin Only Routes */}
-              <Route path="/users" element={
-                <AuthGuard requiredRole="admin">
-                  <AdminLayout>
-                    <Users />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
+              {/* Admin Only Routes - Users management moved to Settings */}
               <Route path="/settings" element={
                 <AuthGuard requiredRole="admin">
                   <AdminLayout>

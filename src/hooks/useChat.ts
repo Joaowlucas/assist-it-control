@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -67,9 +66,9 @@ export function useChatRooms() {
     queryFn: async () => {
       if (!profile?.id) return []
 
-      console.log('Fetching chat rooms for user:', profile.id)
+      console.log('Fetching chat rooms for user:', profile.id, 'with role:', profile.role)
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('chat_rooms')
         .select(`
           *,
@@ -80,8 +79,23 @@ export function useChatRooms() {
           ),
           profiles!chat_rooms_created_by_fkey(name, avatar_url)
         `)
-        .eq('chat_participants.user_id', profile.id)
         .eq('is_active', true)
+
+      // Aplicar filtros baseados no role
+      if (profile.role === 'admin') {
+        // Admin vê todas as salas ativas
+        console.log('Admin user - fetching all rooms')
+      } else if (profile.role === 'technician') {
+        // Técnico vê: salas de suas unidades + salas gerais + salas onde participa + salas criadas por ele
+        console.log('Technician user - filtering rooms')
+        query = query.or(`unit_id.is.null,unit_id.eq.${profile.unit_id},created_by.eq.${profile.id},chat_participants.user_id.eq.${profile.id}`)
+      } else {
+        // Usuário vê: salas de sua unidade + salas gerais + salas onde participa
+        console.log('Regular user - filtering rooms')
+        query = query.or(`unit_id.is.null,unit_id.eq.${profile.unit_id},chat_participants.user_id.eq.${profile.id}`)
+      }
+
+      const { data, error } = await query
         .order('updated_at', { ascending: false })
 
       if (error) {
@@ -89,7 +103,7 @@ export function useChatRooms() {
         throw error
       }
 
-      console.log('Chat rooms fetched:', data)
+      console.log('Chat rooms fetched:', data?.length || 0)
       return data as ChatRoom[]
     },
     enabled: !!profile?.id,
@@ -496,8 +510,9 @@ export function useCreateChatRoom() {
         throw roomError
       }
 
-      // Adicionar participantes
-      const participantsData = participantIds.map(userId => ({
+      // Adicionar participantes (incluindo o criador automaticamente)
+      const allParticipants = [...new Set([...participantIds, profile.id])]
+      const participantsData = allParticipants.map(userId => ({
         room_id: room.id,
         user_id: userId,
       }))
