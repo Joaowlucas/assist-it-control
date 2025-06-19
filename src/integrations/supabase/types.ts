@@ -1141,16 +1141,12 @@ export type Database = {
         }
         Returns: undefined
       }
-      can_access_chat_room: {
-        Args: { room_id: string; user_id: string }
-        Returns: boolean
-      }
-      can_access_chat_room_secure: {
-        Args: { room_id: string; user_id: string }
-        Returns: boolean
-      }
       can_delete_chat_room: {
         Args: { room_id: string; user_id: string }
+        Returns: boolean
+      }
+      can_manage_room: {
+        Args: { room_id: string }
         Returns: boolean
       }
       generate_tombamento: {
@@ -1183,12 +1179,16 @@ export type Database = {
         }[]
       }
       get_user_role: {
-        Args: { user_id: string }
+        Args: Record<PropertyKey, never> | { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
       increment_tutorial_views: {
         Args: { tutorial_id: string }
         Returns: undefined
+      }
+      is_participant: {
+        Args: { room_id: string }
+        Returns: boolean
       }
       reject_equipment_request: {
         Args: { request_id: string; admin_comments?: string }
@@ -1196,10 +1196,6 @@ export type Database = {
       }
       technician_has_unit_access: {
         Args: { technician_id: string; unit_id: string }
-        Returns: boolean
-      }
-      user_can_access_chat_room: {
-        Args: { room_id: string; user_id: string }
         Returns: boolean
       }
     }

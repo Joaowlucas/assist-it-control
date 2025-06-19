@@ -71,8 +71,7 @@ export function useChatRooms() {
 
       console.log('Fetching chat rooms for user:', profile.id, 'with role:', profile.role)
 
-      // Com as novas políticas RLS, a query básica já filtra automaticamente
-      // baseado nas permissões do usuário
+      // Com as novas políticas RLS simplificadas, a query básica já filtra automaticamente
       const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
@@ -338,7 +337,6 @@ export function useSendMessage() {
       return data
     },
     onSuccess: (data) => {
-      // Invalidar múltiplas queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
       toast({
@@ -453,11 +451,10 @@ export function useDeleteChatRoom() {
     mutationFn: async (roomId: string) => {
       console.log('Deleting chat room:', roomId)
 
-      // Verificar se o usuário pode excluir a sala
+      // Usar a nova função can_manage_room
       const { data: canDelete, error: checkError } = await supabase
-        .rpc('can_delete_chat_room', { 
-          room_id: roomId, 
-          user_id: (await supabase.auth.getUser()).data.user?.id 
+        .rpc('can_manage_room', { 
+          room_id: roomId
         })
 
       if (checkError) {
@@ -706,7 +703,6 @@ export function useCreateChatRoom() {
       return room.id
     },
     onSuccess: (roomId) => {
-      // Invalidar imediatamente e forçar refetch
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
       queryClient.refetchQueries({ queryKey: ['chat-rooms'] })
       toast({
@@ -780,7 +776,7 @@ export function useAvailableChatUsers() {
   })
 }
 
-// Nova função para verificar se o usuário pode excluir uma sala
+// Nova função para verificar se o usuário pode excluir uma sala usando a função atualizada
 export function useCanDeleteChatRoom(roomId: string) {
   const { profile } = useAuth()
 
@@ -790,9 +786,8 @@ export function useCanDeleteChatRoom(roomId: string) {
       if (!profile?.id || !roomId) return false
 
       const { data, error } = await supabase
-        .rpc('can_delete_chat_room', { 
-          room_id: roomId, 
-          user_id: profile.id 
+        .rpc('can_manage_room', { 
+          room_id: roomId
         })
 
       if (error) {

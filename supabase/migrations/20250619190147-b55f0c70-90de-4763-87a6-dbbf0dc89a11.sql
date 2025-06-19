@@ -1,5 +1,20 @@
 
--- Criar função para obter role do usuário (evita recursão RLS)
+-- Remover todas as políticas RLS problemáticas
+DROP POLICY IF EXISTS "Users can view accessible chat rooms" ON public.chat_rooms;
+DROP POLICY IF EXISTS "Authenticated users can create chat rooms" ON public.chat_rooms;
+DROP POLICY IF EXISTS "Room creators and admins can update rooms" ON public.chat_rooms;
+DROP POLICY IF EXISTS "Users can view participants of accessible rooms" ON public.chat_participants;
+DROP POLICY IF EXISTS "Users can manage participants in their rooms" ON public.chat_participants;
+DROP POLICY IF EXISTS "Users can view messages in accessible rooms" ON public.chat_messages;
+DROP POLICY IF EXISTS "Users can send messages to accessible rooms" ON public.chat_messages;
+DROP POLICY IF EXISTS "Users can update their messages or admins can update any" ON public.chat_messages;
+
+-- Remover funções que causam recursão
+DROP FUNCTION IF EXISTS public.can_access_chat_room_secure(uuid, uuid);
+DROP FUNCTION IF EXISTS public.user_can_access_chat_room(uuid, uuid);
+DROP FUNCTION IF EXISTS public.can_access_chat_room(uuid, uuid);
+
+-- Criar função simples para obter role do usuário (sem RLS)
 CREATE OR REPLACE FUNCTION public.get_user_role()
 RETURNS TEXT
 LANGUAGE sql
@@ -137,3 +152,8 @@ USING (
   sender_id = auth.uid() 
   OR public.get_user_role() = 'admin'
 );
+
+-- Garantir que RLS está habilitado
+ALTER TABLE public.chat_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
