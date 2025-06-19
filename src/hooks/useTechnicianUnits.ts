@@ -31,8 +31,8 @@ export function useTechnicianUnits(technicianId?: string) {
       return data as TechnicianUnit[]
     },
     enabled: !!technicianId,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    refetchOnWindowFocus: true, // Refetch quando voltar ao foco
+    staleTime: 2 * 60 * 1000, // 2 minutos - reduzido para atualizações mais frequentes
+    refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   })
 }
@@ -56,8 +56,9 @@ export function useCreateTechnicianUnits() {
       return data
     },
     onSuccess: (_, variables) => {
-      // Invalidar dados relacionados às unidades do técnico
+      // Invalidar TODAS as queries relacionadas ao técnico
       queryClient.invalidateQueries({ queryKey: ['technician-units'] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
       queryClient.invalidateQueries({ queryKey: ['equipment'] })
       queryClient.invalidateQueries({ queryKey: ['assignments'] })
       queryClient.invalidateQueries({ queryKey: ['available-equipment'] })
@@ -65,6 +66,15 @@ export function useCreateTechnicianUnits() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-charts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      
+      // Forçar refetch imediato dos dados críticos
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['technician-units', variables.technicianId] })
+        queryClient.refetchQueries({ queryKey: ['tickets'] })
+        queryClient.refetchQueries({ queryKey: ['equipment'] })
+        queryClient.refetchQueries({ queryKey: ['assignments'] })
+      }, 100)
     },
     onError: (error: any) => {
       toast({
@@ -104,8 +114,9 @@ export function useUpdateTechnicianUnits() {
       }
     },
     onSuccess: (_, variables) => {
-      // Invalidar todas as queries que dependem das unidades do técnico
-      queryClient.invalidateQueries({ queryKey: ['technician-units', variables.technicianId] })
+      // Invalidar TODAS as queries relacionadas ao técnico
+      queryClient.invalidateQueries({ queryKey: ['technician-units'] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
       queryClient.invalidateQueries({ queryKey: ['equipment'] })
       queryClient.invalidateQueries({ queryKey: ['assignments'] })
       queryClient.invalidateQueries({ queryKey: ['available-equipment'] })
@@ -113,6 +124,15 @@ export function useUpdateTechnicianUnits() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-charts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      
+      // Forçar refetch imediato dos dados críticos
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['technician-units', variables.technicianId] })
+        queryClient.refetchQueries({ queryKey: ['tickets'] })
+        queryClient.refetchQueries({ queryKey: ['equipment'] })
+        queryClient.refetchQueries({ queryKey: ['assignments'] })
+      }, 100)
       
       toast({
         title: 'Unidades atualizadas!',

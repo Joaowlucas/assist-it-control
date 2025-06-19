@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { MessageCircle, Plus, Search, Send, Users, Settings, Paperclip, X, Building2, UserPlus, MessageSquare } from "lucide-react"
-import { useChat, useCreateChatRoom, useJoinChatRoom, useLeaveChatRoom, useSendMessage, useDeleteChatRoom } from "@/hooks/useChat"
+import { useChatRooms, useChatMessages, useCreateChatRoom, useSendMessage, useDeleteChatRoom } from "@/hooks/useChat"
 import { useAvailableChatUsers } from "@/hooks/useAvailableChatUsers"
 import { useAuth } from "@/hooks/useAuth"
 import { ChatRoomAvatar } from "@/components/ChatRoomAvatar"
@@ -32,13 +33,13 @@ export default function Chat() {
   const [isDirectChatDialogOpen, setIsDirectChatDialogOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<any>(null)
   const [attachments, setAttachments] = useState<File[]>([])
+  const [selectedUser, setSelectedUser] = useState<any>(null)
 
   const { profile } = useAuth()
-  const { data: rooms = [], isLoading: roomsLoading } = useChat()
+  const { data: rooms = [], isLoading: roomsLoading } = useChatRooms()
+  const { data: messages = [] } = useChatMessages(selectedRoom || undefined)
   const { data: availableUsers = [] } = useAvailableChatUsers()
   const createRoom = useCreateChatRoom()
-  const joinRoom = useJoinChatRoom()
-  const leaveRoom = useLeaveChatRoom()
   const sendMessage = useSendMessage()
   const deleteRoom = useDeleteChatRoom()
 
@@ -51,11 +52,18 @@ export default function Chat() {
     if (!selectedRoom || (!messageText.trim() && attachments.length === 0)) return
 
     try {
-      await sendMessage.mutateAsync({
-        roomId: selectedRoom,
-        content: messageText,
-        attachments
-      })
+      if (attachments.length > 0) {
+        await sendMessage.mutateAsync({
+          roomId: selectedRoom,
+          content: messageText,
+          attachmentFile: attachments[0]
+        })
+      } else {
+        await sendMessage.mutateAsync({
+          roomId: selectedRoom,
+          content: messageText
+        })
+      }
       setMessageText("")
       setAttachments([])
     } catch (error) {
@@ -87,14 +95,19 @@ export default function Chat() {
       const otherParticipant = room.participants.find(p => p.user_id !== profile?.id)
       return otherParticipant?.profiles?.name || room.name
     }
-    if (room.type === 'unit' && room.unit) {
-      return `${room.unit.name} (Unidade)`
+    if (room.type === 'unit' && room.units) {
+      return `${room.units.name} (Unidade)`
     }
     return room.name
   }
 
   const canManageRoom = (room: any) => {
     return profile?.role === 'admin' || room.created_by === profile?.id
+  }
+
+  const handleDirectChat = (user: any) => {
+    setSelectedUser(user)
+    setIsDirectChatDialogOpen(true)
   }
 
   return (
@@ -214,10 +227,7 @@ export default function Chat() {
                 <div
                   key={user.id}
                   className="p-2 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setIsDirectChatDialogOpen(true)
-                    // Aqui você pode definir o usuário selecionado se necessário
-                  }}
+                  onClick={() => handleDirectChat(user)}
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
@@ -270,7 +280,7 @@ export default function Chat() {
             {/* Mensagens */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
-                {currentRoom.messages?.map((message) => (
+                {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex gap-3 ${
@@ -279,9 +289,9 @@ export default function Chat() {
                   >
                     {message.sender_id !== profile?.id && (
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={message.sender?.avatar_url || undefined} />
+                        <AvatarImage src={message.profiles?.avatar_url || undefined} />
                         <AvatarFallback>
-                          {message.sender?.name?.charAt(0) || '?'}
+                          {message.profiles?.name?.charAt(0) || '?'}
                         </AvatarFallback>
                       </Avatar>
                     )}
@@ -294,16 +304,16 @@ export default function Chat() {
                     >
                       {message.sender_id !== profile?.id && (
                         <p className="text-xs font-medium mb-1">
-                          {message.sender?.name}
+                          {message.profiles?.name}
                         </p>
                       )}
                       <p className="text-sm">{message.content}</p>
                       {message.attachment_url && (
                         <ChatMessageAttachment
-                          url={message.attachment_url}
-                          name={message.attachment_name || 'Anexo'}
-                          type={message.attachment_type || 'file'}
-                          size={message.attachment_size}
+                          attachmentUrl={message.attachment_url}
+                          attachmentName={message.attachment_name || 'Anexo'}
+                          attachmentType={message.attachment_type || 'file'}
+                          attachmentSize={message.attachment_size}
                         />
                       )}
                       <p className="text-xs opacity-70 mt-1">
@@ -337,7 +347,7 @@ export default function Chat() {
               )}
               <div className="flex gap-2">
                 <ChatAttachmentUpload
-                  onFilesSelected={setAttachments}
+                  onFileSelect={(files) => setAttachments(files)}
                   maxFiles={5}
                   maxSizeInMB={10}
                 />
@@ -373,24 +383,25 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        open={isCreateRoomDialogOpen}
-        onOpenChange={setIsCreateRoomDialogOpen}
+        isOpen={isCreateRoomDialogOpen}
+        onClose={() => setIsCreateRoomDialogOpen(false)}
       />
 
       <EditChatRoomDialog
         room={editingRoom}
-        open={isEditRoomDialogOpen}
-        onOpenChange={setIsEditRoomDialogOpen}
+        isOpen={isEditRoomDialogOpen}
+        onClose={() => setIsEditRoomDialogOpen(false)}
       />
 
       <StartChatDialog
-        open={isStartChatDialogOpen}
-        onOpenChange={setIsStartChatDialogOpen}
+        isOpen={isStartChatDialogOpen}
+        onClose={() => setIsStartChatDialogOpen(false)}
       />
 
       <DirectChatDialog
-        open={isDirectChatDialogOpen}
-        onOpenChange={setIsDirectChatDialogOpen}
+        isOpen={isDirectChatDialogOpen}
+        onClose={() => setIsDirectChatDialogOpen(false)}
+        targetUserId={selectedUser?.id}
       />
     </div>
   )

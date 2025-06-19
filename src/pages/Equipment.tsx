@@ -11,7 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEquipment, useCreateEquipment, useUpdateEquipment, useDeleteEquipment } from "@/hooks/useEquipment"
 import { useUnits } from "@/hooks/useUnits"
+import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
+import { useAuth } from "@/hooks/useAuth"
 import { useEquipmentPhotos } from "@/hooks/useEquipmentPhotos"
+import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
 import { EquipmentPDFPreviewDialog } from "@/components/EquipmentPDFPreviewDialog"
 import { Plus, Search, Eye, Edit, Trash2, Camera, FileText, Package, MapPin, Calendar, Shield, Wrench } from "lucide-react"
@@ -28,11 +31,20 @@ export default function Equipment() {
   const [selectedEquipment, setSelectedEquipment] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
 
+  const { profile } = useAuth()
   const { data: equipment = [], isLoading } = useEquipment()
-  const { data: units = [] } = useUnits()
+  const { data: allUnits = [] } = useUnits()
+  const { data: technicianUnits = [] } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
+  const { data: systemSettings } = useSystemSettings()
+  const { data: equipmentPhotos = [] } = useEquipmentPhotos(selectedEquipment?.id)
   const createEquipment = useCreateEquipment()
   const updateEquipment = useUpdateEquipment()
   const deleteEquipment = useDeleteEquipment()
+
+  // Filtrar unidades baseado no role
+  const availableUnits = profile?.role === 'technician' 
+    ? allUnits.filter(unit => technicianUnits.some(tu => tu.unit_id === unit.id))
+    : allUnits
 
   const filteredEquipment = equipment.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -239,7 +251,7 @@ export default function Equipment() {
                       <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {units.map((unit) => (
+                      {availableUnits.map((unit) => (
                         <SelectItem key={unit.id} value={unit.id}>
                           {unit.name}
                         </SelectItem>
@@ -526,13 +538,15 @@ export default function Equipment() {
       {selectedEquipment && (
         <>
           <EquipmentPhotoGallery
-            equipment={selectedEquipment}
+            equipmentId={selectedEquipment.id}
             open={isPhotoGalleryOpen}
             onOpenChange={setIsPhotoGalleryOpen}
           />
 
           <EquipmentPDFPreviewDialog
-            equipment={selectedEquipment}
+            photos={equipmentPhotos}
+            systemSettings={systemSettings}
+            tombamento={selectedEquipment.tombamento}
             open={isPdfPreviewOpen}
             onOpenChange={setIsPdfPreviewOpen}
           />
@@ -591,7 +605,7 @@ export default function Equipment() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {units.map((unit) => (
+                        {availableUnits.map((unit) => (
                           <SelectItem key={unit.id} value={unit.id}>
                             {unit.name}
                           </SelectItem>
