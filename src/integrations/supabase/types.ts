@@ -1138,6 +1138,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_access_chat_room: {
+        Args: { room_id: string; user_id: string }
+        Returns: boolean
+      }
       generate_tombamento: {
         Args: Record<PropertyKey, never>
         Returns: string

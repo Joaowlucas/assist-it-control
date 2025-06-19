@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -68,34 +69,19 @@ export function useChatRooms() {
 
       console.log('Fetching chat rooms for user:', profile.id, 'with role:', profile.role)
 
-      let query = supabase
+      // Usar as novas políticas RLS - não precisamos mais filtrar manualmente
+      const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
           *,
           units(name),
-          chat_participants!inner(
+          chat_participants(
             user_id,
             profiles(name, avatar_url)
           ),
           profiles!chat_rooms_created_by_fkey(name, avatar_url)
         `)
         .eq('is_active', true)
-
-      // Aplicar filtros baseados no role
-      if (profile.role === 'admin') {
-        // Admin vê todas as salas ativas
-        console.log('Admin user - fetching all rooms')
-      } else if (profile.role === 'technician') {
-        // Técnico vê: salas de suas unidades + salas gerais + salas onde participa + salas criadas por ele
-        console.log('Technician user - filtering rooms')
-        query = query.or(`unit_id.is.null,unit_id.eq.${profile.unit_id},created_by.eq.${profile.id},chat_participants.user_id.eq.${profile.id}`)
-      } else {
-        // Usuário vê: salas de sua unidade + salas gerais + salas onde participa
-        console.log('Regular user - filtering rooms')
-        query = query.or(`unit_id.is.null,unit_id.eq.${profile.unit_id},chat_participants.user_id.eq.${profile.id}`)
-      }
-
-      const { data, error } = await query
         .order('updated_at', { ascending: false })
 
       if (error) {
@@ -295,7 +281,7 @@ export function useEditMessage() {
 
 export function useDeleteMessage() {
   const queryClient = useQueryClient()
-  const { toast } = useToast()
+  const { toast } = useToust()
 
   return useMutation({
     mutationFn: async (messageId: string) => {
@@ -464,32 +450,33 @@ export function useCreateChatRoom() {
 
       console.log('Creating chat room:', { name, unitId, participantIds })
 
-      // Para conversas privadas (2 participantes), verificar se já existe uma conversa entre os mesmos usuários
-      if (participantIds.length === 2) {
+      // Para conversas privadas (2 participantes), verificar se já existe uma conversa
+      if (participantIds.length === 2 && !unitId) {
+        const allParticipants = [...participantIds, profile.id].sort()
+        
+        // Buscar salas existentes com os mesmos participantes
         const { data: existingRooms, error: searchError } = await supabase
           .from('chat_rooms')
           .select(`
             id,
             name,
+            unit_id,
             chat_participants!inner(user_id)
           `)
           .eq('is_active', true)
+          .is('unit_id', null) // Apenas salas privadas (sem unidade)
 
         if (searchError) {
           console.error('Error searching existing rooms:', searchError)
         } else if (existingRooms) {
           // Verificar se há uma sala com exatamente os mesmos participantes
-          const existingRoom = existingRooms.find(room => {
+          for (const room of existingRooms) {
             const roomParticipants = room.chat_participants?.map(p => p.user_id).sort()
-            const newParticipants = participantIds.sort()
-            return roomParticipants?.length === 2 && 
-                   roomParticipants?.length === newParticipants.length &&
-                   roomParticipants?.every((id, index) => id === newParticipants[index])
-          })
-
-          if (existingRoom) {
-            console.log('Found existing private conversation:', existingRoom.id)
-            return existingRoom.id
+            if (roomParticipants?.length === allParticipants.length &&
+                roomParticipants.every((id, index) => id === allParticipants[index])) {
+              console.log('Found existing private conversation:', room.id)
+              return room.id
+            }
           }
         }
       }
@@ -510,20 +497,21 @@ export function useCreateChatRoom() {
         throw roomError
       }
 
-      // Adicionar participantes (incluindo o criador automaticamente)
-      const allParticipants = [...new Set([...participantIds, profile.id])]
-      const participantsData = allParticipants.map(userId => ({
-        room_id: room.id,
-        user_id: userId,
-      }))
+      // Se não é uma sala de unidade, adicionar participantes manualmente
+      if (!unitId && participantIds.length > 0) {
+        const participantsData = participantIds.map(userId => ({
+          room_id: room.id,
+          user_id: userId,
+        }))
 
-      const { error: participantsError } = await supabase
-        .from('chat_participants')
-        .insert(participantsData)
+        const { error: participantsError } = await supabase
+          .from('chat_participants')
+          .insert(participantsData)
 
-      if (participantsError) {
-        console.error('Error adding participants:', participantsError)
-        throw participantsError
+        if (participantsError) {
+          console.error('Error adding participants:', participantsError)
+          throw participantsError
+        }
       }
 
       console.log('Chat room created:', room.id)
@@ -544,5 +532,59 @@ export function useCreateChatRoom() {
         variant: 'destructive',
       })
     },
+  })
+}
+
+// Hook para buscar usuários disponíveis para chat
+export function useAvailableChatUsers() {
+  const { profile } = useAuth()
+
+  return useQuery({
+    queryKey: ['available-chat-users', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return []
+
+      console.log('Fetching available users for chat')
+
+      let query = supabase
+        .from('profiles')
+        .select('id, name, avatar_url, role, unit_id, units(name)')
+        .eq('status', 'ativo')
+        .neq('id', profile.id)
+
+      // Filtrar usuários baseado no role
+      if (profile.role === 'user') {
+        // Usuários comuns podem conversar com outros da mesma unidade + técnicos + admins
+        query = query.or(`unit_id.eq.${profile.unit_id},role.eq.technician,role.eq.admin`)
+      } else if (profile.role === 'technician') {
+        // Técnicos podem conversar com usuários de suas unidades + outros técnicos + admins
+        const { data: techUnits } = await supabase
+          .from('technician_units')
+          .select('unit_id')
+          .eq('technician_id', profile.id)
+
+        const unitIds = techUnits?.map(tu => tu.unit_id) || []
+        if (profile.unit_id) unitIds.push(profile.unit_id)
+
+        if (unitIds.length > 0) {
+          const unitFilter = unitIds.map(id => `unit_id.eq.${id}`).join(',')
+          query = query.or(`${unitFilter},role.eq.technician,role.eq.admin`)
+        } else {
+          query = query.or(`role.eq.technician,role.eq.admin`)
+        }
+      }
+      // Admins podem conversar com qualquer pessoa (sem filtro adicional)
+
+      const { data, error } = await query.order('name')
+
+      if (error) {
+        console.error('Error fetching available users:', error)
+        throw error
+      }
+
+      console.log('Available users fetched:', data?.length || 0)
+      return data || []
+    },
+    enabled: !!profile?.id,
   })
 }
