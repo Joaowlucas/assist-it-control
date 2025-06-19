@@ -9,8 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { ImageUpload } from '@/components/ImageUpload'
-import { Plus, Users, Building2, Globe, User, Settings, Shield } from 'lucide-react'
+import { Plus, Users, Building2, Globe, User, Settings, Shield, Upload, X } from 'lucide-react'
 import { useCreateChatRoom } from '@/hooks/useChat'
 import { useUnits } from '@/hooks/useUnits'
 import { useProfiles } from '@/hooks/useProfiles'
@@ -194,6 +193,11 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
     }
   }
 
+  const getUnitName = (unitId: string) => {
+    const unit = units.find(u => u.id === unitId)
+    return unit?.name || 'Unidade desconhecida'
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -235,7 +239,7 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
               />
             </div>
 
-            {/* Upload de Imagem */}
+            {/* Upload de Imagem Simples */}
             <div>
               <Label>Imagem da Sala (opcional)</Label>
               <div className="mt-2">
@@ -252,15 +256,34 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
                       size="sm"
                       onClick={handleImageRemove}
                     >
+                      <X className="h-4 w-4 mr-2" />
                       Remover Imagem
                     </Button>
                   </div>
                 ) : (
-                  <ImageUpload
-                    onImageSelect={handleImageSelect}
-                    acceptedTypes={['image/jpeg', 'image/png', 'image/gif']}
-                    maxSize={5 * 1024 * 1024} // 5MB
-                  />
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-gray-600 mb-2">Clique para selecionar uma imagem</p>
+                    <p className="text-sm text-gray-500">Máximo 5MB (JPG, PNG, GIF)</p>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file && file.size <= 5 * 1024 * 1024) {
+                          handleImageSelect(file)
+                        }
+                      }}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <Label
+                      htmlFor="image-upload"
+                      className="inline-block mt-2 px-4 py-2 bg-primary text-primary-foreground rounded cursor-pointer hover:bg-primary/90"
+                    >
+                      Selecionar Imagem
+                    </Label>
+                  </div>
                 )}
               </div>
             </div>
@@ -387,9 +410,9 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
                               <span>{getRoleLabel(user.role)}</span>
                             </Badge>
                           </div>
-                          {user.units?.name && (
+                          {user.unit_id && (
                             <p className="text-xs text-muted-foreground truncate">
-                              {user.units.name}
+                              {getUnitName(user.unit_id)}
                             </p>
                           )}
                         </div>
