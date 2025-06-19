@@ -84,11 +84,11 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
         </DialogHeader>
 
         {/* Informações da Unidade */}
-        {profile?.units?.name && (
+        {profile?.unit?.name && (
           <div className="bg-muted/30 p-3 rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" />
-              <span>Unidade: <strong>{profile.units.name}</strong></span>
+              <span>Unidade: <strong>{profile.unit.name}</strong></span>
             </div>
           </div>
         )}
@@ -131,7 +131,7 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {categories.filter(category => category.name && category.name.trim() !== '').map((category) => (
                       <SelectItem key={category.id} value={category.name}>
                         {category.name}
                       </SelectItem>

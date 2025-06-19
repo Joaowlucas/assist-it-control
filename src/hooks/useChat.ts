@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -111,6 +110,7 @@ export function useChatMessages(roomId: string) {
 export function useSendMessage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { profile } = useAuth()
 
   return useMutation({
     mutationFn: async ({ roomId, content, attachmentFile }: {
@@ -118,6 +118,10 @@ export function useSendMessage() {
       content: string
       attachmentFile?: File
     }) => {
+      if (!profile?.id) {
+        throw new Error('User not authenticated')
+      }
+
       console.log('Sending message:', { roomId, content, hasAttachment: !!attachmentFile })
 
       let attachmentUrl = null
@@ -153,6 +157,7 @@ export function useSendMessage() {
         .from('chat_messages')
         .insert({
           room_id: roomId,
+          sender_id: profile.id,
           content,
           attachment_url: attachmentUrl,
           attachment_name: attachmentName,
