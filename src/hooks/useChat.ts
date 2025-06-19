@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -129,6 +130,19 @@ export function useChatRooms() {
           queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: 'avatar_url=neq.null'
+        },
+        () => {
+          console.log('Profile avatar changed, invalidating chat rooms query')
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+        }
+      )
       .subscribe()
 
     return () => {
@@ -186,6 +200,19 @@ export function useChatMessages(roomId: string) {
         },
         () => {
           console.log('Messages changed for room:', roomId)
+          queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: 'avatar_url=neq.null'
+        },
+        () => {
+          console.log('Profile avatar changed, invalidating messages query')
           queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
         }
       )
