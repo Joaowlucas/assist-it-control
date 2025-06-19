@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +22,8 @@ interface ChatRoom {
   name: string
   type: 'group' | 'direct'
   owner_id: string
+  is_active: boolean
+  created_by: string
   members?: {
     id: string
     user_id: string
@@ -83,6 +86,8 @@ export default function Chat() {
             name,
             type,
             owner_id,
+            is_active,
+            created_by,
             members (
               id,
               user_id,
@@ -103,7 +108,13 @@ export default function Chat() {
         }
 
         if (roomsData) {
-          setRooms(roomsData as ChatRoom[])
+          // Add missing properties with default values
+          const formattedRooms = roomsData.map(room => ({
+            ...room,
+            is_active: room.is_active ?? true,
+            created_by: room.created_by ?? room.owner_id
+          })) as ChatRoom[]
+          setRooms(formattedRooms)
         }
       } catch (error: any) {
         toast({
@@ -121,7 +132,11 @@ export default function Chat() {
       .channel('public:chat_rooms')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_rooms' }, async (payload) => {
         if (payload.new) {
-          const newRoom = payload.new as ChatRoom
+          const newRoom = {
+            ...payload.new,
+            is_active: payload.new.is_active ?? true,
+            created_by: payload.new.created_by ?? payload.new.owner_id
+          } as ChatRoom
           if (newRoom.type === 'group') {
             setRooms(prevRooms => [...prevRooms, newRoom])
           }
@@ -263,7 +278,7 @@ export default function Chat() {
     }
   }
 
-  const handleFileSelected = (file: File | null) => {
+  const handleFileSelect = (file: File | null) => {
     setAttachedFile(file)
   }
 
@@ -328,13 +343,28 @@ export default function Chat() {
           </div>
         </div>
 
-        <ChatContactsSidebar 
-          rooms={filteredRooms}
-          selectedRoom={selectedRoom}
-          onRoomSelect={setSelectedRoom}
-          onRoomEdit={handleEditRoom}
-          currentUserId={user?.id || ''}
-        />
+        <div className="flex-1 overflow-y-auto">
+          {filteredRooms.map((room) => (
+            <div
+              key={room.id}
+              className={`p-3 cursor-pointer hover:bg-muted/50 border-b border-border/30 ${
+                selectedRoom?.id === room.id ? 'bg-muted' : ''
+              }`}
+              onClick={() => setSelectedRoom(room)}
+            >
+              <div className="flex items-center gap-3">
+                <ChatRoomAvatar room={room} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{room.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {room.type === 'group' && `${room.members?.length || 0} membros`}
+                    {room.type === 'direct' && getDirectChatPartner(room)?.full_name}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Área principal do chat */}
@@ -396,9 +426,9 @@ export default function Chat() {
                         </div>
                         {message.attachment_url && (
                           <ChatMessageAttachment 
-                            attachmentUrl={message.attachment_url}
-                            fileName={message.attachment_name || ''}
-                            fileSize={message.attachment_size}
+                            url={message.attachment_url}
+                            name={message.attachment_name || ''}
+                            size={message.attachment_size || 0}
                           />
                         )}
                         <div className="text-xs opacity-70 mt-1">
@@ -415,7 +445,7 @@ export default function Chat() {
             <div className="p-4 border-t border-border/50 bg-background/80 backdrop-blur-sm">
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 <ChatAttachmentUpload 
-                  onFileSelected={handleFileSelected}
+                  onFileSelect={handleFileSelect}
                   disabled={sendingMessage}
                 />
                 <div className="flex-1 relative">
@@ -462,14 +492,14 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        open={showCreateRoomDialog}
-        onOpenChange={setShowCreateRoomDialog}
-        onCreate={handleCreateRoom}
+        isOpen={showCreateRoomDialog}
+        onClose={() => setShowCreateRoomDialog(false)}
+        onRoomCreated={handleCreateRoom}
       />
 
       <DirectChatDialog
-        open={showDirectChatDialog}
-        onOpenChange={setShowDirectChatDialog}
+        isOpen={showDirectChatDialog}
+        onClose={() => setShowDirectChatDialog(false)}
         onChatCreated={handleDirectChatCreated}
       />
 
