@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +16,7 @@ import { ptBR } from 'date-fns/locale'
 import { ChatAttachmentUpload } from '@/components/ChatAttachmentUpload'
 import { ChatMessageAttachment } from '@/components/ChatMessageAttachment'
 import { ChatContactsSidebar } from '@/components/ChatContactsSidebar'
+import { ChatRoomAvatar } from '@/components/ChatRoomAvatar'
 
 export default function Chat() {
   const { profile } = useAuth()
@@ -92,8 +92,8 @@ export default function Chat() {
 
   const getRoomDisplayName = (room: ChatRoom) => {
     // Para conversas privadas (2 participantes), mostrar nome do outro usuário
-    if (!room.unit_id && room.participants && room.participants.length === 2) {
-      const otherParticipant = room.participants.find(p => p.user_id !== profile?.id)
+    if (!room.unit_id && room.chat_participants && room.chat_participants.length === 2) {
+      const otherParticipant = room.chat_participants.find(p => p.user_id !== profile?.id)
       if (otherParticipant) {
         return `${otherParticipant.profiles.name}`
       }
@@ -113,6 +113,10 @@ export default function Chat() {
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
     }
     return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+  }
+
+  const getParticipantCount = (room: ChatRoom) => {
+    return room.chat_participants?.length || 0
   }
 
   if (roomsLoading) {
@@ -170,15 +174,17 @@ export default function Chat() {
                 onClick={() => setSelectedRoom(room)}
               >
                 <CardContent className="p-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-start gap-3">
+                    <ChatRoomAvatar room={room} size="md" />
+                    
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         {getRoomTypeIcon(room)}
-                        <h3 className="font-medium text-sm">{getRoomDisplayName(room)}</h3>
+                        <h3 className="font-medium text-sm truncate">{getRoomDisplayName(room)}</h3>
                       </div>
                       
                       {room.unit_id && room.units?.name && (
-                        <p className="text-xs text-muted-foreground mb-2">
+                        <p className="text-xs text-muted-foreground mb-2 truncate">
                           {room.units.name}
                         </p>
                       )}
@@ -189,7 +195,7 @@ export default function Chat() {
                           className={`text-xs ${getRoomTypeColor(room)}`}
                         >
                           <Users className="h-3 w-3 mr-1" />
-                          {room.participants?.length || 0}
+                          {getParticipantCount(room)}
                         </Badge>
                         
                         {room.created_by === profile?.id && (
@@ -223,11 +229,7 @@ export default function Chat() {
             <div className="p-4 border-b bg-background">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {getRoomTypeIcon(selectedRoom)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <ChatRoomAvatar room={selectedRoom} size="lg" />
                   <div>
                     <h2 className="text-lg font-semibold">{getRoomDisplayName(selectedRoom)}</h2>
                     {selectedRoom.units?.name && (
@@ -241,7 +243,7 @@ export default function Chat() {
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="flex items-center gap-1">
                     <Users className="h-3 w-3" />
-                    {selectedRoom.participants?.length || 0} participantes
+                    {getParticipantCount(selectedRoom)} participantes
                   </Badge>
                 </div>
               </div>

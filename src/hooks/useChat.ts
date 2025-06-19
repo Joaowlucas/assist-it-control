@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -78,7 +77,7 @@ export function useChatRooms() {
         .select(`
           *,
           units(name),
-          chat_participants(
+          chat_participants!inner(
             user_id,
             profiles(name, avatar_url)
           ),
