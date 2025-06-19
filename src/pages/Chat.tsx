@@ -359,17 +359,9 @@ export default function Chat() {
             <div className="text-center">
               <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <h3 className="text-lg font-medium mb-2">Selecione uma sala de chat</h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground">
                 Escolha uma sala na lateral para começar a conversar
               </p>
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2"
-                onClick={() => setShowContactsSidebar(true)}
-              >
-                <UserPlus className="h-4 w-4" />
-                Iniciar conversa privada
-              </Button>
             </div>
           </div>
         )}

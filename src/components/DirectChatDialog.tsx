@@ -1,15 +1,12 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Send, X } from 'lucide-react'
-import { useCreateChatRoom, useSendMessage } from '@/hooks/useChat'
-import { useProfiles } from '@/hooks/useProfiles'
+import { useCreateChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
-import { useToast } from '@/hooks/use-toast'
+import { useProfiles } from '@/hooks/useProfiles'
+import { MessageCircle, Users } from 'lucide-react'
 
 interface DirectChatDialogProps {
   open: boolean
@@ -18,107 +15,121 @@ interface DirectChatDialogProps {
   onRoomCreated?: (roomId: string) => void
 }
 
-export function DirectChatDialog({ open, onOpenChange, targetUserId, onRoomCreated }: DirectChatDialogProps) {
+export function DirectChatDialog({ 
+  open, 
+  onOpenChange, 
+  targetUserId, 
+  onRoomCreated 
+}: DirectChatDialogProps) {
   const { profile } = useAuth()
-  const { data: profiles } = useProfiles()
-  const createChatRoom = useCreateChatRoom()
-  const sendMessage = useSendMessage()
-  const { toast } = useToast()
-  const [message, setMessage] = useState('')
+  const { data: profiles = [] } = useProfiles()
+  const createRoom = useCreateChatRoom()
+  const [isCreating, setIsCreating] = useState(false)
 
-  const targetUser = profiles?.find(p => p.id === targetUserId)
+  const targetUser = profiles.find(p => p.id === targetUserId)
 
-  const handleStartChat = async () => {
-    if (!targetUserId || !targetUser || !message.trim()) {
-      toast({
-        title: 'Erro',
-        description: 'Digite uma mensagem para iniciar a conversa',
-        variant: 'destructive'
-      })
-      return
-    }
+  const handleCreateDirectChat = async () => {
+    if (!profile?.id || !targetUserId || !targetUser) return
+
+    setIsCreating(true)
 
     try {
-      // Criar sala de chat privada
-      const room = await createChatRoom.mutateAsync({
-        name: `Chat: ${profile?.name} & ${targetUser.name}`,
-        participants: [targetUserId]
+      const roomName = `${profile.name} • ${targetUser.name}`
+      
+      const roomId = await createRoom.mutateAsync({
+        name: roomName,
+        unitId: null, // Conversas privadas não têm unidade específica
+        participantIds: [profile.id, targetUserId]
       })
 
-      // Enviar primeira mensagem
-      await sendMessage.mutateAsync({
-        roomId: room.id,
-        content: message
-      })
-
-      setMessage('')
+      onRoomCreated?.(roomId)
       onOpenChange(false)
-      onRoomCreated?.(room.id)
-
-      toast({
-        title: 'Conversa iniciada!',
-        description: `Conversa privada com ${targetUser.name} foi criada.`
-      })
     } catch (error) {
-      console.error('Erro ao iniciar conversa:', error)
+      console.error('Error creating direct chat:', error)
+    } finally {
+      setIsCreating(false)
     }
   }
 
-  if (!targetUser) return null
+  if (!targetUser) {
+    return null
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={targetUser.avatar_url || undefined} />
-              <AvatarFallback>
-                {targetUser.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            Conversar com {targetUser.name}
+          <DialogTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Iniciar Conversa Privada
           </DialogTitle>
           <DialogDescription>
-            Inicie uma conversa privada enviando uma mensagem
+            Você está prestes a iniciar uma conversa privada com este usuário.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <Avatar className="h-10 w-10">
+          {/* Informações do usuário */}
+          <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+            <Avatar className="h-12 w-12">
               <AvatarImage src={targetUser.avatar_url || undefined} />
               <AvatarFallback>
                 {targetUser.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <p className="font-medium">{targetUser.name}</p>
-              <p className="text-sm text-muted-foreground">{targetUser.email}</p>
+            <div className="flex-1">
+              <h3 className="font-medium">{targetUser.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {targetUser.role === 'admin' ? 'Administrador' : 
+                 targetUser.role === 'technician' ? 'Técnico' : 'Usuário'}
+              </p>
+              {targetUser.email && (
+                <p className="text-xs text-muted-foreground">{targetUser.email}</p>
+              )}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Primeira mensagem</label>
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Digite sua mensagem..."
-              onKeyPress={(e) => e.key === 'Enter' && handleStartChat()}
-            />
+          {/* Informação sobre conversas privadas */}
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start gap-2">
+              <Users className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="text-blue-800 dark:text-blue-200 font-medium">
+                  Conversa Privada
+                </p>
+                <p className="text-blue-700 dark:text-blue-300 mt-1">
+                  Esta será uma conversa apenas entre vocês dois. Se já existe uma conversa anterior, 
+                  você será direcionado para ela.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {/* Botões de ação */}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isCreating}
+            >
               Cancelar
             </Button>
             <Button 
-              onClick={handleStartChat}
-              disabled={!message.trim() || createChatRoom.isPending || sendMessage.isPending}
+              onClick={handleCreateDirectChat}
+              disabled={isCreating}
               className="flex items-center gap-2"
             >
-              <Send className="h-4 w-4" />
-              {createChatRoom.isPending || sendMessage.isPending ? 'Enviando...' : 'Iniciar Conversa'}
+              {isCreating ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Iniciando...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-4 w-4" />
+                  Iniciar Conversa
+                </>
+              )}
             </Button>
           </div>
         </div>
