@@ -13,6 +13,7 @@ export interface ChatRoom {
   created_at: string
   updated_at: string
   is_active: boolean
+  image_url: string | null
   units?: {
     name: string
   }
@@ -531,16 +532,17 @@ export function useCreateChatRoom() {
   const { profile } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ name, unitId, participantIds }: {
+    mutationFn: async ({ name, unitId, participantIds, imageUrl }: {
       name: string
       unitId?: string | null
       participantIds: string[]
+      imageUrl?: string | null
     }) => {
       if (!profile?.id) {
         throw new Error('User not authenticated')
       }
 
-      console.log('Creating chat room:', { name, unitId, participantIds })
+      console.log('Creating chat room:', { name, unitId, participantIds, imageUrl })
 
       // Para conversas privadas (apenas 2 participantes), verificar se já existe
       if (!unitId && participantIds.length === 1) {
@@ -575,6 +577,7 @@ export function useCreateChatRoom() {
           name,
           unit_id: unitId,
           created_by: profile.id,
+          image_url: imageUrl,
         })
         .select()
         .single()

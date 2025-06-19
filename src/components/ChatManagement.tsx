@@ -6,13 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Plus, Pencil, Trash2, MessageCircle, Search, Users, Building2 } from 'lucide-react'
+import { Pencil, Trash2, MessageCircle, Search, Users, Building2 } from 'lucide-react'
 import { useChatRooms, useDeleteChatRoom } from '@/hooks/useChat'
 import { useUnits } from '@/hooks/useUnits'
 import { useAuth } from '@/hooks/useAuth'
 import { EditChatRoomDialog } from '@/components/EditChatRoomDialog'
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog'
-import { StartChatDialog } from '@/components/StartChatDialog'
+import { CreateChatRoomDialog } from '@/components/CreateChatRoomDialog'
 
 export function ChatManagement() {
   const { profile } = useAuth()
@@ -147,12 +147,8 @@ export function ChatManagement() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <StartChatDialog />
             {profile?.role === 'admin' && (
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Sala
-              </Button>
+              <CreateChatRoomDialog />
             )}
           </div>
         </CardHeader>
@@ -184,6 +180,7 @@ export function ChatManagement() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
+                        <AvatarImage src={room.image_url || undefined} />
                         <AvatarFallback>
                           <MessageCircle className="h-5 w-5" />
                         </AvatarFallback>
