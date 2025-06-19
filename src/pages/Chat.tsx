@@ -3,14 +3,13 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Plus, MessageCircle, Send, X, Settings } from "lucide-react"
-import { ChatContactsSidebar } from "@/components/ChatContactsSidebar"
 import { CreateChatRoomDialog } from "@/components/CreateChatRoomDialog"
 import { DirectChatDialog } from "@/components/DirectChatDialog"
 import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
 import { ChatRoomAvatar } from "@/components/ChatRoomAvatar"
 import { useAuth } from "@/hooks/useAuth"
 import { useSupabase } from "@/hooks/useSupabase"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChatMessageAttachment } from "@/components/ChatMessageAttachment"
@@ -21,9 +20,8 @@ interface ChatRoom {
   created_at: string
   name: string
   type: 'group' | 'direct'
-  owner_id: string
-  is_active: boolean
   created_by: string
+  is_active: boolean
   members?: {
     id: string
     user_id: string
@@ -31,7 +29,7 @@ interface ChatRoom {
     created_at: string
     profile: {
       id: string
-      full_name: string
+      name: string
       email: string
       avatar_url: string
     }
@@ -49,7 +47,7 @@ interface Message {
   attachment_size: number | null
   sender?: {
     id: string
-    full_name: string
+    name: string
     email: string
     avatar_url: string
   }
@@ -85,9 +83,8 @@ export default function Chat() {
             created_at,
             name,
             type,
-            owner_id,
-            is_active,
             created_by,
+            is_active,
             members (
               id,
               user_id,
@@ -95,7 +92,7 @@ export default function Chat() {
               created_at,
               profile:profiles (
                 id,
-                full_name,
+                name,
                 email,
                 avatar_url
               )
@@ -108,11 +105,10 @@ export default function Chat() {
         }
 
         if (roomsData) {
-          // Add missing properties with default values
           const formattedRooms = roomsData.map(room => ({
             ...room,
             is_active: room.is_active ?? true,
-            created_by: room.created_by ?? room.owner_id
+            created_by: room.created_by ?? user.id
           })) as ChatRoom[]
           setRooms(formattedRooms)
         }
@@ -135,7 +131,7 @@ export default function Chat() {
           const newRoom = {
             ...payload.new,
             is_active: payload.new.is_active ?? true,
-            created_by: payload.new.created_by ?? payload.new.owner_id
+            created_by: payload.new.created_by ?? user.id
           } as ChatRoom
           if (newRoom.type === 'group') {
             setRooms(prevRooms => [...prevRooms, newRoom])
@@ -194,7 +190,7 @@ export default function Chat() {
           attachment_size,
           sender:profiles (
             id,
-            full_name,
+            name,
             email,
             avatar_url
           )
@@ -207,7 +203,7 @@ export default function Chat() {
       }
 
       if (messagesData) {
-        setMessages(messagesData as Message[])
+        setMessages(messagesData)
       }
     } catch (error: any) {
       toast({
@@ -245,7 +241,11 @@ export default function Chat() {
           throw error
         }
 
-        attachmentUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${data.fullPath}`
+        const { data: { publicUrl } } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(data.path)
+
+        attachmentUrl = publicUrl
         attachmentName = attachedFile.name
         attachmentSize = attachedFile.size
       }
@@ -282,8 +282,47 @@ export default function Chat() {
     setAttachedFile(file)
   }
 
-  const handleCreateRoom = (newRoom: ChatRoom) => {
-    setRooms([...rooms, newRoom])
+  const handleCreateRoom = (roomId: string) => {
+    // Refresh rooms list
+    const fetchRooms = async () => {
+      try {
+        const { data: roomsData, error: roomsError } = await supabase
+          .from('chat_rooms')
+          .select(`
+            id,
+            created_at,
+            name,
+            type,
+            created_by,
+            is_active,
+            members (
+              id,
+              user_id,
+              room_id,
+              created_at,
+              profile:profiles (
+                id,
+                name,
+                email,
+                avatar_url
+              )
+            )
+          `)
+          .or(`type.eq.group,and(type.eq.direct,members.profile.id.eq.${user!.id})`)
+
+        if (roomsData) {
+          const formattedRooms = roomsData.map(room => ({
+            ...room,
+            is_active: room.is_active ?? true,
+            created_by: room.created_by ?? user!.id
+          })) as ChatRoom[]
+          setRooms(formattedRooms)
+        }
+      } catch (error) {
+        console.error('Error fetching rooms:', error)
+      }
+    }
+    fetchRooms()
   }
 
   const handleDirectChatCreated = (room: ChatRoom) => {
@@ -358,7 +397,7 @@ export default function Chat() {
                   <p className="font-medium truncate">{room.name}</p>
                   <p className="text-sm text-muted-foreground">
                     {room.type === 'group' && `${room.members?.length || 0} membros`}
-                    {room.type === 'direct' && getDirectChatPartner(room)?.full_name}
+                    {room.type === 'direct' && getDirectChatPartner(room)?.name}
                   </p>
                 </div>
               </div>
@@ -379,7 +418,7 @@ export default function Chat() {
                   <h3 className="font-semibold">{selectedRoom.name}</h3>
                   <p className="text-sm text-muted-foreground">
                     {selectedRoom.type === 'group' && `${selectedRoom.members?.length || 0} membros`}
-                    {selectedRoom.type === 'direct' && getDirectChatPartner(selectedRoom)?.full_name}
+                    {selectedRoom.type === 'direct' && getDirectChatPartner(selectedRoom)?.name}
                   </p>
                 </div>
                 <Button
@@ -393,7 +432,7 @@ export default function Chat() {
             </div>
 
             {/* Mensagens */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesEndRef}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {loadingMessages ? (
                 <div className="flex justify-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -418,7 +457,7 @@ export default function Chat() {
                       >
                         {message.sender_id !== user?.id && selectedRoom.type === 'group' && (
                           <div className="text-xs font-medium mb-1 opacity-70">
-                            {message.sender?.full_name}
+                            {message.sender?.name}
                           </div>
                         )}
                         <div className="text-sm whitespace-pre-wrap break-words">
@@ -426,9 +465,9 @@ export default function Chat() {
                         </div>
                         {message.attachment_url && (
                           <ChatMessageAttachment 
-                            url={message.attachment_url}
-                            name={message.attachment_name || ''}
-                            size={message.attachment_size || 0}
+                            attachmentUrl={message.attachment_url}
+                            attachmentName={message.attachment_name || ''}
+                            attachmentSize={message.attachment_size || 0}
                           />
                         )}
                         <div className="text-xs opacity-70 mt-1">
@@ -439,6 +478,7 @@ export default function Chat() {
                   </div>
                 ))
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input de mensagem */}
@@ -446,7 +486,6 @@ export default function Chat() {
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 <ChatAttachmentUpload 
                   onFileSelect={handleFileSelect}
-                  disabled={sendingMessage}
                 />
                 <div className="flex-1 relative">
                   <Input
@@ -498,7 +537,7 @@ export default function Chat() {
       />
 
       <DirectChatDialog
-        isOpen={showDirectChatDialog}
+        open={showDirectChatDialog}
         onClose={() => setShowDirectChatDialog(false)}
         onChatCreated={handleDirectChatCreated}
       />
