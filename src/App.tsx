@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AdminLayout } from "@/components/AdminLayout";
 import { UserLayout } from "@/components/UserLayout";
+import { ChatWithRoleLayout } from "@/components/ChatWithRoleLayout";
 import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Equipment from "./pages/Equipment";
@@ -19,7 +20,6 @@ import UserPortal from "./pages/UserPortal";
 import UserDashboard from "./pages/UserDashboard";
 import UserTickets from "./pages/UserTickets";
 import UserAssignments from "./pages/UserAssignments";
-import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -49,22 +49,6 @@ queryClient.prefetchQuery({
   queryKey: ['system-settings'],
   staleTime: 60 * 60 * 1000, // 1 hora
 })
-
-// Component to handle chat layout based on user role
-const ChatWithLayout = () => (
-  <AuthGuard>
-    <AuthGuard requiredRole="user">
-      <UserLayout>
-        <Chat />
-      </UserLayout>
-    </AuthGuard>
-    <AuthGuard requiredRole="admin_tech">
-      <AdminLayout>
-        <Chat />
-      </AdminLayout>
-    </AuthGuard>
-  </AuthGuard>
-)
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -130,8 +114,12 @@ const App = () => (
                 </AuthGuard>
               } />
               
-              {/* Chat Route - Available for all users with role-based layout */}
-              <Route path="/chat" element={<ChatWithLayout />} />
+              {/* Chat Route - Available for all authenticated users with role-based layout */}
+              <Route path="/chat" element={
+                <AuthGuard>
+                  <ChatWithRoleLayout />
+                </AuthGuard>
+              } />
               
               {/* Admin Only Routes */}
               <Route path="/users" element={

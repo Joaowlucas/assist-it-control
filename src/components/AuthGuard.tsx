@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/hooks/useAuth'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -37,7 +38,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     // admin_tech significa que tanto admin quanto technician podem acessar
     if (requiredRole === "admin_tech") {
       if (profile.role !== "admin" && profile.role !== "technician") {
-        return <Navigate to="/user-portal" replace />
+        return <Navigate to="/user-dashboard" replace />
       }
     } else if (profile.role !== requiredRole) {
       // Se é admin tentando acessar área de usuário, redireciona para dashboard
@@ -48,9 +49,9 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
       if (profile.role === 'technician' && requiredRole === 'user') {
         return <Navigate to="/" replace />
       }
-      // Se é usuário tentando acessar área de admin/técnico, redireciona para portal do usuário
+      // Se é usuário tentando acessar área de admin/técnico, redireciona para dashboard do usuário
       if (profile.role === 'user' && (requiredRole === 'admin' || requiredRole === 'technician')) {
-        return <Navigate to="/user-portal" replace />
+        return <Navigate to="/user-dashboard" replace />
       }
     }
   }
