@@ -3,19 +3,25 @@ import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Button } from '@/components/ui/button'
 import { X, Upload, Paperclip, Image as ImageIcon, FileText } from 'lucide-react'
+import { useSendMessage } from '@/hooks/useChat'
+import { useToast } from '@/hooks/use-toast'
 
 interface ChatAttachmentUploadProps {
-  onFileSelect: (file: File | null) => void
-  selectedFile: File | null
+  roomId: string
+  onUploadComplete: () => void
 }
 
-export function ChatAttachmentUpload({ onFileSelect, selectedFile }: ChatAttachmentUploadProps) {
+export function ChatAttachmentUpload({ roomId, onUploadComplete }: ChatAttachmentUploadProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const sendMessage = useSendMessage()
+  const { toast } = useToast()
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (file) {
-      onFileSelect(file)
+      setSelectedFile(file)
       
       // Create preview for images
       if (file.type.startsWith('image/')) {
@@ -26,7 +32,7 @@ export function ChatAttachmentUpload({ onFileSelect, selectedFile }: ChatAttachm
         setPreview(null)
       }
     }
-  }, [onFileSelect])
+  }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -41,8 +47,34 @@ export function ChatAttachmentUpload({ onFileSelect, selectedFile }: ChatAttachm
     maxSize: 10 * 1024 * 1024, // 10MB
   })
 
+  const handleUpload = async () => {
+    if (!selectedFile || !roomId) return
+
+    setIsUploading(true)
+    try {
+      await sendMessage.mutateAsync({
+        roomId,
+        content: `Enviou um arquivo: ${selectedFile.name}`,
+        attachmentFile: selectedFile
+      })
+
+      setSelectedFile(null)
+      setPreview(null)
+      onUploadComplete()
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      toast({
+        title: "Erro",
+        description: "Erro ao enviar arquivo",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   const removeFile = () => {
-    onFileSelect(null)
+    setSelectedFile(null)
     setPreview(null)
   }
 
@@ -69,6 +101,16 @@ export function ChatAttachmentUpload({ onFileSelect, selectedFile }: ChatAttachm
             {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
           </p>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleUpload}
+          disabled={isUploading}
+          className="h-8 w-8 p-0"
+        >
+          <Upload className="h-4 w-4" />
+        </Button>
         <Button
           type="button"
           variant="ghost"

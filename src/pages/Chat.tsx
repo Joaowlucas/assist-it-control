@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react"
 import { useChat } from "@/hooks/useChat"
 import { useAuth } from "@/hooks/useAuth"
@@ -131,6 +130,7 @@ export default function Chat() {
   const getRoomType = (room: any) => {
     if (room.type === 'private') return 'Privado'
     if (room.type === 'group') return 'Grupo'
+    if (room.type === 'direct') return 'Direto'
     return 'Unidade'
   }
 
@@ -328,7 +328,7 @@ export default function Chat() {
                         >
                           {message.sender_id !== profile?.id && (
                             <p className="text-xs font-medium mb-1 opacity-70">
-                              {message.sender?.name}
+                              {message.sender?.name || message.profiles?.name}
                             </p>
                           )}
                           
@@ -400,11 +400,10 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        isOpen={showCreateDialog}
+        open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onRoomCreated={(roomId) => {
           setShowCreateDialog(false)
-          // Selecionar a nova sala
           const newRoom = rooms.find(r => r.id === roomId)
           if (newRoom) {
             selectRoom(roomId)
@@ -413,7 +412,7 @@ export default function Chat() {
       />
 
       <DirectChatDialog
-        isOpen={showDirectDialog}
+        open={showDirectDialog}
         onOpenChange={setShowDirectDialog}
         onDirectChatCreated={(room) => {
           setShowDirectDialog(false)
@@ -424,7 +423,7 @@ export default function Chat() {
       {editingRoom && (
         <EditChatRoomDialog
           room={editingRoom}
-          isOpen={showEditDialog}
+          open={showEditDialog}
           onOpenChange={setShowEditDialog}
           onRoomUpdated={() => {
             setShowEditDialog(false)
