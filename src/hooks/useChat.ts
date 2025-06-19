@@ -113,8 +113,8 @@ export function useChatRooms() {
           schema: 'public',
           table: 'chat_rooms'
         },
-        () => {
-          console.log('Chat rooms changed, invalidating query')
+        (payload) => {
+          console.log('Chat rooms changed:', payload.eventType, payload.new || payload.old)
           queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
@@ -125,8 +125,8 @@ export function useChatRooms() {
           schema: 'public',
           table: 'chat_participants'
         },
-        () => {
-          console.log('Chat participants changed, invalidating query')
+        (payload) => {
+          console.log('Chat participants changed:', payload.eventType)
           queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
@@ -135,11 +135,23 @@ export function useChatRooms() {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'profiles',
-          filter: 'avatar_url=neq.null'
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile changed, invalidating chat rooms query')
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'system_settings'
         },
         () => {
-          console.log('Profile avatar changed, invalidating chat rooms query')
+          console.log('System settings changed, invalidating related queries')
+          queryClient.invalidateQueries({ queryKey: ['system-settings'] })
           queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
@@ -198,9 +210,13 @@ export function useChatMessages(roomId: string) {
           table: 'chat_messages',
           filter: `room_id=eq.${roomId}`
         },
-        () => {
-          console.log('Messages changed for room:', roomId)
+        (payload) => {
+          console.log('Messages changed for room:', roomId, payload.eventType)
           queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
+          // Também atualizar a lista de salas quando há nova mensagem
+          if (payload.eventType === 'INSERT') {
+            queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+          }
         }
       )
       .on(
@@ -208,11 +224,10 @@ export function useChatMessages(roomId: string) {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'profiles',
-          filter: 'avatar_url=neq.null'
+          table: 'profiles'
         },
         () => {
-          console.log('Profile avatar changed, invalidating messages query')
+          console.log('Profile changed, invalidating messages query')
           queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
         }
       )
@@ -323,6 +338,7 @@ export function useSendMessage() {
       return data
     },
     onSuccess: (data) => {
+      // Invalidar múltiplas queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
       toast({
@@ -674,7 +690,9 @@ export function useCreateChatRoom() {
       return room.id
     },
     onSuccess: (roomId) => {
+      // Invalidar imediatamente e forçar refetch
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      queryClient.refetchQueries({ queryKey: ['chat-rooms'] })
       toast({
         title: 'Conversa criada',
         description: 'Nova conversa iniciada com sucesso',
