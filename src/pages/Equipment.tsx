@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,6 +23,7 @@ import { ptBR } from 'date-fns/locale'
 import { EQUIPMENT_TYPES } from "@/constants/equipmentTypes"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { supabase } from "@/integrations/supabase/client"
 
 export default function Equipment() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -87,6 +87,43 @@ export default function Equipment() {
     }
   }
 
+  const uploadEquipmentPhotos = async (equipmentId: string, images: File[]) => {
+    if (images.length === 0) return
+
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i]
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${equipmentId}_${Date.now()}_${i}.${fileExt}`
+      const filePath = `equipment-photos/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('equipment-photos')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        console.error('Error uploading photo:', uploadError)
+        continue
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('equipment-photos')
+        .getPublicUrl(filePath)
+
+      const { error: insertError } = await supabase
+        .from('equipment_photos')
+        .insert({
+          equipment_id: equipmentId,
+          photo_url: publicUrl,
+          is_primary: i === 0,
+          uploaded_by: profile?.id
+        })
+
+      if (insertError) {
+        console.error('Error inserting photo record:', insertError)
+      }
+    }
+  }
+
   const handleCreateEquipment = async (e: React.FormEvent) => {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
@@ -105,10 +142,15 @@ export default function Equipment() {
         purchase_date: formData.get('purchase_date') as string || null,
         warranty_end_date: formData.get('warranty_end_date') as string || null,
         status: 'disponivel' as const,
-        photos: selectedImages,
       }
 
-      await createEquipment.mutateAsync(equipmentData)
+      const result = await createEquipment.mutateAsync(equipmentData)
+      
+      // Upload das fotos após criar o equipamento
+      if (selectedImages.length > 0 && result?.id) {
+        await uploadEquipmentPhotos(result.id, selectedImages)
+      }
+
       setIsCreateDialogOpen(false)
       setSelectedImages([])
       toast.success("Equipamento criado com sucesso!")
@@ -138,10 +180,15 @@ export default function Equipment() {
         purchase_date: formData.get('purchase_date') as string || null,
         warranty_end_date: formData.get('warranty_end_date') as string || null,
         status: formData.get('status') as any,
-        photos: editImages,
       }
 
       await updateEquipment.mutateAsync(equipmentData)
+      
+      // Upload das fotos adicionais após atualizar o equipamento
+      if (editImages.length > 0) {
+        await uploadEquipmentPhotos(selectedEquipment.id, editImages)
+      }
+
       setIsEditDialogOpen(false)
       setEditImages([])
       toast.success("Equipamento atualizado com sucesso!")
