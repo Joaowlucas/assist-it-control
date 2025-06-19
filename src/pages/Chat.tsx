@@ -368,24 +368,24 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        isOpen={isCreateRoomDialogOpen}
-        onClose={() => setIsCreateRoomDialogOpen(false)}
+        open={isCreateRoomDialogOpen}
+        onOpenChange={setIsCreateRoomDialogOpen}
       />
 
       <EditChatRoomDialog
         room={editingRoom}
-        isOpen={isEditRoomDialogOpen}
-        onClose={() => setIsEditRoomDialogOpen(false)}
+        open={isEditRoomDialogOpen}
+        onOpenChange={setIsEditRoomDialogOpen}
       />
 
       <StartChatDialog
-        isOpen={isStartChatDialogOpen}
-        onClose={() => setIsStartChatDialogOpen(false)}
+        open={isStartChatDialogOpen}
+        onOpenChange={setIsStartChatDialogOpen}
       />
 
       <DirectChatDialog
-        isOpen={isDirectChatDialogOpen}
-        onClose={() => setIsDirectChatDialogOpen(false)}
+        open={isDirectChatDialogOpen}
+        onOpenChange={setIsDirectChatDialogOpen}
         targetUserId={selectedUser?.id}
       />
     </div>

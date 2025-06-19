@@ -17,6 +17,7 @@ import { useEquipmentPhotos } from "@/hooks/useEquipmentPhotos"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
 import { EquipmentPDFPreviewDialog } from "@/components/EquipmentPDFPreviewDialog"
+import { ImageUpload } from "@/components/ImageUpload"
 import { Plus, Search, Eye, Edit, Trash2, Camera, FileText, Package, MapPin, Calendar, Shield, Wrench } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -31,6 +32,8 @@ export default function Equipment() {
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [editImages, setEditImages] = useState<File[]>([])
 
   const { profile } = useAuth()
   const { data: equipment = [], isLoading } = useEquipment()
@@ -102,10 +105,12 @@ export default function Equipment() {
         purchase_date: formData.get('purchase_date') as string || null,
         warranty_end_date: formData.get('warranty_end_date') as string || null,
         status: 'disponivel' as const,
+        photos: selectedImages,
       }
 
       await createEquipment.mutateAsync(equipmentData)
       setIsCreateDialogOpen(false)
+      setSelectedImages([])
       toast.success("Equipamento criado com sucesso!")
     } catch (error: any) {
       toast.error(error.message || "Erro ao criar equipamento")
@@ -133,10 +138,12 @@ export default function Equipment() {
         purchase_date: formData.get('purchase_date') as string || null,
         warranty_end_date: formData.get('warranty_end_date') as string || null,
         status: formData.get('status') as any,
+        photos: editImages,
       }
 
       await updateEquipment.mutateAsync(equipmentData)
       setIsEditDialogOpen(false)
+      setEditImages([])
       toast.success("Equipamento atualizado com sucesso!")
     } catch (error: any) {
       toast.error(error.message || "Erro ao atualizar equipamento")
@@ -155,6 +162,7 @@ export default function Equipment() {
 
   const openEditDialog = (equipment: any) => {
     setSelectedEquipment(equipment)
+    setEditImages([])
     setIsEditDialogOpen(true)
   }
 
@@ -304,6 +312,13 @@ export default function Equipment() {
                   <Input id="warranty_end_date" name="warranty_end_date" type="date" />
                 </div>
               </div>
+
+              <ImageUpload
+                images={selectedImages}
+                onImagesChange={setSelectedImages}
+                maxImages={5}
+                maxSize={5 * 1024 * 1024}
+              />
 
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -574,6 +589,9 @@ export default function Equipment() {
 
           <EquipmentPDFPreviewDialog
             equipment={selectedEquipment}
+            photos={equipmentPhotos}
+            systemSettings={systemSettings}
+            tombamento={selectedEquipment.tombamento || ''}
             open={isPdfPreviewOpen}
             onOpenChange={setIsPdfPreviewOpen}
           />
@@ -691,6 +709,13 @@ export default function Equipment() {
                     </Select>
                   </div>
                 </div>
+
+                <ImageUpload
+                  images={editImages}
+                  onImagesChange={setEditImages}
+                  maxImages={5}
+                  maxSize={5 * 1024 * 1024}
+                />
 
                 <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
