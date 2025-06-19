@@ -177,6 +177,8 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           name: string
+          selected_units: string[] | null
+          type: Database["public"]["Enums"]["chat_type"] | null
           unit_id: string | null
           updated_at: string
         }
@@ -187,6 +189,8 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name: string
+          selected_units?: string[] | null
+          type?: Database["public"]["Enums"]["chat_type"] | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -197,6 +201,8 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name?: string
+          selected_units?: string[] | null
+          type?: Database["public"]["Enums"]["chat_type"] | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -1201,6 +1207,7 @@ export type Database = {
     }
     Enums: {
       assignment_status: "ativo" | "finalizado"
+      chat_type: "private" | "unit" | "group"
       equipment_status: "disponivel" | "em_uso" | "manutencao" | "descartado"
       ticket_category: "hardware" | "software" | "rede" | "acesso" | "outros"
       ticket_priority: "baixa" | "media" | "alta" | "critica"
@@ -1322,6 +1329,7 @@ export const Constants = {
   public: {
     Enums: {
       assignment_status: ["ativo", "finalizado"],
+      chat_type: ["private", "unit", "group"],
       equipment_status: ["disponivel", "em_uso", "manutencao", "descartado"],
       ticket_category: ["hardware", "software", "rede", "acesso", "outros"],
       ticket_priority: ["baixa", "media", "alta", "critica"],
