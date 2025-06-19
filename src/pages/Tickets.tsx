@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react"
 import { useTickets } from "@/hooks/useTickets"
 import { useAuth } from "@/hooks/useAuth"
@@ -29,14 +30,15 @@ export default function Tickets() {
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({
-    status: '',
-    priority: '',
-    category: '',
-    assignee: '',
-    unit: '',
-    dateRange: { from: undefined, to: undefined }
-  })
+  
+  // Estados dos filtros
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [priorityFilter, setPriorityFilter] = useState("all")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [assigneeFilter, setAssigneeFilter] = useState("all")
+  const [unitFilter, setUnitFilter] = useState("all")
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
 
   const updateTicketStatus = useUpdateTicketStatus()
   const assignTicket = useAssignTicket()
@@ -103,38 +105,58 @@ export default function Tickets() {
   const filteredTickets = useMemo(() => {
     let filtered = tickets
 
-    if (filters.status) {
-      filtered = filtered.filter(ticket => ticket.status === filters.status)
-    }
-    if (filters.priority) {
-      filtered = filtered.filter(ticket => ticket.priority === filters.priority)
-    }
-    if (filters.category) {
-      filtered = filtered.filter(ticket => ticket.category === filters.category)
-    }
-    if (filters.assignee) {
-      if (filters.assignee === 'unassigned') {
-        filtered = filtered.filter(ticket => !ticket.assignee_id)
-      } else {
-        filtered = filtered.filter(ticket => ticket.assignee_id === filters.assignee)
-      }
-    }
-    if (filters.unit) {
-      filtered = filtered.filter(ticket => ticket.unit_id === filters.unit)
-    }
-    if (filters.dateRange.from) {
-      filtered = filtered.filter(ticket => 
-        new Date(ticket.created_at) >= filters.dateRange.from!
+    // Filtro de busca
+    if (searchTerm) {
+      filtered = filtered.filter(ticket =>
+        ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.requester?.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
-    if (filters.dateRange.to) {
+
+    // Filtros específicos
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(ticket => ticket.status === statusFilter)
+    }
+    if (priorityFilter !== "all") {
+      filtered = filtered.filter(ticket => ticket.priority === priorityFilter)
+    }
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(ticket => ticket.category === categoryFilter)
+    }
+    if (assigneeFilter !== "all") {
+      if (assigneeFilter === "unassigned") {
+        filtered = filtered.filter(ticket => !ticket.assignee_id)
+      } else {
+        filtered = filtered.filter(ticket => ticket.assignee_id === assigneeFilter)
+      }
+    }
+    if (unitFilter !== "all") {
+      filtered = filtered.filter(ticket => ticket.unit_id === unitFilter)
+    }
+    if (dateRange.from) {
       filtered = filtered.filter(ticket => 
-        new Date(ticket.created_at) <= filters.dateRange.to!
+        new Date(ticket.created_at) >= dateRange.from!
+      )
+    }
+    if (dateRange.to) {
+      filtered = filtered.filter(ticket => 
+        new Date(ticket.created_at) <= dateRange.to!
       )
     }
 
     return filtered
-  }, [tickets, filters])
+  }, [tickets, searchTerm, statusFilter, priorityFilter, categoryFilter, assigneeFilter, unitFilter, dateRange])
+
+  const clearFilters = () => {
+    setSearchTerm("")
+    setStatusFilter("all")
+    setPriorityFilter("all")
+    setCategoryFilter("all")
+    setAssigneeFilter("all")
+    setUnitFilter("all")
+    setDateRange({})
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -228,8 +250,21 @@ export default function Tickets() {
 
       {showFilters && (
         <TicketFilters
-          filters={filters}
-          onFiltersChange={setFilters}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          priorityFilter={priorityFilter}
+          onPriorityFilterChange={setPriorityFilter}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
+          assigneeFilter={assigneeFilter}
+          onAssigneeFilterChange={setAssigneeFilter}
+          unitFilter={unitFilter}
+          onUnitFilterChange={setUnitFilter}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          onClearFilters={clearFilters}
           units={units}
           technicians={technicians}
         />
@@ -316,14 +351,14 @@ export default function Tickets() {
 
                     {canEditTicket(ticket) && (
                       <Select
-                        value={ticket.assignee_id || ""}
-                        onValueChange={(value) => handleAssignTicket(ticket.id, value || null)}
+                        value={ticket.assignee_id || "none"}
+                        onValueChange={(value) => handleAssignTicket(ticket.id, value === "none" ? null : value)}
                       >
                         <SelectTrigger className="w-full sm:w-[200px]">
                           <SelectValue placeholder="Sem técnico" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Sem técnico</SelectItem>
+                          <SelectItem value="none">Sem técnico</SelectItem>
                           {technicians.map((tech) => (
                             <SelectItem key={tech.id} value={tech.id}>
                               {tech.name}

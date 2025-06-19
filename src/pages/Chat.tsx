@@ -1,528 +1,435 @@
-import { useState, useEffect, useRef } from "react"
+
+import { useState, useEffect, useMemo } from "react"
+import { useChat } from "@/hooks/useChat"
+import { useAuth } from "@/hooks/useAuth"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Plus, MessageCircle, Send, X, Settings } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { CreateChatRoomDialog } from "@/components/CreateChatRoomDialog"
 import { DirectChatDialog } from "@/components/DirectChatDialog"
 import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
-import { ChatRoomAvatar } from "@/components/ChatRoomAvatar"
-import { useAuth } from "@/hooks/useAuth"
-import { useSupabase } from "@/hooks/useSupabase"
-import { useToast } from "@/hooks/use-toast"
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { ChatMessageAttachment } from "@/components/ChatMessageAttachment"
 import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
-
-interface ChatRoom {
-  id: string
-  created_at: string
-  name: string
-  type: 'group' | 'private' | 'direct'
-  created_by: string
-  is_active: boolean
-  members?: {
-    id: string
-    user_id: string
-    room_id: string
-    created_at: string
-    profile: {
-      id: string
-      name: string
-      email: string
-      avatar_url: string
-    }
-  }[]
-}
-
-interface Message {
-  id: string
-  created_at: string
-  content: string
-  sender_id: string
-  room_id: string
-  attachment_url: string | null
-  attachment_name: string | null
-  attachment_size: number | null
-  sender?: {
-    id: string
-    name: string
-    email: string
-    avatar_url: string
-  }
-}
+import { 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  Users, 
+  Menu, 
+  Settings, 
+  Paperclip,
+  Phone,
+  Video,
+  MoreVertical
+} from "lucide-react"
+import { format, isToday, isYesterday } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Chat() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null)
-  const [rooms, setRooms] = useState<ChatRoom[]>([])
-  const [showCreateRoomDialog, setShowCreateRoomDialog] = useState(false)
-  const [showDirectChatDialog, setShowDirectChatDialog] = useState(false)
-  const [editingRoom, setEditingRoom] = useState<ChatRoom | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState("")
-  const [sendingMessage, setSendingMessage] = useState(false)
-  const [loadingMessages, setLoadingMessages] = useState(false)
-  const [attachedFile, setAttachedFile] = useState<File | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const { user, profile } = useAuth()
-  const { supabase } = useSupabase()
+  const { profile } = useAuth()
   const { toast } = useToast()
+  
+  const {
+    rooms,
+    messages,
+    selectedRoom,
+    isLoadingRooms,
+    isLoadingMessages,
+    sendMessage,
+    selectRoom,
+    markAsRead,
+    createRoom,
+    updateRoom,
+    deleteRoom,
+    leaveRoom
+  } = useChat()
 
-  useEffect(() => {
-    if (!user) return
+  const [newMessage, setNewMessage] = useState("")
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showDirectDialog, setShowDirectDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editingRoom, setEditingRoom] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
-    const fetchRooms = async () => {
-      try {
-        const { data: roomsData, error: roomsError } = await supabase
-          .from('chat_rooms')
-          .select(`
-            id,
-            created_at,
-            name,
-            type,
-            created_by,
-            is_active
-          `)
-          .eq('is_active', true)
+  // Filtrar salas baseado na busca
+  const filteredRooms = useMemo(() => {
+    if (!searchTerm) return rooms
+    return rooms.filter(room => 
+      room.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [rooms, searchTerm])
 
-        if (roomsError) {
-          throw roomsError
-        }
-
-        if (roomsData) {
-          const formattedRooms = roomsData.map(room => ({
-            ...room,
-            is_active: room.is_active ?? true,
-            created_by: room.created_by ?? user.id,
-            type: room.type === 'private' ? 'private' : room.type === 'direct' ? 'direct' : 'group'
-          })) as ChatRoom[]
-          setRooms(formattedRooms)
-        }
-      } catch (error: any) {
-        toast({
-          title: "Erro ao carregar as conversas",
-          description: error.message,
-          variant: "destructive",
-        })
+  // Agrupar mensagens por data
+  const groupedMessages = useMemo(() => {
+    if (!messages) return []
+    
+    const groups: { [key: string]: typeof messages } = {}
+    
+    messages.forEach(message => {
+      const date = new Date(message.created_at)
+      let dateKey: string
+      
+      if (isToday(date)) {
+        dateKey = 'Hoje'
+      } else if (isYesterday(date)) {
+        dateKey = 'Ontem'
+      } else {
+        dateKey = format(date, 'dd/MM/yyyy', { locale: ptBR })
       }
-    }
-
-    fetchRooms()
-
-    const roomSubscription = supabase
-      .channel('public:chat_rooms')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_rooms' }, async (payload) => {
-        if (payload.new && typeof payload.new === 'object') {
-          const newRoomData = payload.new as any
-          const newRoom = {
-            ...newRoomData,
-            is_active: newRoomData.is_active ?? true,
-            created_by: newRoomData.created_by ?? user.id,
-            type: newRoomData.type === 'private' ? 'private' : newRoomData.type === 'direct' ? 'direct' : 'group'
-          } as ChatRoom
-          if (newRoom.type === 'group') {
-            setRooms(prevRooms => [...prevRooms, newRoom])
-          }
-        }
-      })
-      .subscribe()
-
-    return () => {
-      roomSubscription.unsubscribe()
-    }
-  }, [user, supabase, toast])
-
-  useEffect(() => {
-    if (selectedRoom) {
-      fetchMessages(selectedRoom.id)
-    }
-  }, [selectedRoom])
-
-  useEffect(() => {
-    if (!selectedRoom) return
-
-    const messageSubscription = supabase
-      .channel(`public:chat_messages:room_id=eq.${selectedRoom.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, async (payload) => {
-        if (payload.new) {
-          const newMessage = payload.new as Message
-          setMessages(prevMessages => [...prevMessages, newMessage])
-        }
-      })
-      .subscribe()
-
-    return () => {
-      messageSubscription.unsubscribe()
-    }
-  }, [selectedRoom, supabase])
-
-  useEffect(() => {
-    scrollToBottom()
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      groups[dateKey].push(message)
+    })
+    
+    return Object.entries(groups).map(([date, msgs]) => ({
+      date,
+      messages: msgs
+    }))
   }, [messages])
-
-  const fetchMessages = async (roomId: string) => {
-    setLoadingMessages(true)
-    try {
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('chat_messages')
-        .select(`
-          id,
-          created_at,
-          content,
-          sender_id,
-          room_id,
-          attachment_url,
-          attachment_name,
-          attachment_size,
-          sender:profiles (
-            id,
-            name,
-            email,
-            avatar_url
-          )
-        `)
-        .eq('room_id', roomId)
-        .order('created_at', { ascending: true })
-
-      if (messagesError) {
-        throw messagesError
-      }
-
-      if (messagesData) {
-        setMessages(messagesData)
-      }
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar as mensagens",
-        description: error.message,
-        variant: "destructive",
-      })
-    } finally {
-      setLoadingMessages(false)
-    }
-  }
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!newMessage.trim() && !attachedFile) return
-    if (!selectedRoom) return
-
-    setSendingMessage(true)
+    if (!newMessage.trim() || !selectedRoom) return
 
     try {
-      let attachmentUrl = null
-      let attachmentName = null
-      let attachmentSize = null
-
-      if (attachedFile) {
-        const { data, error } = await supabase.storage
-          .from('chat-attachments')
-          .upload(`${user!.id}/${Date.now()}-${attachedFile.name}`, attachedFile, {
-            cacheControl: '3600',
-            upsert: false
-          })
-
-        if (error) {
-          throw error
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('chat-attachments')
-          .getPublicUrl(data.path)
-
-        attachmentUrl = publicUrl
-        attachmentName = attachedFile.name
-        attachmentSize = attachedFile.size
-      }
-
-      const { error: messageError } = await supabase
-        .from('chat_messages')
-        .insert({
-          content: newMessage,
-          sender_id: user!.id,
-          room_id: selectedRoom.id,
-          attachment_url: attachmentUrl,
-          attachment_name: attachmentName,
-          attachment_size: attachmentSize,
-        })
-
-      if (messageError) {
-        throw messageError
-      }
-
+      await sendMessage(selectedRoom.id, newMessage.trim())
       setNewMessage("")
-      setAttachedFile(null)
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error sending message:', error)
       toast({
-        title: "Erro ao enviar a mensagem",
-        description: error.message,
-        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao enviar mensagem",
+        variant: "destructive"
       })
-    } finally {
-      setSendingMessage(false)
     }
   }
 
-  const handleFileSelect = (file: File | null) => {
-    setAttachedFile(file)
+  const handleRoomSelect = (room: any) => {
+    selectRoom(room.id)
+    markAsRead(room.id)
+    setIsMobileSidebarOpen(false)
   }
 
-  const handleCreateRoom = (roomId: string) => {
-    const fetchRooms = async () => {
-      try {
-        const { data: roomsData, error: roomsError } = await supabase
-          .from('chat_rooms')
-          .select(`
-            id,
-            created_at,
-            name,
-            type,
-            created_by,
-            is_active
-          `)
-          .eq('is_active', true)
-
-        if (roomsData) {
-          const formattedRooms = roomsData.map(room => ({
-            ...room,
-            is_active: room.is_active ?? true,
-            created_by: room.created_by ?? user!.id,
-            type: room.type === 'private' ? 'private' : room.type === 'direct' ? 'direct' : 'group'
-          })) as ChatRoom[]
-          setRooms(formattedRooms)
-        }
-      } catch (error) {
-        console.error('Error fetching rooms:', error)
-      }
-    }
-    fetchRooms()
-  }
-
-  const handleDirectChatCreated = (room: ChatRoom) => {
-    setRooms([...rooms, room])
-    setSelectedRoom(room)
-  }
-
-  const handleEditRoom = (room: ChatRoom) => {
+  const handleEditRoom = (room: any) => {
     setEditingRoom(room)
+    setShowEditDialog(true)
   }
 
-  const getDirectChatPartner = (room: ChatRoom) => {
-    return room.members?.find(member => member.profile.id !== user?.id)?.profile
+  const formatMessageTime = (timestamp: string) => {
+    return format(new Date(timestamp), 'HH:mm', { locale: ptBR })
   }
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  const getRoomType = (room: any) => {
+    if (room.type === 'private') return 'Privado'
+    if (room.type === 'group') return 'Grupo'
+    return 'Unidade'
   }
 
-  const filteredRooms = rooms.filter(room =>
-    room.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const canManageRoom = (room: any) => {
+    return profile?.role === 'admin' || room.created_by === profile?.id
+  }
 
-  return (
-    <div className="flex h-full">
-      {/* Sidebar de contatos */}
-      <div className="w-80 border-r border-border/50 bg-background/50 backdrop-blur-sm">
-        <div className="p-4 border-b border-border/50">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Chat</h2>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowCreateRoomDialog(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowDirectChatDialog(true)}
-              >
-                <MessageCircle className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Buscar conversas..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {filteredRooms.map((room) => (
-            <div
-              key={room.id}
-              className={`p-3 cursor-pointer hover:bg-muted/50 border-b border-border/30 ${
-                selectedRoom?.id === room.id ? 'bg-muted' : ''
-              }`}
-              onClick={() => setSelectedRoom(room)}
+  const ChatSidebar = () => (
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Conversas</h2>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDirectDialog(true)}
+              disabled={profile?.role === 'user'}
             >
-              <div className="flex items-center gap-3">
-                <ChatRoomAvatar room={room} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{room.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {room.type === 'group' && `${room.members?.length || 0} membros`}
-                    {room.type === 'direct' && getDirectChatPartner(room)?.name}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCreateDialog(true)}
+              disabled={profile?.role === 'user'}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+        
+        <Input
+          placeholder="Buscar conversas..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mb-4"
+        />
       </div>
 
-      {/* Área principal do chat */}
-      <div className="flex-1 flex flex-col">
-        {selectedRoom ? (
-          <>
-            {/* Header da conversa */}
-            <div className="p-4 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <ChatRoomAvatar room={selectedRoom} size="md" />
-                <div className="flex-1">
-                  <h3 className="font-semibold">{selectedRoom.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedRoom.type === 'group' && `${selectedRoom.members?.length || 0} membros`}
-                    {selectedRoom.type === 'direct' && getDirectChatPartner(selectedRoom)?.name}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEditRoom(selectedRoom)}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </div>
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {isLoadingRooms ? (
+            <div className="flex justify-center p-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
-
-            {/* Mensagens */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {loadingMessages ? (
-                <div className="flex justify-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  Não há mensagens ainda. Comece a conversa!
-                </div>
-              ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[70%] ${message.sender_id === user?.id ? 'order-2' : 'order-1'}`}>
-                      <div
-                        className={`rounded-lg px-4 py-2 ${
-                          message.sender_id === user?.id
-                            ? 'bg-primary text-primary-foreground ml-2'
-                            : 'bg-muted mr-2'
-                        }`}
-                      >
-                        {message.sender_id !== user?.id && selectedRoom.type === 'group' && (
-                          <div className="text-xs font-medium mb-1 opacity-70">
-                            {message.sender?.name}
-                          </div>
-                        )}
-                        <div className="text-sm whitespace-pre-wrap break-words">
-                          {message.content}
-                        </div>
-                        {message.attachment_url && (
-                          <ChatMessageAttachment 
-                            attachment_url={message.attachment_url}
-                            attachment_name={message.attachment_name || ''}
-                            attachment_size={message.attachment_size || 0}
-                          />
-                        )}
-                        <div className="text-xs opacity-70 mt-1">
-                          {format(new Date(message.created_at), 'HH:mm', { locale: ptBR })}
-                        </div>
-                      </div>
+          ) : filteredRooms.length === 0 ? (
+            <div className="text-center text-muted-foreground p-4">
+              {searchTerm ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa disponível'}
+            </div>
+          ) : (
+            filteredRooms.map((room) => (
+              <div
+                key={room.id}
+                className={`p-3 rounded-lg cursor-pointer transition-colors mb-2 ${
+                  selectedRoom?.id === room.id 
+                    ? 'bg-primary/10 border border-primary/20' 
+                    : 'hover:bg-muted/50'
+                }`}
+                onClick={() => handleRoomSelect(room)}
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={room.image_url} />
+                    <AvatarFallback>
+                      {room.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium truncate">{room.name}</p>
+                      <Badge variant="outline" className="text-xs">
+                        {getRoomType(room)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-1">
+                      <Users className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {room.participant_count || 0} participantes
+                      </span>
                     </div>
                   </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input de mensagem */}
-            <div className="p-4 border-t border-border/50 bg-background/80 backdrop-blur-sm">
-              <form onSubmit={handleSendMessage} className="flex gap-2">
-                <ChatAttachmentUpload 
-                  onFileSelect={handleFileSelect}
-                  selectedFile={attachedFile}
-                />
-                <div className="flex-1 relative">
-                  <Input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    disabled={sendingMessage}
-                    className="pr-10"
-                  />
-                  {attachedFile && (
-                    <div className="absolute -top-16 left-0 right-0 bg-muted p-2 rounded-md text-sm flex items-center justify-between">
-                      <span className="truncate">📎 {attachedFile.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setAttachedFile(null)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
                 </div>
-                <Button type="submit" disabled={sendingMessage || (!newMessage.trim() && !attachedFile)}>
-                  {sendingMessage ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
+              </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+
+  const ChatContent = () => {
+    if (!selectedRoom) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Selecione uma conversa</h3>
+            <p className="text-muted-foreground">
+              Escolha uma conversa da lista para começar a trocar mensagens
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex-1 flex flex-col">
+        {/* Header da conversa */}
+        <div className="p-4 border-b flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="md:hidden">
+                  <Menu className="h-4 w-4" />
                 </Button>
-              </form>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Selecione uma conversa para começar</p>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle>Conversas</SheetTitle>
+                </SheetHeader>
+                <ChatSidebar />
+              </SheetContent>
+            </Sheet>
+            
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={selectedRoom.image_url} />
+              <AvatarFallback>
+                {selectedRoom.name.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div>
+              <h3 className="font-medium">{selectedRoom.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {getRoomType(selectedRoom)}
+              </p>
             </div>
           </div>
-        )}
+
+          <div className="flex items-center gap-2">
+            {canManageRoom(selectedRoom) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEditRoom(selectedRoom)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="sm">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Mensagens */}
+        <ScrollArea className="flex-1 p-4">
+          {isLoadingMessages ? (
+            <div className="flex justify-center p-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : groupedMessages.length === 0 ? (
+            <div className="text-center text-muted-foreground p-8">
+              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhuma mensagem ainda</p>
+              <p className="text-sm">Seja o primeiro a enviar uma mensagem!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {groupedMessages.map((group) => (
+                <div key={group.date}>
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
+                      {group.date}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {group.messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${
+                          message.sender_id === profile?.id ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        <div
+                          className={`max-w-[70%] rounded-lg p-3 ${
+                            message.sender_id === profile?.id
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          {message.sender_id !== profile?.id && (
+                            <p className="text-xs font-medium mb-1 opacity-70">
+                              {message.sender?.name}
+                            </p>
+                          )}
+                          
+                          <p className="text-sm break-words">{message.content}</p>
+                          
+                          {message.attachment_url && (
+                            <ChatMessageAttachment
+                              url={message.attachment_url}
+                              name={message.attachment_name}
+                              size={message.attachment_size}
+                            />
+                          )}
+                          
+                          <p className="text-xs opacity-70 mt-1">
+                            {formatMessageTime(message.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        {/* Input de mensagem */}
+        <div className="p-4 border-t">
+          <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <ChatAttachmentUpload
+                  roomId={selectedRoom.id}
+                  onUploadComplete={() => {
+                    toast({
+                      title: "Sucesso",
+                      description: "Arquivo enviado com sucesso"
+                    })
+                  }}
+                />
+              </div>
+              
+              <Input
+                placeholder="Digite sua mensagem..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                className="resize-none"
+              />
+            </div>
+            
+            <Button type="submit" disabled={!newMessage.trim()}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
       </div>
+    )
+  }
+
+  return (
+    <div className="h-screen flex">
+      {/* Sidebar Desktop */}
+      <div className="hidden md:block w-80 border-r bg-background">
+        <ChatSidebar />
+      </div>
+
+      {/* Conteúdo Principal */}
+      <ChatContent />
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        open={showCreateRoomDialog}
-        onOpenChange={setShowCreateRoomDialog}
-        onRoomCreated={handleCreateRoom}
+        isOpen={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onRoomCreated={(roomId) => {
+          setShowCreateDialog(false)
+          // Selecionar a nova sala
+          const newRoom = rooms.find(r => r.id === roomId)
+          if (newRoom) {
+            selectRoom(roomId)
+          }
+        }}
       />
 
       <DirectChatDialog
-        open={showDirectChatDialog}
-        onOpenChange={setShowDirectChatDialog}
-        onChatCreated={handleDirectChatCreated}
+        isOpen={showDirectDialog}
+        onOpenChange={setShowDirectDialog}
+        onDirectChatCreated={(room) => {
+          setShowDirectDialog(false)
+          selectRoom(room.id)
+        }}
       />
 
       {editingRoom && (
         <EditChatRoomDialog
           room={editingRoom}
-          onOpenChange={() => setEditingRoom(null)}
+          isOpen={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          onRoomUpdated={() => {
+            setShowEditDialog(false)
+            setEditingRoom(null)
+          }}
         />
       )}
     </div>
