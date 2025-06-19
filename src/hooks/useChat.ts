@@ -242,6 +242,37 @@ export function useChatMessages(roomId?: string) {
   return query
 }
 
+export function useChatParticipants(roomId?: string) {
+  const { profile } = useAuth()
+
+  return useQuery({
+    queryKey: ['chat-participants', roomId],
+    queryFn: async () => {
+      if (!roomId) return []
+
+      const { data, error } = await supabase
+        .from('chat_participants')
+        .select(`
+          id,
+          user_id,
+          room_id,
+          joined_at,
+          last_read_at,
+          profiles(id, name, avatar_url, role)
+        `)
+        .eq('room_id', roomId)
+
+      if (error) {
+        console.error('Error fetching chat participants:', error)
+        throw error
+      }
+
+      return (data as ChatParticipant[]) || []
+    },
+    enabled: !!roomId && !!profile?.id,
+  })
+}
+
 export function useCreateChatRoom() {
   const queryClient = useQueryClient()
   const { profile } = useAuth()
@@ -302,6 +333,39 @@ export function useCreateChatRoom() {
   })
 }
 
+export function useUpdateChatRoom() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: {
+      roomId: string
+      name?: string
+      imageUrl?: string
+    }) => {
+      const { data, error } = await supabase
+        .from('chat_rooms')
+        .update({
+          name: params.name,
+          image_url: params.imageUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.roomId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating chat room:', error)
+        throw error
+      }
+
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+    },
+  })
+}
+
 export function useSendMessage() {
   const queryClient = useQueryClient()
   const { profile } = useAuth()
@@ -310,6 +374,7 @@ export function useSendMessage() {
     mutationFn: async (params: {
       roomId: string
       content: string
+      attachmentFile?: File
       attachmentUrl?: string
       attachmentName?: string
       attachmentType?: string
@@ -319,14 +384,44 @@ export function useSendMessage() {
 
       console.log('Sending message to room:', params.roomId)
 
+      let attachmentUrl = params.attachmentUrl
+      let attachmentName = params.attachmentName
+      let attachmentType = params.attachmentType
+      let attachmentSize = params.attachmentSize
+
+      // Upload do arquivo se fornecido
+      if (params.attachmentFile) {
+        const fileExt = params.attachmentFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `chat-attachments/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('chat-attachments')
+          .upload(filePath, params.attachmentFile)
+
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError)
+          throw new Error('Erro ao fazer upload do arquivo')
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(filePath)
+
+        attachmentUrl = urlData.publicUrl
+        attachmentName = params.attachmentFile.name
+        attachmentType = params.attachmentFile.type
+        attachmentSize = params.attachmentFile.size
+      }
+
       const messageData = {
         room_id: params.roomId,
         sender_id: profile.id,
         content: params.content,
-        attachment_url: params.attachmentUrl || null,
-        attachment_name: params.attachmentName || null,
-        attachment_type: params.attachmentType || null,
-        attachment_size: params.attachmentSize || null,
+        attachment_url: attachmentUrl || null,
+        attachment_name: attachmentName || null,
+        attachment_type: attachmentType || null,
+        attachment_size: attachmentSize || null,
       }
 
       const { data, error } = await supabase
@@ -347,6 +442,92 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.roomId] })
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
     },
+  })
+}
+
+export function useEditMessage() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: { messageId: string; content: string }) => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .update({
+          content: params.content,
+          edited_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.messageId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error editing message:', error)
+        throw error
+      }
+
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
+    },
+  })
+}
+
+export function useDeleteMessage() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (messageId: string) => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .update({
+          is_deleted: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', messageId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error deleting message:', error)
+        throw error
+      }
+
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
+    },
+  })
+}
+
+export function useCanDeleteChatRoom(roomId: string) {
+  const { profile } = useAuth()
+
+  return useQuery({
+    queryKey: ['can-delete-chat-room', roomId, profile?.id],
+    queryFn: async () => {
+      if (!roomId || !profile?.id) return false
+
+      // Admin pode deletar qualquer sala
+      if (profile.role === 'admin') return true
+
+      // Verificar se o usuário é o criador da sala
+      const { data: room, error } = await supabase
+        .from('chat_rooms')
+        .select('created_by')
+        .eq('id', roomId)
+        .single()
+
+      if (error) {
+        console.error('Error checking room permissions:', error)
+        return false
+      }
+
+      return room.created_by === profile.id
+    },
+    enabled: !!roomId && !!profile?.id,
   })
 }
 
