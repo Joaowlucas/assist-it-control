@@ -49,22 +49,23 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'bg-red-100 text-red-800'
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
       case 'technician':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
       default:
-        return 'bg-green-100 text-green-800'
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
     }
   }
 
   const handleStartChat = async (userId: string, userName: string) => {
     try {
       const roomId = await createChatRoom.mutateAsync({
-        name: `${profile?.name} - ${userName}`,
+        name: `Chat: ${profile?.name} - ${userName}`,
         participantIds: [userId],
       })
       
       setOpen(false)
+      setSearchTerm('')
       onChatCreated?.(roomId)
     } catch (error) {
       console.error('Error starting chat:', error)
@@ -114,7 +115,7 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
               filteredUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => handleStartChat(user.id, user.name)}
                 >
                   <Avatar className="h-10 w-10">
@@ -127,9 +128,9 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium truncate">{user.name}</p>
-                      <Badge className={`${getRoleColor(user.role)} text-xs`}>
+                      <Badge className={`${getRoleColor(user.role)} text-xs flex items-center gap-1`}>
                         {getRoleIcon(user.role)}
-                        <span className="ml-1">{getRoleLabel(user.role)}</span>
+                        <span>{getRoleLabel(user.role)}</span>
                       </Badge>
                     </div>
                     {user.units?.name && (

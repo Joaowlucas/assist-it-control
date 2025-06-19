@@ -1,7 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
+import { useEffect } from 'react'
 
 export interface ChatRoom {
   id: string
@@ -60,15 +62,16 @@ export interface ChatParticipant {
 
 export function useChatRooms() {
   const { profile } = useAuth()
+  const queryClient = useQueryClient()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['chat-rooms', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return []
 
       console.log('Fetching chat rooms for user:', profile.id, 'with role:', profile.role)
 
-      // Usar as novas políticas RLS - não precisamos mais filtrar manualmente
+      // Query base para buscar todas as salas acessíveis ao usuário
       const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
@@ -89,14 +92,57 @@ export function useChatRooms() {
       }
 
       console.log('Chat rooms fetched:', data?.length || 0)
-      return data as ChatRoom[]
+      return (data as ChatRoom[]) || []
     },
     enabled: !!profile?.id,
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 segundos
   })
+
+  // Configurar subscription para tempo real
+  useEffect(() => {
+    if (!profile?.id) return
+
+    const channel = supabase
+      .channel('chat-rooms-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_rooms'
+        },
+        () => {
+          console.log('Chat rooms changed, invalidating query')
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_participants'
+        },
+        () => {
+          console.log('Chat participants changed, invalidating query')
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [profile?.id, queryClient])
+
+  return query
 }
 
 export function useChatMessages(roomId: string) {
-  return useQuery({
+  const queryClient = useQueryClient()
+
+  const query = useQuery({
     queryKey: ['chat-messages', roomId],
     queryFn: async () => {
       if (!roomId) return []
@@ -117,11 +163,40 @@ export function useChatMessages(roomId: string) {
         throw error
       }
 
-      console.log('Messages fetched:', data)
-      return data as ChatMessage[]
+      console.log('Messages fetched for room:', roomId, 'count:', data?.length || 0)
+      return (data as ChatMessage[]) || []
     },
     enabled: !!roomId,
+    refetchOnWindowFocus: false,
   })
+
+  // Subscription para mensagens em tempo real
+  useEffect(() => {
+    if (!roomId) return
+
+    const channel = supabase
+      .channel(`chat-messages-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `room_id=eq.${roomId}`
+        },
+        () => {
+          console.log('Messages changed for room:', roomId)
+          queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [roomId, queryClient])
+
+  return query
 }
 
 export function useChatParticipants(roomId: string) {
@@ -145,8 +220,8 @@ export function useChatParticipants(roomId: string) {
         throw error
       }
 
-      console.log('Participants fetched:', data)
-      return data as ChatParticipant[]
+      console.log('Participants fetched for room:', roomId, 'count:', data?.length || 0)
+      return (data as ChatParticipant[]) || []
     },
     enabled: !!roomId,
   })
@@ -177,7 +252,7 @@ export function useSendMessage() {
       if (attachmentFile) {
         const fileExt = attachmentFile.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `chat-attachments/${roomId}/${fileName}`
+        const filePath = `${roomId}/${fileName}`
 
         const { error: uploadError } = await supabase.storage
           .from('chat-attachments')
@@ -185,7 +260,7 @@ export function useSendMessage() {
 
         if (uploadError) {
           console.error('Error uploading attachment:', uploadError)
-          throw uploadError
+          throw new Error('Erro ao fazer upload do anexo: ' + uploadError.message)
         }
 
         const { data: urlData } = supabase.storage
@@ -214,21 +289,25 @@ export function useSendMessage() {
 
       if (error) {
         console.error('Error sending message:', error)
-        throw error
+        throw new Error('Erro ao enviar mensagem: ' + error.message)
       }
 
-      console.log('Message sent:', data)
+      console.log('Message sent successfully:', data.id)
       return data
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      toast({
+        title: 'Mensagem enviada',
+        description: 'Sua mensagem foi enviada com sucesso',
+      })
     },
     onError: (error) => {
       console.error('Error in sendMessage mutation:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao enviar mensagem: ' + error.message,
+        description: error.message,
         variant: 'destructive',
       })
     },
@@ -258,20 +337,24 @@ export function useEditMessage() {
 
       if (error) {
         console.error('Error editing message:', error)
-        throw error
+        throw new Error('Erro ao editar mensagem: ' + error.message)
       }
 
-      console.log('Message edited:', data)
+      console.log('Message edited successfully')
       return data
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
+      toast({
+        title: 'Mensagem editada',
+        description: 'Sua mensagem foi editada com sucesso',
+      })
     },
     onError: (error) => {
       console.error('Error in editMessage mutation:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao editar mensagem: ' + error.message,
+        description: error.message,
         variant: 'destructive',
       })
     },
@@ -295,20 +378,24 @@ export function useDeleteMessage() {
 
       if (error) {
         console.error('Error deleting message:', error)
-        throw error
+        throw new Error('Erro ao excluir mensagem: ' + error.message)
       }
 
-      console.log('Message deleted:', data)
+      console.log('Message deleted successfully')
       return data
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
+      toast({
+        title: 'Mensagem excluída',
+        description: 'A mensagem foi excluída com sucesso',
+      })
     },
     onError: (error) => {
       console.error('Error in deleteMessage mutation:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao excluir mensagem: ' + error.message,
+        description: error.message,
         variant: 'destructive',
       })
     },
@@ -332,10 +419,10 @@ export function useDeleteChatRoom() {
 
       if (error) {
         console.error('Error deleting chat room:', error)
-        throw error
+        throw new Error('Erro ao remover sala: ' + error.message)
       }
 
-      console.log('Chat room deleted:', data)
+      console.log('Chat room deleted successfully')
       return data
     },
     onSuccess: () => {
@@ -349,7 +436,7 @@ export function useDeleteChatRoom() {
       console.error('Error in deleteChatRoom mutation:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao remover sala: ' + error.message,
+        description: error.message,
         variant: 'destructive',
       })
     },
@@ -381,33 +468,39 @@ export function useUpdateChatRoom() {
 
       if (roomError) {
         console.error('Error updating chat room:', roomError)
-        throw roomError
+        throw new Error('Erro ao atualizar sala: ' + roomError.message)
       }
 
-      // Remover participantes existentes
-      const { error: deleteError } = await supabase
-        .from('chat_participants')
-        .delete()
-        .eq('room_id', roomId)
+      // Se não é uma sala de unidade, gerenciar participantes manualmente
+      if (!unitId) {
+        // Remover participantes existentes (exceto o criador)
+        const { error: deleteError } = await supabase
+          .from('chat_participants')
+          .delete()
+          .eq('room_id', roomId)
+          .neq('user_id', (await supabase.from('chat_rooms').select('created_by').eq('id', roomId).single()).data?.created_by)
 
-      if (deleteError) {
-        console.error('Error removing old participants:', deleteError)
-        throw deleteError
-      }
+        if (deleteError) {
+          console.error('Error removing old participants:', deleteError)
+          throw new Error('Erro ao remover participantes: ' + deleteError.message)
+        }
 
-      // Adicionar novos participantes
-      const participantsData = participants.map(userId => ({
-        room_id: roomId,
-        user_id: userId,
-      }))
+        // Adicionar novos participantes
+        if (participants.length > 0) {
+          const participantsData = participants.map(userId => ({
+            room_id: roomId,
+            user_id: userId,
+          }))
 
-      const { error: participantsError } = await supabase
-        .from('chat_participants')
-        .insert(participantsData)
+          const { error: participantsError } = await supabase
+            .from('chat_participants')
+            .insert(participantsData)
 
-      if (participantsError) {
-        console.error('Error adding new participants:', participantsError)
-        throw participantsError
+          if (participantsError) {
+            console.error('Error adding new participants:', participantsError)
+            throw new Error('Erro ao adicionar participantes: ' + participantsError.message)
+          }
+        }
       }
 
       console.log('Chat room updated successfully')
@@ -425,7 +518,7 @@ export function useUpdateChatRoom() {
       console.error('Error in updateChatRoom mutation:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao atualizar sala: ' + error.message,
+        description: error.message,
         variant: 'destructive',
       })
     },
@@ -449,29 +542,24 @@ export function useCreateChatRoom() {
 
       console.log('Creating chat room:', { name, unitId, participantIds })
 
-      // Para conversas privadas (2 participantes), verificar se já existe uma conversa
-      if (participantIds.length === 2 && !unitId) {
-        const allParticipants = [...participantIds, profile.id].sort()
+      // Para conversas privadas (apenas 2 participantes), verificar se já existe
+      if (!unitId && participantIds.length === 1) {
+        const allParticipants = [participantIds[0], profile.id].sort()
         
-        // Buscar salas existentes com os mesmos participantes
-        const { data: existingRooms, error: searchError } = await supabase
+        // Buscar conversas privadas existentes
+        const { data: existingRooms } = await supabase
           .from('chat_rooms')
           .select(`
             id,
-            name,
-            unit_id,
-            chat_participants!inner(user_id)
+            chat_participants(user_id)
           `)
           .eq('is_active', true)
-          .is('unit_id', null) // Apenas salas privadas (sem unidade)
+          .is('unit_id', null)
 
-        if (searchError) {
-          console.error('Error searching existing rooms:', searchError)
-        } else if (existingRooms) {
-          // Verificar se há uma sala com exatamente os mesmos participantes
+        if (existingRooms) {
           for (const room of existingRooms) {
             const roomParticipants = room.chat_participants?.map(p => p.user_id).sort()
-            if (roomParticipants?.length === allParticipants.length &&
+            if (roomParticipants?.length === 2 &&
                 roomParticipants.every((id, index) => id === allParticipants[index])) {
               console.log('Found existing private conversation:', room.id)
               return room.id
@@ -493,10 +581,10 @@ export function useCreateChatRoom() {
 
       if (roomError) {
         console.error('Error creating chat room:', roomError)
-        throw roomError
+        throw new Error('Erro ao criar conversa: ' + roomError.message)
       }
 
-      // Se não é uma sala de unidade, adicionar participantes manualmente
+      // Para salas não-unitárias, adicionar participantes manualmente
       if (!unitId && participantIds.length > 0) {
         const participantsData = participantIds.map(userId => ({
           room_id: room.id,
@@ -509,11 +597,11 @@ export function useCreateChatRoom() {
 
         if (participantsError) {
           console.error('Error adding participants:', participantsError)
-          throw participantsError
+          throw new Error('Erro ao adicionar participantes: ' + participantsError.message)
         }
       }
 
-      console.log('Chat room created:', room.id)
+      console.log('Chat room created successfully:', room.id)
       return room.id
     },
     onSuccess: (roomId) => {
@@ -527,14 +615,13 @@ export function useCreateChatRoom() {
       console.error('Error in createChatRoom mutation:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao criar conversa: ' + error.message,
+        description: error.message,
         variant: 'destructive',
       })
     },
   })
 }
 
-// Hook para buscar usuários disponíveis para chat
 export function useAvailableChatUsers() {
   const { profile } = useAuth()
 
@@ -551,19 +638,21 @@ export function useAvailableChatUsers() {
         .eq('status', 'ativo')
         .neq('id', profile.id)
 
-      // Filtrar usuários baseado no role
+      // Filtrar usuários baseado no role do usuário atual
       if (profile.role === 'user') {
-        // Usuários comuns podem conversar com outros da mesma unidade + técnicos + admins
+        // Usuários comuns: mesma unidade + técnicos + admins
         query = query.or(`unit_id.eq.${profile.unit_id},role.eq.technician,role.eq.admin`)
       } else if (profile.role === 'technician') {
-        // Técnicos podem conversar com usuários de suas unidades + outros técnicos + admins
+        // Técnicos: suas unidades + outros técnicos + admins + usuários das unidades
         const { data: techUnits } = await supabase
           .from('technician_units')
           .select('unit_id')
           .eq('technician_id', profile.id)
 
         const unitIds = techUnits?.map(tu => tu.unit_id) || []
-        if (profile.unit_id) unitIds.push(profile.unit_id)
+        if (profile.unit_id && !unitIds.includes(profile.unit_id)) {
+          unitIds.push(profile.unit_id)
+        }
 
         if (unitIds.length > 0) {
           const unitFilter = unitIds.map(id => `unit_id.eq.${id}`).join(',')

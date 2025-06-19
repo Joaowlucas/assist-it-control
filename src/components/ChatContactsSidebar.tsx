@@ -1,15 +1,13 @@
 
-import { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { MessageCircle, Users, Search } from 'lucide-react'
-import { useProfiles } from '@/hooks/useProfiles'
-import { DirectChatDialog } from '@/components/DirectChatDialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Search, User, Settings, Shield, MessageCircle } from 'lucide-react'
+import { useAvailableChatUsers, useCreateChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/integrations/supabase/client'
 
 interface ChatContactsSidebarProps {
   open: boolean
@@ -18,214 +16,142 @@ interface ChatContactsSidebarProps {
 }
 
 export function ChatContactsSidebar({ open, onOpenChange, onDirectChat }: ChatContactsSidebarProps) {
-  const { profile } = useAuth()
-  const { data: profiles = [] } = useProfiles()
-  const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [directChatDialog, setDirectChatDialog] = useState<{
-    open: boolean
-    targetUserId: string | null
-  }>({
-    open: false,
-    targetUserId: null
-  })
+  const { profile } = useAuth()
+  const { data: availableUsers = [], isLoading } = useAvailableChatUsers()
+  const createChatRoom = useCreateChatRoom()
 
-  useEffect(() => {
-    if (!open) return
+  const filteredUsers = availableUsers.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
-    const channel = supabase.channel('online-users-sidebar')
-    
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
-        const userIds = Object.keys(state).map(key => {
-          const presences = state[key] as Array<{ user_id?: string }>
-          return presences[0]?.user_id
-        }).filter(Boolean) as string[]
-        setOnlineUsers(userIds)
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        const userIds = (newPresences as Array<{ user_id?: string }>)
-          .map((presence) => presence.user_id)
-          .filter(Boolean) as string[]
-        setOnlineUsers(prev => [...new Set([...prev, ...userIds])])
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        const userIds = (leftPresences as Array<{ user_id?: string }>)
-          .map((presence) => presence.user_id)
-          .filter(Boolean) as string[]
-        setOnlineUsers(prev => prev.filter(id => !userIds.includes(id)))
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Shield className="h-4 w-4" />
+      case 'technician':
+        return <Settings className="h-4 w-4" />
+      default:
+        return <User className="h-4 w-4" />
     }
-  }, [open])
-
-  const handleStartDirectChat = (userId: string) => {
-    setDirectChatDialog({
-      open: true,
-      targetUserId: userId
-    })
   }
 
-  const handleRoomCreated = (roomId: string) => {
-    onDirectChat?.(roomId)
-    onOpenChange(false) // Fechar a sidebar após criar a conversa
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Admin'
+      case 'technician':
+        return 'Técnico'
+      default:
+        return 'Usuário'
+    }
   }
 
-  // Filtrar usuários (excluir o próprio usuário e aplicar busca)
-  const filteredProfiles = profiles
-    .filter(p => p.id !== profile?.id && p.status === 'ativo')
-    .filter(p => searchTerm === '' || p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      case 'technician':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+      default:
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+    }
+  }
 
-  const onlineProfiles = filteredProfiles.filter(profile => onlineUsers.includes(profile.id))
-  const offlineProfiles = filteredProfiles.filter(profile => !onlineUsers.includes(profile.id))
+  const handleStartChat = async (userId: string, userName: string) => {
+    try {
+      const roomId = await createChatRoom.mutateAsync({
+        name: `Chat: ${profile?.name} - ${userName}`,
+        participantIds: [userId],
+      })
+      
+      onOpenChange(false)
+      setSearchTerm('')
+      onDirectChat?.(roomId)
+    } catch (error) {
+      console.error('Error starting chat:', error)
+    }
+  }
+
+  if (isLoading) {
+    return null
+  }
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-80 sm:max-w-80">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Contatos
-            </SheetTitle>
-            <SheetDescription>
-              Selecione um usuário para iniciar uma conversa privada
-            </SheetDescription>
-          </SheetHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[400px] sm:w-[540px]">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Iniciar Nova Conversa
+          </SheetTitle>
+          <SheetDescription>
+            Selecione um usuário para iniciar uma conversa direta
+          </SheetDescription>
+        </SheetHeader>
+        
+        <div className="space-y-4 mt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar usuários..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-          <div className="mt-4 space-y-4">
-            {/* Busca */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar contatos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Lista de Usuários */}
-            <ScrollArea className="h-[calc(100vh-200px)]">
-              <div className="space-y-4">
-                {/* Usuários Online */}
-                {onlineProfiles.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-green-600 mb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      Online ({onlineProfiles.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {onlineProfiles.map((user) => (
-                        <div 
-                          key={user.id} 
-                          className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-                          onClick={() => handleStartDirectChat(user.id)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={user.avatar_url || undefined} />
-                                <AvatarFallback>
-                                  {user.name.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{user.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {user.role === 'admin' ? 'Administrador' : 
-                                 user.role === 'technician' ? 'Técnico' : 'Usuário'}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto space-y-2">
+            {filteredUsers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>
+                  {searchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário disponível'}
+                </p>
+              </div>
+            ) : (
+              filteredUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={user.avatar_url || undefined} />
+                    <AvatarFallback>
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium truncate">{user.name}</p>
+                      <Badge className={`${getRoleColor(user.role)} text-xs flex items-center gap-1`}>
+                        {getRoleIcon(user.role)}
+                        <span>{getRoleLabel(user.role)}</span>
+                      </Badge>
                     </div>
-                  </div>
-                )}
-
-                {/* Usuários Offline */}
-                {offlineProfiles.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                      Offline ({offlineProfiles.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {offlineProfiles.map((user) => (
-                        <div 
-                          key={user.id} 
-                          className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-                          onClick={() => handleStartDirectChat(user.id)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <Avatar className="h-10 w-10 opacity-60">
-                                <AvatarImage src={user.avatar_url || undefined} />
-                                <AvatarFallback>
-                                  {user.name.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-gray-400 border-2 border-background rounded-full" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium opacity-60">{user.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {user.role === 'admin' ? 'Administrador' : 
-                                 user.role === 'technician' ? 'Técnico' : 'Usuário'}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Nenhum usuário encontrado */}
-                {filteredProfiles.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhum contato encontrado</p>
-                    {searchTerm && (
-                      <p className="text-sm mt-2">
-                        Tente ajustar sua busca por "{searchTerm}"
+                    {user.units?.name && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {user.units.name}
                       </p>
                     )}
                   </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        </SheetContent>
-      </Sheet>
 
-      <DirectChatDialog
-        open={directChatDialog.open}
-        onOpenChange={(open) => setDirectChatDialog(prev => ({ ...prev, open }))}
-        targetUserId={directChatDialog.targetUserId}
-        onRoomCreated={handleRoomCreated}
-      />
-    </>
+                  <Button
+                    size="sm"
+                    onClick={() => handleStartChat(user.id, user.name)}
+                    disabled={createChatRoom.isPending}
+                    className="shrink-0"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    Chat
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

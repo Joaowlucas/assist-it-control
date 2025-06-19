@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X, UserPlus } from 'lucide-react'
+import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X, UserPlus, Building2, Search } from 'lucide-react'
 import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
@@ -26,7 +27,7 @@ export default function Chat() {
   const [showAttachmentUpload, setShowAttachmentUpload] = useState(false)
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null)
   const [showContactsSidebar, setShowContactsSidebar] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
@@ -38,6 +39,12 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Filtrar salas por busca
+  const filteredRooms = rooms?.filter(room =>
+    room.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    room.units?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || []
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,20 +90,29 @@ export default function Chat() {
     return profile?.role === 'admin' || senderId === profile?.id
   }
 
-  const canCreateNewChat = () => {
-    // Todos os usuários autenticados podem criar chats
-    return !!profile
-  }
-
   const getRoomDisplayName = (room: ChatRoom) => {
-    // Se for conversa privada (2 participantes), mostrar nome do outro usuário
-    if (room.participants && room.participants.length === 2) {
+    // Para conversas privadas (2 participantes), mostrar nome do outro usuário
+    if (!room.unit_id && room.participants && room.participants.length === 2) {
       const otherParticipant = room.participants.find(p => p.user_id !== profile?.id)
       if (otherParticipant) {
-        return `Chat com ${otherParticipant.profiles.name}`
+        return `${otherParticipant.profiles.name}`
       }
     }
     return room.name
+  }
+
+  const getRoomTypeIcon = (room: ChatRoom) => {
+    if (room.unit_id) {
+      return <Building2 className="h-4 w-4" />
+    }
+    return <MessageCircle className="h-4 w-4" />
+  }
+
+  const getRoomTypeColor = (room: ChatRoom) => {
+    if (room.unit_id) {
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+    }
+    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
   }
 
   if (roomsLoading) {
@@ -115,65 +131,83 @@ export default function Chat() {
       {/* Lista de Salas */}
       <div className="w-80 border-r bg-muted/30">
         <div className="p-4 border-b">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
               Chat Interno
             </h2>
-            {canCreateNewChat() && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowContactsSidebar(true)}
-                className="flex items-center gap-2"
-              >
-                <UserPlus className="h-4 w-4" />
-                Nova Conversa
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowContactsSidebar(true)}
+              className="flex items-center gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Nova Conversa
+            </Button>
+          </div>
+          
+          {/* Barra de busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar salas..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
         
         <ScrollArea className="h-full">
           <div className="p-4 space-y-2">
-            {rooms?.map((room) => (
+            {filteredRooms.map((room) => (
               <Card
                 key={room.id}
                 className={`cursor-pointer transition-colors hover:bg-accent ${
-                  selectedRoom?.id === room.id ? 'bg-accent' : ''
+                  selectedRoom?.id === room.id ? 'bg-accent border-primary' : ''
                 }`}
                 onClick={() => setSelectedRoom(room)}
               >
                 <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-medium">{getRoomDisplayName(room)}</h3>
-                      {room.units?.name && (
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 mb-1">
+                        {getRoomTypeIcon(room)}
+                        <h3 className="font-medium text-sm">{getRoomDisplayName(room)}</h3>
+                      </div>
+                      
+                      {room.unit_id && room.units?.name && (
+                        <p className="text-xs text-muted-foreground mb-2">
                           {room.units.name}
                         </p>
                       )}
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="secondary" className="text-xs">
-                        <Users className="h-3 w-3 mr-1" />
-                        {room.participants?.length || 0}
-                      </Badge>
-                      {room.created_by === profile?.id && (
-                        <Badge variant="outline" className="text-xs">
-                          Criador
+                      
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs ${getRoomTypeColor(room)}`}
+                        >
+                          <Users className="h-3 w-3 mr-1" />
+                          {room.participants?.length || 0}
                         </Badge>
-                      )}
+                        
+                        {room.created_by === profile?.id && (
+                          <Badge variant="outline" className="text-xs">
+                            Criador
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
             
-            {(!rooms || rooms.length === 0) && (
+            {filteredRooms.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Nenhuma sala de chat disponível</p>
+                <p>{searchTerm ? 'Nenhuma sala encontrada' : 'Nenhuma sala de chat disponível'}</p>
                 <p className="text-sm">Clique em "Nova Conversa" para começar</p>
               </div>
             )}
@@ -188,28 +222,25 @@ export default function Chat() {
             {/* Header do Chat */}
             <div className="p-4 border-b bg-background">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">{getRoomDisplayName(selectedRoom)}</h2>
-                  {selectedRoom.units?.name && (
-                    <p className="text-sm text-muted-foreground">
-                      {selectedRoom.units.name}
-                    </p>
-                  )}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>
+                      {getRoomTypeIcon(selectedRoom)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-lg font-semibold">{getRoomDisplayName(selectedRoom)}</h2>
+                    {selectedRoom.units?.name && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedRoom.units.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
+                
                 <div className="flex items-center gap-2">
-                  {canCreateNewChat() && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowContactsSidebar(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Nova Conversa
-                    </Button>
-                  )}
-                  <Badge variant="outline">
-                    <Users className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
                     {selectedRoom.participants?.length || 0} participantes
                   </Badge>
                 </div>
@@ -261,7 +292,7 @@ export default function Chat() {
                           
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <p className="text-sm">{msg.content}</p>
+                              <p className="text-sm break-words">{msg.content}</p>
                               {msg.edited_at && !msg.is_deleted && (
                                 <p className="text-xs opacity-70 mt-1">(editado)</p>
                               )}
@@ -364,6 +395,7 @@ export default function Chat() {
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Digite sua mensagem..."
                   disabled={sendMessage.isPending}
+                  className="flex-1"
                 />
                 <Button 
                   type="submit" 
@@ -380,9 +412,13 @@ export default function Chat() {
             <div className="text-center">
               <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <h3 className="text-lg font-medium mb-2">Selecione uma sala de chat</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 Escolha uma sala na lateral para começar a conversar
               </p>
+              <Button onClick={() => setShowContactsSidebar(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Iniciar Nova Conversa
+              </Button>
             </div>
           </div>
         )}

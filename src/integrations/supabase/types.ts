@@ -1183,6 +1183,10 @@ export type Database = {
         Args: { technician_id: string; unit_id: string }
         Returns: boolean
       }
+      user_can_access_chat_room: {
+        Args: { room_id: string; user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       assignment_status: "ativo" | "finalizado"
