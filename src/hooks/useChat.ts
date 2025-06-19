@@ -473,32 +473,72 @@ export function useUpdateChatRoom() {
 
       // Se não é uma sala de unidade, gerenciar participantes manualmente
       if (!unitId) {
-        // Remover participantes existentes (exceto o criador)
-        const { error: deleteError } = await supabase
+        // Buscar participantes atuais
+        const { data: currentParticipants, error: fetchError } = await supabase
           .from('chat_participants')
-          .delete()
+          .select('user_id')
           .eq('room_id', roomId)
-          .neq('user_id', (await supabase.from('chat_rooms').select('created_by').eq('id', roomId).single()).data?.created_by)
 
-        if (deleteError) {
-          console.error('Error removing old participants:', deleteError)
-          throw new Error('Erro ao remover participantes: ' + deleteError.message)
+        if (fetchError) {
+          console.error('Error fetching current participants:', fetchError)
+          throw new Error('Erro ao buscar participantes atuais: ' + fetchError.message)
+        }
+
+        const currentUserIds = currentParticipants?.map(p => p.user_id) || []
+        
+        // Buscar o criador da sala para garantir que não seja removido
+        const { data: roomData, error: roomFetchError } = await supabase
+          .from('chat_rooms')
+          .select('created_by')
+          .eq('id', roomId)
+          .single()
+
+        if (roomFetchError) {
+          console.error('Error fetching room creator:', roomFetchError)
+          throw new Error('Erro ao buscar criador da sala: ' + roomFetchError.message)
+        }
+
+        const creatorId = roomData.created_by
+
+        // Calcular participantes a adicionar (novos participantes que não existem)
+        const participantsToAdd = participants.filter(userId => !currentUserIds.includes(userId))
+
+        // Calcular participantes a remover (participantes atuais que não estão na nova lista, exceto o criador)
+        const participantsToRemove = currentUserIds.filter(userId => 
+          !participants.includes(userId) && userId !== creatorId
+        )
+
+        console.log('Participants to add:', participantsToAdd)
+        console.log('Participants to remove:', participantsToRemove)
+
+        // Remover participantes que não estão mais selecionados (exceto o criador)
+        if (participantsToRemove.length > 0) {
+          const { error: removeError } = await supabase
+            .from('chat_participants')
+            .delete()
+            .eq('room_id', roomId)
+            .in('user_id', participantsToRemove)
+
+          if (removeError) {
+            console.error('Error removing participants:', removeError)
+            throw new Error('Erro ao remover participantes: ' + removeError.message)
+          }
         }
 
         // Adicionar novos participantes
-        if (participants.length > 0) {
-          const participantsData = participants.map(userId => ({
+        if (participantsToAdd.length > 0) {
+          const participantsData = participantsToAdd.map(userId => ({
             room_id: roomId,
             user_id: userId,
           }))
 
-          const { error: participantsError } = await supabase
+          const { error: addError } = await supabase
             .from('chat_participants')
             .insert(participantsData)
 
-          if (participantsError) {
-            console.error('Error adding new participants:', participantsError)
-            throw new Error('Erro ao adicionar participantes: ' + participantsError.message)
+          if (addError) {
+            console.error('Error adding new participants:', addError)
+            throw new Error('Erro ao adicionar participantes: ' + addError.message)
           }
         }
       }
