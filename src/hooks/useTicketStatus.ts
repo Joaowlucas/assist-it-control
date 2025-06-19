@@ -31,11 +31,15 @@ export function useUpdateTicketStatus() {
           assignee:profiles!tickets_assignee_id_fkey(name, email),
           unit:units(name)
         `)
-        .single()
+        .maybeSingle()
       
       if (error) {
         console.error('Error updating ticket status:', error)
         throw error
+      }
+      
+      if (!data) {
+        throw new Error('Chamado não encontrado')
       }
       
       console.log('Ticket status updated:', data)
@@ -70,17 +74,9 @@ export function useAssignTicket() {
       
       const updateData: any = { assignee_id: assigneeId }
       
-      // Se está atribuindo um técnico e o status ainda está aberto, muda para em andamento
+      // Se está atribuindo um técnico, muda para em andamento
       if (assigneeId) {
-        const { data: currentTicket } = await supabase
-          .from('tickets')
-          .select('status')
-          .eq('id', id)
-          .single()
-        
-        if (currentTicket?.status === 'aberto') {
-          updateData.status = 'em_andamento'
-        }
+        updateData.status = 'em_andamento'
       }
       
       const { data, error } = await supabase
@@ -93,11 +89,15 @@ export function useAssignTicket() {
           assignee:profiles!tickets_assignee_id_fkey(name, email),
           unit:units(name)
         `)
-        .single()
+        .maybeSingle()
       
       if (error) {
         console.error('Error assigning ticket:', error)
         throw error
+      }
+      
+      if (!data) {
+        throw new Error('Chamado não encontrado')
       }
       
       console.log('Ticket assigned:', data)

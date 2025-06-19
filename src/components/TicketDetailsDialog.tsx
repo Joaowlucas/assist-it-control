@@ -57,16 +57,18 @@ interface TicketDetailsDialogProps {
 }
 
 export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetailsDialogProps) {
-  // Early return if ticket is null - BEFORE any hooks
-  if (!ticket) {
-    return null
-  }
-
   const { toast } = useToast()
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  
+  // Sempre chamar hooks no topo, antes de qualquer return
   const { generateTicketPDF, isGenerating } = useTicketPDF()
   const { data: systemSettings } = useSystemSettings()
+
+  // Early return DEPOIS dos hooks
+  if (!ticket) {
+    return null
+  }
 
   const handleDownloadPDF = async () => {
     try {

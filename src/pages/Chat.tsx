@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +18,7 @@ interface ChatRoom {
   id: string
   created_at: string
   name: string
-  type: 'group' | 'private'
+  type: 'group' | 'private' | 'direct'
   created_by: string
   is_active: boolean
   members?: {
@@ -97,7 +96,7 @@ export default function Chat() {
             ...room,
             is_active: room.is_active ?? true,
             created_by: room.created_by ?? user.id,
-            type: room.type === 'private' ? 'private' : 'group'
+            type: room.type === 'private' ? 'private' : room.type === 'direct' ? 'direct' : 'group'
           })) as ChatRoom[]
           setRooms(formattedRooms)
         }
@@ -112,7 +111,6 @@ export default function Chat() {
 
     fetchRooms()
 
-    // Subscrição para novas salas
     const roomSubscription = supabase
       .channel('public:chat_rooms')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_rooms' }, async (payload) => {
@@ -122,7 +120,7 @@ export default function Chat() {
             ...newRoomData,
             is_active: newRoomData.is_active ?? true,
             created_by: newRoomData.created_by ?? user.id,
-            type: newRoomData.type === 'private' ? 'private' : 'group'
+            type: newRoomData.type === 'private' ? 'private' : newRoomData.type === 'direct' ? 'direct' : 'group'
           } as ChatRoom
           if (newRoom.type === 'group') {
             setRooms(prevRooms => [...prevRooms, newRoom])
@@ -161,7 +159,6 @@ export default function Chat() {
   }, [selectedRoom, supabase])
 
   useEffect(() => {
-    // Scroll para a parte inferior sempre que novas mensagens são adicionadas
     scrollToBottom()
   }, [messages])
 
@@ -274,7 +271,6 @@ export default function Chat() {
   }
 
   const handleCreateRoom = (roomId: string) => {
-    // Refresh rooms list
     const fetchRooms = async () => {
       try {
         const { data: roomsData, error: roomsError } = await supabase
@@ -294,7 +290,7 @@ export default function Chat() {
             ...room,
             is_active: room.is_active ?? true,
             created_by: room.created_by ?? user!.id,
-            type: room.type === 'private' ? 'private' : 'group'
+            type: room.type === 'private' ? 'private' : room.type === 'direct' ? 'direct' : 'group'
           })) as ChatRoom[]
           setRooms(formattedRooms)
         }
@@ -445,9 +441,9 @@ export default function Chat() {
                         </div>
                         {message.attachment_url && (
                           <ChatMessageAttachment 
-                            attachmentUrl={message.attachment_url}
-                            attachmentName={message.attachment_name || ''}
-                            attachmentSize={message.attachment_size || 0}
+                            attachment_url={message.attachment_url}
+                            attachment_name={message.attachment_name || ''}
+                            attachment_size={message.attachment_size || 0}
                           />
                         )}
                         <div className="text-xs opacity-70 mt-1">
@@ -512,21 +508,21 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        isOpen={showCreateRoomDialog}
-        onClose={() => setShowCreateRoomDialog(false)}
+        open={showCreateRoomDialog}
+        onOpenChange={setShowCreateRoomDialog}
         onRoomCreated={handleCreateRoom}
       />
 
       <DirectChatDialog
-        isOpen={showDirectChatDialog}
-        onClose={() => setShowDirectChatDialog(false)}
+        open={showDirectChatDialog}
+        onOpenChange={setShowDirectChatDialog}
         onChatCreated={handleDirectChatCreated}
       />
 
       {editingRoom && (
         <EditChatRoomDialog
           room={editingRoom}
-          onClose={() => setEditingRoom(null)}
+          onOpenChange={() => setEditingRoom(null)}
         />
       )}
     </div>
