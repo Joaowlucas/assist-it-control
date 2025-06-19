@@ -81,10 +81,10 @@ export function AppSidebar() {
   const items = profile?.role === 'admin' || profile?.role === 'technician' ? adminItems : userItems
 
   return (
-    <Sidebar>
-      <SidebarContent>
+    <Sidebar className="bg-background/80 backdrop-blur-md border-r border-border/50">
+      <SidebarContent className="bg-transparent">
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-foreground/70">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -92,6 +92,7 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     asChild 
                     isActive={location.pathname === item.url}
+                    className="hover:bg-accent/50 data-[active=true]:bg-accent/70 transition-colors"
                   >
                     <Link to={item.url}>
                       <item.icon />
