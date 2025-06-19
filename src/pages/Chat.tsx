@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react"
 import { useChat } from "@/hooks/useChat"
 import { useAuth } from "@/hooks/useAuth"
@@ -400,8 +401,8 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
         onRoomCreated={(roomId) => {
           setShowCreateDialog(false)
           const newRoom = rooms.find(r => r.id === roomId)
@@ -412,9 +413,9 @@ export default function Chat() {
       />
 
       <DirectChatDialog
-        open={showDirectDialog}
-        onOpenChange={setShowDirectDialog}
-        onDirectChatCreated={(room) => {
+        isOpen={showDirectDialog}
+        onClose={() => setShowDirectDialog(false)}
+        onChatCreated={(room) => {
           setShowDirectDialog(false)
           selectRoom(room.id)
         }}
@@ -423,8 +424,11 @@ export default function Chat() {
       {editingRoom && (
         <EditChatRoomDialog
           room={editingRoom}
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
+          isOpen={showEditDialog}
+          onClose={() => {
+            setShowEditDialog(false)
+            setEditingRoom(null)
+          }}
           onRoomUpdated={() => {
             setShowEditDialog(false)
             setEditingRoom(null)

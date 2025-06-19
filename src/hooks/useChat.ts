@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -270,9 +271,12 @@ export function useChat() {
 
       console.log('Creating chat room:', params)
 
+      // Converter 'direct' para 'private' para compatibilidade com o banco
+      const dbType = params.type === 'direct' ? 'private' : (params.type || 'private')
+
       const roomData = {
         name: params.name,
-        type: params.type || 'private',
+        type: dbType as 'private' | 'unit' | 'group',
         unit_id: params.unitId || null,
         selected_units: params.selectedUnits || [],
         created_by: profile.id,
