@@ -16,8 +16,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChatAttachmentUpload } from '@/components/ChatAttachmentUpload'
 import { ChatMessageAttachment } from '@/components/ChatMessageAttachment'
-import { ChatUsersList } from '@/components/ChatUsersList'
-import { DirectChatDialog } from '@/components/DirectChatDialog'
+import { ChatContactsSidebar } from '@/components/ChatContactsSidebar'
 
 export default function Chat() {
   const { profile } = useAuth()
@@ -27,8 +26,7 @@ export default function Chat() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [showAttachmentUpload, setShowAttachmentUpload] = useState(false)
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null)
-  const [showDirectChatDialog, setShowDirectChatDialog] = useState(false)
-  const [directChatTargetUserId, setDirectChatTargetUserId] = useState<string | null>(null)
+  const [showContactsSidebar, setShowContactsSidebar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
@@ -66,11 +64,6 @@ export default function Chat() {
     if (confirm('Tem certeza que deseja excluir esta mensagem?')) {
       await deleteMessage.mutateAsync(messageId)
     }
-  }
-
-  const handleStartDirectChat = (userId: string) => {
-    setDirectChatTargetUserId(userId)
-    setShowDirectChatDialog(true)
   }
 
   const handleRoomCreated = (roomId: string) => {
@@ -114,10 +107,21 @@ export default function Chat() {
       {/* Lista de Salas */}
       <div className="w-80 border-r bg-muted/30">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Chat Interno
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Chat Interno
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowContactsSidebar(true)}
+              className="flex items-center gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Nova Conversa
+            </Button>
+          </div>
         </div>
         
         <ScrollArea className="h-full">
@@ -174,10 +178,21 @@ export default function Chat() {
                     </p>
                   )}
                 </div>
-                <Badge variant="outline">
-                  <Users className="h-3 w-3 mr-1" />
-                  Chat Ativo
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowContactsSidebar(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Nova Conversa
+                  </Button>
+                  <Badge variant="outline">
+                    <Users className="h-3 w-3 mr-1" />
+                    Chat Ativo
+                  </Badge>
+                </div>
               </div>
             </div>
 
@@ -350,7 +365,7 @@ export default function Chat() {
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
-                onClick={() => setShowDirectChatDialog(true)}
+                onClick={() => setShowContactsSidebar(true)}
               >
                 <UserPlus className="h-4 w-4" />
                 Iniciar conversa privada
@@ -360,8 +375,12 @@ export default function Chat() {
         )}
       </div>
 
-      {/* Lista de Usuários */}
-      <ChatUsersList onDirectChat={handleRoomCreated} />
+      {/* Sidebar de Contatos */}
+      <ChatContactsSidebar
+        open={showContactsSidebar}
+        onOpenChange={setShowContactsSidebar}
+        onDirectChat={handleRoomCreated}
+      />
 
       {/* Dialog para Editar Mensagem */}
       <Dialog open={!!editingMessage} onOpenChange={() => setEditingMessage(null)}>
@@ -392,14 +411,6 @@ export default function Chat() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog para Conversa Direta */}
-      <DirectChatDialog
-        open={showDirectChatDialog}
-        onOpenChange={setShowDirectChatDialog}
-        targetUserId={directChatTargetUserId}
-        onRoomCreated={handleRoomCreated}
-      />
     </div>
   )
 }
