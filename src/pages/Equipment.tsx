@@ -22,6 +22,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { EQUIPMENT_TYPES } from "@/constants/equipmentTypes"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 
 export default function Equipment() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -87,22 +88,28 @@ export default function Equipment() {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
     
-    const equipmentData = {
-      name: formData.get('name') as string,
-      type: formData.get('type') as string,
-      brand: formData.get('brand') as string,
-      model: formData.get('model') as string,
-      serial_number: formData.get('serial_number') as string,
-      description: formData.get('description') as string,
-      location: formData.get('location') as string,
-      unit_id: formData.get('unit_id') as string,
-      purchase_date: formData.get('purchase_date') as string || null,
-      warranty_end_date: formData.get('warranty_end_date') as string || null,
-      status: 'disponivel' as const,
-    }
+    try {
+      const equipmentData = {
+        name: formData.get('name') as string,
+        type: formData.get('type') as string,
+        brand: formData.get('brand') as string,
+        model: formData.get('model') as string,
+        serial_number: formData.get('serial_number') as string,
+        tombamento: formData.get('tombamento') as string,
+        description: formData.get('description') as string,
+        location: formData.get('location') as string,
+        unit_id: formData.get('unit_id') as string,
+        purchase_date: formData.get('purchase_date') as string || null,
+        warranty_end_date: formData.get('warranty_end_date') as string || null,
+        status: 'disponivel' as const,
+      }
 
-    await createEquipment.mutateAsync(equipmentData)
-    setIsCreateDialogOpen(false)
+      await createEquipment.mutateAsync(equipmentData)
+      setIsCreateDialogOpen(false)
+      toast.success("Equipamento criado com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao criar equipamento")
+    }
   }
 
   const handleUpdateEquipment = async (e: React.FormEvent) => {
@@ -111,23 +118,29 @@ export default function Equipment() {
 
     const formData = new FormData(e.target as HTMLFormElement)
     
-    const equipmentData = {
-      id: selectedEquipment.id,
-      name: formData.get('name') as string,
-      type: formData.get('type') as string,
-      brand: formData.get('brand') as string,
-      model: formData.get('model') as string,
-      serial_number: formData.get('serial_number') as string,
-      description: formData.get('description') as string,
-      location: formData.get('location') as string,
-      unit_id: formData.get('unit_id') as string,
-      purchase_date: formData.get('purchase_date') as string || null,
-      warranty_end_date: formData.get('warranty_end_date') as string || null,
-      status: formData.get('status') as any,
-    }
+    try {
+      const equipmentData = {
+        id: selectedEquipment.id,
+        name: formData.get('name') as string,
+        type: formData.get('type') as string,
+        brand: formData.get('brand') as string,
+        model: formData.get('model') as string,
+        serial_number: formData.get('serial_number') as string,
+        tombamento: formData.get('tombamento') as string,
+        description: formData.get('description') as string,
+        location: formData.get('location') as string,
+        unit_id: formData.get('unit_id') as string,
+        purchase_date: formData.get('purchase_date') as string || null,
+        warranty_end_date: formData.get('warranty_end_date') as string || null,
+        status: formData.get('status') as any,
+      }
 
-    await updateEquipment.mutateAsync(equipmentData)
-    setIsEditDialogOpen(false)
+      await updateEquipment.mutateAsync(equipmentData)
+      setIsEditDialogOpen(false)
+      toast.success("Equipamento atualizado com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar equipamento")
+    }
   }
 
   const openPhotoGallery = (equipment: any) => {
@@ -146,7 +159,12 @@ export default function Equipment() {
   }
 
   const handleDeleteEquipment = async (equipmentId: string) => {
-    await deleteEquipment.mutateAsync(equipmentId)
+    try {
+      await deleteEquipment.mutateAsync(equipmentId)
+      toast.success("Equipamento excluído com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir equipamento")
+    }
   }
 
   // Estatísticas dos equipamentos
@@ -208,11 +226,18 @@ export default function Equipment() {
             <form onSubmit={handleCreateEquipment} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="name">Nome *</Label>
                   <Input id="name" name="name" required />
                 </div>
                 <div>
-                  <Label htmlFor="type">Tipo</Label>
+                  <Label htmlFor="tombamento">Tombamento *</Label>
+                  <Input id="tombamento" name="tombamento" placeholder="Ex: EQ001" required />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="type">Tipo *</Label>
                   <Select name="type" required>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo" />
@@ -221,6 +246,21 @@ export default function Equipment() {
                       {EQUIPMENT_TYPES.map((type) => (
                         <SelectItem key={type} value={type}>
                           {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="unit_id">Unidade *</Label>
+                  <Select name="unit_id" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUnits.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -239,26 +279,9 @@ export default function Equipment() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="serial_number">Número de Série</Label>
-                  <Input id="serial_number" name="serial_number" />
-                </div>
-                <div>
-                  <Label htmlFor="unit_id">Unidade</Label>
-                  <Select name="unit_id" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableUnits.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id}>
-                          {unit.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label htmlFor="serial_number">Número de Série</Label>
+                <Input id="serial_number" name="serial_number" />
               </div>
 
               <div>
@@ -551,9 +574,6 @@ export default function Equipment() {
 
           <EquipmentPDFPreviewDialog
             equipment={selectedEquipment}
-            photos={equipmentPhotos}
-            systemSettings={systemSettings}
-            tombamento={selectedEquipment.tombamento}
             open={isPdfPreviewOpen}
             onOpenChange={setIsPdfPreviewOpen}
           />
@@ -569,11 +589,18 @@ export default function Equipment() {
               <form onSubmit={handleUpdateEquipment} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="edit-name">Nome</Label>
+                    <Label htmlFor="edit-name">Nome *</Label>
                     <Input id="edit-name" name="name" defaultValue={selectedEquipment.name} required />
                   </div>
                   <div>
-                    <Label htmlFor="edit-type">Tipo</Label>
+                    <Label htmlFor="edit-tombamento">Tombamento *</Label>
+                    <Input id="edit-tombamento" name="tombamento" defaultValue={selectedEquipment.tombamento || ''} required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-type">Tipo *</Label>
                     <Select name="type" defaultValue={selectedEquipment.type} required>
                       <SelectTrigger>
                         <SelectValue />
@@ -582,6 +609,21 @@ export default function Equipment() {
                         {EQUIPMENT_TYPES.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-unit_id">Unidade *</Label>
+                    <Select name="unit_id" defaultValue={selectedEquipment.unit_id} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableUnits.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -600,26 +642,9 @@ export default function Equipment() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="edit-serial_number">Número de Série</Label>
-                    <Input id="edit-serial_number" name="serial_number" defaultValue={selectedEquipment.serial_number || ''} />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-unit_id">Unidade</Label>
-                    <Select name="unit_id" defaultValue={selectedEquipment.unit_id} required>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableUnits.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.id}>
-                            {unit.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label htmlFor="edit-serial_number">Número de Série</Label>
+                  <Input id="edit-serial_number" name="serial_number" defaultValue={selectedEquipment.serial_number || ''} />
                 </div>
 
                 <div>

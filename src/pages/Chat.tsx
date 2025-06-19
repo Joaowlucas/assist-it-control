@@ -304,12 +304,7 @@ export default function Chat() {
                       )}
                       <p className="text-sm">{message.content}</p>
                       {message.attachment_url && (
-                        <ChatMessageAttachment
-                          attachment_url={message.attachment_url}
-                          attachment_name={message.attachment_name || 'Anexo'}
-                          attachment_type={message.attachment_type || 'file'}
-                          attachment_size={message.attachment_size}
-                        />
+                        <ChatMessageAttachment message={message} />
                       )}
                       <p className="text-xs opacity-70 mt-1">
                         {format(new Date(message.created_at), 'HH:mm', { locale: ptBR })}
@@ -373,24 +368,24 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        open={isCreateRoomDialogOpen}
-        onOpenChange={setIsCreateRoomDialogOpen}
+        isOpen={isCreateRoomDialogOpen}
+        onClose={() => setIsCreateRoomDialogOpen(false)}
       />
 
       <EditChatRoomDialog
         room={editingRoom}
-        open={isEditRoomDialogOpen}
-        onOpenChange={setIsEditRoomDialogOpen}
+        isOpen={isEditRoomDialogOpen}
+        onClose={() => setIsEditRoomDialogOpen(false)}
       />
 
       <StartChatDialog
-        open={isStartChatDialogOpen}
-        onOpenChange={setIsStartChatDialogOpen}
+        isOpen={isStartChatDialogOpen}
+        onClose={() => setIsStartChatDialogOpen(false)}
       />
 
       <DirectChatDialog
-        open={isDirectChatDialogOpen}
-        onOpenChange={setIsDirectChatDialogOpen}
+        isOpen={isDirectChatDialogOpen}
+        onClose={() => setIsDirectChatDialogOpen(false)}
         targetUserId={selectedUser?.id}
       />
     </div>
