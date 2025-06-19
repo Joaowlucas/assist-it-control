@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Users, Building2, Globe, User, Settings, Shield, Upload, X } from 'lucide-react'
+import { Plus, Users, Building2, Globe, User, Settings, Shield, Upload, X, MessageCircle } from 'lucide-react'
 import { useCreateChatRoom } from '@/hooks/useChat'
 import { useUnits } from '@/hooks/useUnits'
 import { useProfiles } from '@/hooks/useProfiles'
@@ -20,7 +20,7 @@ interface CreateChatRoomDialogProps {
   onRoomCreated?: (roomId: string) => void
 }
 
-type RoomType = 'unit' | 'global'
+type RoomType = 'private' | 'unit' | 'group'
 
 export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProps) {
   const [open, setOpen] = useState(false)
@@ -42,8 +42,9 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
   const filteredProfiles = profiles.filter(p => 
     p.status === 'ativo' && 
     p.id !== profile?.id &&
-    (roomType === 'global' ? 
+    (roomType === 'group' ? 
       selectedUnits.length === 0 || selectedUnits.includes(p.unit_id || '') :
+      roomType === 'private' ? true :
       !selectedUnit || p.unit_id === selectedUnit
     )
   )
@@ -91,30 +92,34 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
 
     setIsLoading(true)
     try {
-      // Determinar participantes baseado no tipo de sala
       let participantIds: string[] = []
       let unitId: string | null = null
+      let selectedUnitsArray: string[] = []
 
-      if (roomType === 'unit' && selectedUnit) {
+      if (roomType === 'private') {
+        // Para conversas privadas, usar participantes selecionados
+        participantIds = selectedUsers
+      } else if (roomType === 'unit' && selectedUnit) {
+        // Para salas de unidade, usar unit_id (participantes adicionados pelo trigger)
         unitId = selectedUnit
-        // Para salas de unidade, os participantes são adicionados automaticamente pelo trigger
-      } else if (roomType === 'global') {
+      } else if (roomType === 'group') {
+        // Para grupos personalizados, usar unidades selecionadas + participantes específicos
+        selectedUnitsArray = selectedUnits
         participantIds = selectedUsers
       }
 
-      // Criar a sala
       const roomId = await createChatRoom.mutateAsync({
         name,
+        type: roomType,
         unitId,
+        selectedUnits: selectedUnitsArray,
         participantIds
       })
 
       // Upload da imagem se fornecida
-      let imageUrl = null
       if (roomImage) {
-        imageUrl = await uploadRoomImage(roomId)
+        const imageUrl = await uploadRoomImage(roomId)
         
-        // Atualizar a sala com a URL da imagem
         if (imageUrl) {
           await supabase
             .from('chat_rooms')
@@ -148,8 +153,6 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
         ? prev.filter(id => id !== unitId)
         : [...prev, unitId]
     )
-    // Reset selected users when units change
-    setSelectedUsers([])
   }
 
   const handleUserToggle = (userId: string) => {
@@ -198,6 +201,21 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
     return unit?.name || 'Unidade desconhecida'
   }
 
+  const isFormValid = () => {
+    if (!name.trim()) return false
+    
+    switch (roomType) {
+      case 'private':
+        return selectedUsers.length > 0
+      case 'unit':
+        return !!selectedUnit
+      case 'group':
+        return selectedUsers.length > 0 || selectedUnits.length > 0
+      default:
+        return false
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -215,84 +233,89 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Informações Básicas */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Nome da Sala *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Digite o nome da sala..."
-                required
-              />
-            </div>
+          {/* Nome da Sala */}
+          <div>
+            <Label htmlFor="name">Nome da Sala *</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Digite o nome da sala..."
+              required
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="description">Descrição (opcional)</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva o propósito da sala..."
-                rows={2}
-              />
-            </div>
-
-            {/* Upload de Imagem Simples */}
-            <div>
-              <Label>Imagem da Sala (opcional)</Label>
-              <div className="mt-2">
-                {imagePreview ? (
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-16 h-16 object-cover rounded-lg border"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleImageRemove}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Remover Imagem
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-gray-600 mb-2">Clique para selecionar uma imagem</p>
-                    <p className="text-sm text-gray-500">Máximo 5MB (JPG, PNG, GIF)</p>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file && file.size <= 5 * 1024 * 1024) {
-                          handleImageSelect(file)
-                        }
-                      }}
-                      className="hidden"
-                      id="image-upload"
-                    />
-                    <Label
-                      htmlFor="image-upload"
-                      className="inline-block mt-2 px-4 py-2 bg-primary text-primary-foreground rounded cursor-pointer hover:bg-primary/90"
-                    >
-                      Selecionar Imagem
-                    </Label>
-                  </div>
-                )}
-              </div>
+          {/* Upload de Imagem */}
+          <div>
+            <Label>Imagem da Sala (opcional)</Label>
+            <div className="mt-2">
+              {imagePreview ? (
+                <div className="flex items-center gap-4">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-16 h-16 object-cover rounded-lg border"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleImageRemove}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Remover Imagem
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-gray-600 mb-2">Clique para selecionar uma imagem</p>
+                  <p className="text-sm text-gray-500">Máximo 5MB (JPG, PNG, GIF)</p>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file && file.size <= 5 * 1024 * 1024) {
+                        handleImageSelect(file)
+                      }
+                    }}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <Label
+                    htmlFor="image-upload"
+                    className="inline-block mt-2 px-4 py-2 bg-primary text-primary-foreground rounded cursor-pointer hover:bg-primary/90"
+                  >
+                    Selecionar Imagem
+                  </Label>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Tipo de Sala */}
           <div className="space-y-4">
             <Label>Tipo de Sala</Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                type="button"
+                onClick={() => setRoomType('private')}
+                className={`p-4 border rounded-lg text-left transition-colors ${
+                  roomType === 'private' 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:bg-muted'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageCircle className="h-5 w-5" />
+                  <span className="font-medium">Conversa Privada</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Conversa direta entre usuários específicos
+                </p>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setRoomType('unit')}
@@ -304,28 +327,28 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Building2 className="h-5 w-5" />
-                  <span className="font-medium">Unidade Específica</span>
+                  <span className="font-medium">Sala de Unidade</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Incluir todos os usuários de uma unidade específica
+                  Incluir todos os usuários de uma unidade
                 </p>
               </button>
 
               <button
                 type="button"
-                onClick={() => setRoomType('global')}
+                onClick={() => setRoomType('group')}
                 className={`p-4 border rounded-lg text-left transition-colors ${
-                  roomType === 'global' 
+                  roomType === 'group' 
                     ? 'border-primary bg-primary/10' 
                     : 'border-border hover:bg-muted'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Globe className="h-5 w-5" />
-                  <span className="font-medium">Grupo Global</span>
+                  <span className="font-medium">Grupo Personalizado</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Escolher participantes específicos de múltiplas unidades
+                  Escolher unidades e participantes específicos
                 </p>
               </button>
             </div>
@@ -350,7 +373,7 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
             </div>
           )}
 
-          {roomType === 'global' && (
+          {roomType === 'group' && (
             <div className="space-y-4">
               {/* Seleção de Unidades */}
               <div>
@@ -373,57 +396,54 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
                   ))}
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Seleção de Participantes */}
-              <div>
-                <Label>Participantes *</Label>
-                <div className="mt-2 max-h-60 overflow-y-auto border rounded-lg p-4 space-y-2">
-                  {filteredProfiles.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      {selectedUnits.length === 0 
-                        ? 'Selecione unidades para ver os usuários ou deixe em branco para ver todos'
-                        : 'Nenhum usuário encontrado nas unidades selecionadas'
-                      }
-                    </p>
-                  ) : (
-                    filteredProfiles.map((user) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center gap-3 p-2 rounded hover:bg-muted"
-                      >
-                        <Checkbox
-                          id={`user-${user.id}`}
-                          checked={selectedUsers.includes(user.id)}
-                          onCheckedChange={() => handleUserToggle(user.id)}
-                        />
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs">
-                            {user.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{user.name}</p>
-                            <Badge className={`${getRoleColor(user.role)} text-xs flex items-center gap-1`}>
-                              {getRoleIcon(user.role)}
-                              <span>{getRoleLabel(user.role)}</span>
-                            </Badge>
-                          </div>
-                          {user.unit_id && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {getUnitName(user.unit_id)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                {roomType === 'global' && selectedUsers.length === 0 && (
-                  <p className="text-sm text-destructive mt-2">
-                    Selecione pelo menos um participante
+          {/* Seleção de Participantes */}
+          {(roomType === 'private' || roomType === 'group') && (
+            <div>
+              <Label>Participantes *</Label>
+              <div className="mt-2 max-h-60 overflow-y-auto border rounded-lg p-4 space-y-2">
+                {filteredProfiles.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    {roomType === 'group' && selectedUnits.length === 0 
+                      ? 'Selecione unidades para filtrar usuários ou deixe em branco para ver todos'
+                      : 'Nenhum usuário encontrado'
+                    }
                   </p>
+                ) : (
+                  filteredProfiles.map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center gap-3 p-2 rounded hover:bg-muted"
+                    >
+                      <Checkbox
+                        id={`user-${user.id}`}
+                        checked={selectedUsers.includes(user.id)}
+                        onCheckedChange={() => handleUserToggle(user.id)}
+                      />
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {user.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{user.name}</p>
+                          <Badge className={`${getRoleColor(user.role)} text-xs flex items-center gap-1`}>
+                            {getRoleIcon(user.role)}
+                            <span>{getRoleLabel(user.role)}</span>
+                          </Badge>
+                        </div>
+                        {user.unit_id && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {getUnitName(user.unit_id)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -441,13 +461,7 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
             </Button>
             <Button
               type="submit"
-              disabled={
-                !name.trim() || 
-                isLoading ||
-                (roomType === 'unit' && !selectedUnit) ||
-                (roomType === 'global' && selectedUsers.length === 0) ||
-                createChatRoom.isPending
-              }
+              disabled={!isFormValid() || isLoading || createChatRoom.isPending}
             >
               {isLoading || createChatRoom.isPending ? 'Criando...' : 'Criar Sala'}
             </Button>

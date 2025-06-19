@@ -177,6 +177,8 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           name: string
+          selected_units: string[] | null
+          type: Database["public"]["Enums"]["chat_type"] | null
           unit_id: string | null
           updated_at: string
         }
@@ -187,6 +189,8 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name: string
+          selected_units?: string[] | null
+          type?: Database["public"]["Enums"]["chat_type"] | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -197,6 +201,8 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name?: string
+          selected_units?: string[] | null
+          type?: Database["public"]["Enums"]["chat_type"] | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -1141,11 +1147,19 @@ export type Database = {
         }
         Returns: undefined
       }
-      can_access_chat_room: {
+      can_delete_chat_room: {
         Args: { room_id: string; user_id: string }
         Returns: boolean
       }
+      can_manage_room: {
+        Args: { room_id: string }
+        Returns: boolean
+      }
       generate_tombamento: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -1171,12 +1185,16 @@ export type Database = {
         }[]
       }
       get_user_role: {
-        Args: { user_id: string }
+        Args: Record<PropertyKey, never> | { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
       increment_tutorial_views: {
         Args: { tutorial_id: string }
         Returns: undefined
+      }
+      is_participant: {
+        Args: { room_id: string }
+        Returns: boolean
       }
       reject_equipment_request: {
         Args: { request_id: string; admin_comments?: string }
@@ -1186,13 +1204,10 @@ export type Database = {
         Args: { technician_id: string; unit_id: string }
         Returns: boolean
       }
-      user_can_access_chat_room: {
-        Args: { room_id: string; user_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       assignment_status: "ativo" | "finalizado"
+      chat_type: "private" | "unit" | "group"
       equipment_status: "disponivel" | "em_uso" | "manutencao" | "descartado"
       ticket_category: "hardware" | "software" | "rede" | "acesso" | "outros"
       ticket_priority: "baixa" | "media" | "alta" | "critica"
@@ -1314,6 +1329,7 @@ export const Constants = {
   public: {
     Enums: {
       assignment_status: ["ativo", "finalizado"],
+      chat_type: ["private", "unit", "group"],
       equipment_status: ["disponivel", "em_uso", "manutencao", "descartado"],
       ticket_category: ["hardware", "software", "rede", "acesso", "outros"],
       ticket_priority: ["baixa", "media", "alta", "critica"],

@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X, UserPlus, Building2, Search } from 'lucide-react'
-import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, ChatRoom } from '@/hooks/useChat'
+import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X, UserPlus, Search, Settings } from 'lucide-react'
+import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, useDeleteChatRoom, useCanDeleteChatRoom, ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -18,6 +18,8 @@ import { ChatAttachmentUpload } from '@/components/ChatAttachmentUpload'
 import { ChatMessageAttachment } from '@/components/ChatMessageAttachment'
 import { ChatContactsSidebar } from '@/components/ChatContactsSidebar'
 import { ChatRoomAvatar } from '@/components/ChatRoomAvatar'
+import { CreateChatRoomDialog } from '@/components/CreateChatRoomDialog'
+import { EditChatRoomDialog } from '@/components/EditChatRoomDialog'
 
 export default function Chat() {
   const { profile } = useAuth()
@@ -28,14 +30,17 @@ export default function Chat() {
   const [showAttachmentUpload, setShowAttachmentUpload] = useState(false)
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null)
   const [showContactsSidebar, setShowContactsSidebar] = useState(false)
+  const [showEditRoomDialog, setShowEditRoomDialog] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [showRoomsList, setShowRoomsList] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
+  const { data: canDeleteRoom } = useCanDeleteChatRoom(selectedRoom?.id || '')
   const sendMessage = useSendMessage()
   const editMessage = useEditMessage()
   const deleteMessage = useDeleteMessage()
+  const deleteChatRoom = useDeleteChatRoom()
 
   // Auto-scroll para a última mensagem
   useEffect(() => {
@@ -80,6 +85,20 @@ export default function Chat() {
     }
   }
 
+  const handleDeleteRoom = async () => {
+    if (!selectedRoom) return
+    
+    if (confirm('Tem certeza que deseja excluir esta conversa? Esta ação não pode ser desfeita.')) {
+      try {
+        await deleteChatRoom.mutateAsync(selectedRoom.id)
+        setSelectedRoom(null)
+        setShowRoomsList(true)
+      } catch (error) {
+        console.error('Error deleting room:', error)
+      }
+    }
+  }
+
   const handleRoomCreated = (roomId: string) => {
     // Encontrar a nova sala e selecioná-la
     const newRoom = rooms?.find(room => room.id === roomId)
@@ -91,6 +110,10 @@ export default function Chat() {
 
   const canEditMessage = (senderId: string) => {
     return profile?.role === 'admin' || senderId === profile?.id
+  }
+
+  const canManageRoom = (room: ChatRoom) => {
+    return profile?.role === 'admin' || room.created_by === profile?.id
   }
 
   const getRoomDisplayName = (room: ChatRoom) => {
@@ -105,10 +128,14 @@ export default function Chat() {
   }
 
   const getRoomTypeColor = (room: ChatRoom) => {
-    if (room.unit_id) {
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+    switch (room.type) {
+      case 'unit':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+      case 'group':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+      default:
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
     }
-    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
   }
 
   const getParticipantCount = (room: ChatRoom) => {
@@ -148,16 +175,18 @@ export default function Chat() {
               <MessageCircle className="h-4 w-4 lg:h-5 lg:w-5" />
               Chat Interno
             </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowContactsSidebar(true)}
-              className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3"
-            >
-              <UserPlus className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden sm:inline">Nova Conversa</span>
-              <span className="sm:hidden">Nova</span>
-            </Button>
+            <div className="flex gap-2">
+              <CreateChatRoomDialog onRoomCreated={handleRoomCreated} />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowContactsSidebar(true)}
+                className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3"
+              >
+                <UserPlus className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="hidden sm:inline">Contatos</span>
+              </Button>
+            </div>
           </div>
           
           {/* Barra de busca */}
@@ -189,19 +218,20 @@ export default function Chat() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium text-xs lg:text-sm truncate">{getRoomDisplayName(room)}</h3>
+                        <Badge variant="secondary" className={`text-xs px-1 ${getRoomTypeColor(room)}`}>
+                          {room.type === 'private' ? 'Privada' : 
+                           room.type === 'unit' ? 'Unidade' : 'Grupo'}
+                        </Badge>
                       </div>
                       
-                      {room.unit_id && room.units?.name && (
+                      {room.units?.name && (
                         <p className="text-xs text-muted-foreground mb-2 truncate">
                           {room.units.name}
                         </p>
                       )}
                       
                       <div className="flex items-center gap-1 lg:gap-2">
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs ${getRoomTypeColor(room)} px-1 lg:px-2`}
-                        >
+                        <Badge variant="outline" className="text-xs px-1 lg:px-2">
                           <Users className="h-2 w-2 lg:h-3 lg:w-3 mr-1" />
                           {getParticipantCount(room)}
                         </Badge>
@@ -212,6 +242,17 @@ export default function Chat() {
                           </Badge>
                         )}
                       </div>
+                      
+                      {room.last_message && (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          <p className="truncate">
+                            <span className="font-medium">{room.last_message.profiles.name}:</span> {room.last_message.content}
+                          </p>
+                          <p className="text-xs">
+                            {format(new Date(room.last_message.created_at), 'HH:mm', { locale: ptBR })}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -222,7 +263,7 @@ export default function Chat() {
               <div className="text-center py-6 lg:py-8 text-muted-foreground">
                 <MessageCircle className="h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm lg:text-base">{searchTerm ? 'Nenhuma sala encontrada' : 'Nenhuma sala de chat disponível'}</p>
-                <p className="text-xs lg:text-sm">Clique em "Nova Conversa" para começar</p>
+                <p className="text-xs lg:text-sm">Clique em "Nova Sala" para começar</p>
               </div>
             )}
           </div>
@@ -263,6 +304,32 @@ export default function Chat() {
                     <Users className="h-2 w-2 lg:h-3 lg:w-3" />
                     {getParticipantCount(selectedRoom)}
                   </Badge>
+                  
+                  {/* Menu de opções da sala */}
+                  {canManageRoom(selectedRoom) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="p-1">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setShowEditRoomDialog(true)}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Editar Sala
+                        </DropdownMenuItem>
+                        {canDeleteRoom && (
+                          <DropdownMenuItem
+                            onClick={handleDeleteRoom}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir Sala
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
             </div>
@@ -444,10 +511,13 @@ export default function Chat() {
               <p className="text-muted-foreground mb-4 text-sm lg:text-base">
                 Escolha uma sala na lateral para começar a conversar
               </p>
-              <Button onClick={() => setShowContactsSidebar(true)} size="sm" className="lg:size-default">
-                <UserPlus className="h-3 w-3 lg:h-4 lg:w-4 mr-2" />
-                Iniciar Nova Conversa
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <CreateChatRoomDialog onRoomCreated={handleRoomCreated} />
+                <Button onClick={() => setShowContactsSidbar(true)} variant="outline" size="sm" className="lg:size-default">
+                  <UserPlus className="h-3 w-3 lg:h-4 lg:w-4 mr-2" />
+                  Contatos
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -458,6 +528,13 @@ export default function Chat() {
         open={showContactsSidebar}
         onOpenChange={setShowContactsSidebar}
         onDirectChat={handleRoomCreated}
+      />
+
+      {/* Dialog para Editar Sala */}
+      <EditChatRoomDialog
+        room={selectedRoom}
+        isOpen={showEditRoomDialog}
+        onOpenChange={setShowEditRoomDialog}
       />
 
       {/* Dialog para Editar Mensagem */}
