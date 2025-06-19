@@ -20,7 +20,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     email: '',
     password: '',
     role: 'user' as 'admin' | 'technician' | 'user',
-    unit_id: ''
+    unit_id: 'no-unit'
   })
   
   const createUser = useCreateUser()
@@ -42,7 +42,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     try {
       await createUser.mutateAsync({
         ...formData,
-        unit_id: formData.unit_id || null
+        unit_id: formData.unit_id === 'no-unit' ? null : formData.unit_id
       })
       
       setFormData({
@@ -50,7 +50,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         email: '',
         password: '',
         role: 'user',
-        unit_id: ''
+        unit_id: 'no-unit'
       })
       onOpenChange(false)
     } catch (error) {
@@ -128,7 +128,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                 <SelectValue placeholder="Selecione uma unidade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma unidade</SelectItem>
+                <SelectItem value="no-unit">Nenhuma unidade</SelectItem>
                 {units.map((unit) => (
                   <SelectItem key={unit.id} value={unit.id}>
                     {unit.name}
