@@ -2,18 +2,23 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
 
 type Ticket = Tables<'tickets'>
 type TicketInsert = TablesInsert<'tickets'>
 type TicketUpdate = TablesUpdate<'tickets'>
 
 export function useTickets() {
+  const { profile } = useAuth()
+  const { data: technicianUnits = [] } = useTechnicianUnits(profile?.id)
+
   return useQuery({
-    queryKey: ['tickets'],
+    queryKey: ['tickets', profile?.id, profile?.role],
     queryFn: async () => {
-      console.log('Fetching tickets...')
+      console.log('Fetching tickets for user:', profile?.role, profile?.id)
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('tickets')
         .select(`
           *,
@@ -25,7 +30,21 @@ export function useTickets() {
             uploader:profiles(name, email)
           )
         `)
-        .order('created_at', { ascending: false })
+
+      // Filtrar por unidades baseado no role
+      if (profile?.role === 'technician') {
+        const unitIds = technicianUnits.map(tu => tu.unit_id)
+        
+        if (unitIds.length > 0) {
+          query = query.in('unit_id', unitIds)
+        } else {
+          // Se técnico não tem unidades atribuídas, não mostrar nada
+          return []
+        }
+      }
+      // Admin vê todos os chamados (sem filtro)
+      
+      const { data, error } = await query.order('created_at', { ascending: false })
       
       if (error) {
         console.error('Error fetching tickets:', error)
@@ -47,9 +66,10 @@ export function useTickets() {
         }) || []
       })) || []
       
-      console.log('Tickets fetched:', ticketsWithUrls)
+      console.log('Tickets fetched:', ticketsWithUrls.length, 'tickets for role:', profile?.role)
       return ticketsWithUrls
     },
+    enabled: !!profile?.id,
   })
 }
 

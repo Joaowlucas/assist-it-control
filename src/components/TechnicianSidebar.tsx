@@ -1,5 +1,5 @@
 
-import { Home, Ticket, Wrench, Settings, MessageCircle, User, Building2 } from "lucide-react"
+import { Home, Ticket, Wrench, MessageCircle, Building2 } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -13,39 +13,9 @@ import {
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/hooks/useAuth"
-import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { Link, useLocation } from "react-router-dom"
-import { TechnicianSidebar } from "./TechnicianSidebar"
 
-const userItems = [
-  {
-    title: "Dashboard",
-    url: "/user-dashboard",
-    icon: Home,
-  },
-  {
-    title: "Meus Chamados",
-    url: "/user-tickets",
-    icon: Ticket,
-  },
-  {
-    title: "Equipamentos",
-    url: "/user-assignments",
-    icon: Wrench,
-  },
-  {
-    title: "Chat",
-    url: "/chat",
-    icon: MessageCircle,
-  },
-  {
-    title: "Portal",
-    url: "/user-portal",
-    icon: User,
-  },
-]
-
-const adminItems = [
+const technicianItems = [
   {
     title: "Dashboard",
     url: "/",
@@ -71,41 +41,28 @@ const adminItems = [
     url: "/chat",
     icon: MessageCircle,
   },
-  {
-    title: "Configurações",
-    url: "/settings",
-    icon: Settings,
-  },
 ]
 
-export function AppSidebar() {
+export function TechnicianSidebar() {
   const { profile } = useAuth()
-  const { data: systemSettings } = useSystemSettings()
   const location = useLocation()
-
-  // Se for técnico, usar o sidebar específico
-  if (profile?.role === 'technician') {
-    return <TechnicianSidebar />
-  }
-
-  const items = profile?.role === 'admin' ? adminItems : userItems
 
   return (
     <Sidebar className="bg-background/80 backdrop-blur-md border-r border-border/50">
       <SidebarHeader className="p-4 border-b border-border/50">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={systemSettings?.company_logo_url || undefined} />
+            <AvatarImage src={profile?.avatar_url || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-              {systemSettings?.company_name?.charAt(0) || 'S'}
+              {profile?.name?.charAt(0) || 'T'}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0 flex-1">
             <h2 className="font-semibold text-sm truncate text-foreground">
-              {systemSettings?.company_name || 'Sistema'}
+              {profile?.name || 'Técnico'}
             </h2>
             <p className="text-xs text-muted-foreground truncate">
-              {systemSettings?.department_name || 'TI'}
+              Técnico de Suporte
             </p>
           </div>
         </div>
@@ -116,7 +73,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-foreground/70">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {technicianItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 
