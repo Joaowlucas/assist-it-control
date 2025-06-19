@@ -71,7 +71,7 @@ export function useChatRooms() {
 
       console.log('Fetching chat rooms for user:', profile.id, 'with role:', profile.role)
 
-      // Com as novas políticas RLS simplificadas, a query básica já filtra automaticamente
+      // Melhorar a query para carregar corretamente os avatares dos participantes
       const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
@@ -721,15 +721,16 @@ export function useCreateChatRoom() {
   })
 }
 
+// Função para usar o novo hook de usuários disponíveis
 export function useAvailableChatUsers() {
   const { profile } = useAuth()
 
   return useQuery({
-    queryKey: ['available-chat-users', profile?.id],
+    queryKey: ['available-chat-users', profile?.id, profile?.role, profile?.unit_id],
     queryFn: async () => {
       if (!profile?.id) return []
 
-      console.log('Fetching available users for chat')
+      console.log('Fetching available users for chat - User role:', profile.role, 'Unit:', profile.unit_id)
 
       let query = supabase
         .from('profiles')
@@ -737,12 +738,17 @@ export function useAvailableChatUsers() {
         .eq('status', 'ativo')
         .neq('id', profile.id)
 
-      // Filtrar usuários baseado no role do usuário atual
+      // Aplicar filtro baseado no role do usuário atual
       if (profile.role === 'user') {
-        // Usuários comuns: mesma unidade + técnicos + admins
-        query = query.or(`unit_id.eq.${profile.unit_id},role.eq.technician,role.eq.admin`)
+        // Usuários comuns: apenas admins + técnicos da mesma unidade
+        if (profile.unit_id) {
+          query = query.or(`role.eq.admin,and(role.eq.technician,unit_id.eq.${profile.unit_id})`)
+        } else {
+          // Se não tem unidade, só pode conversar com admins
+          query = query.eq('role', 'admin')
+        }
       } else if (profile.role === 'technician') {
-        // Técnicos: suas unidades + outros técnicos + admins + usuários das unidades
+        // Técnicos: admins + usuários/técnicos das unidades que atendem
         const { data: techUnits } = await supabase
           .from('technician_units')
           .select('unit_id')
@@ -754,10 +760,10 @@ export function useAvailableChatUsers() {
         }
 
         if (unitIds.length > 0) {
-          const unitFilter = unitIds.map(id => `unit_id.eq.${id}`).join(',')
-          query = query.or(`${unitFilter},role.eq.technician,role.eq.admin`)
+          const unitFilters = unitIds.map(id => `unit_id.eq.${id}`).join(',')
+          query = query.or(`role.eq.admin,${unitFilters},role.eq.technician`)
         } else {
-          query = query.or(`role.eq.technician,role.eq.admin`)
+          query = query.or('role.eq.admin,role.eq.technician')
         }
       }
       // Admins podem conversar com qualquer pessoa (sem filtro adicional)
@@ -769,7 +775,7 @@ export function useAvailableChatUsers() {
         throw error
       }
 
-      console.log('Available users fetched:', data?.length || 0)
+      console.log('Available users fetched:', data?.length || 0, 'users')
       return data || []
     },
     enabled: !!profile?.id,

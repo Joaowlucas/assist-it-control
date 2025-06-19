@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MessageCircle, Users } from 'lucide-react'
-import { useProfiles } from '@/hooks/useProfiles'
+import { useAvailableChatUsers } from '@/hooks/useChat'
 import { DirectChatDialog } from '@/components/DirectChatDialog'
 import { supabase } from '@/integrations/supabase/client'
 
@@ -14,7 +14,7 @@ interface ChatUsersListProps {
 }
 
 export function ChatUsersList({ onDirectChat }: ChatUsersListProps) {
-  const { data: profiles = [] } = useProfiles()
+  const { data: availableUsers = [] } = useAvailableChatUsers()
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const [directChatDialog, setDirectChatDialog] = useState<{
     open: boolean
@@ -66,12 +66,12 @@ export function ChatUsersList({ onDirectChat }: ChatUsersListProps) {
     onDirectChat?.(roomId)
   }
 
-  const onlineProfiles = profiles.filter(profile => 
-    onlineUsers.includes(profile.id) && profile.status === 'ativo'
+  const onlineProfiles = availableUsers.filter(profile => 
+    onlineUsers.includes(profile.id)
   )
 
-  const offlineProfiles = profiles.filter(profile => 
-    !onlineUsers.includes(profile.id) && profile.status === 'ativo'
+  const offlineProfiles = availableUsers.filter(profile => 
+    !onlineUsers.includes(profile.id)
   )
 
   return (
@@ -91,18 +91,18 @@ export function ChatUsersList({ onDirectChat }: ChatUsersListProps) {
             <div className="p-4 space-y-4">
               {onlineProfiles.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-green-600 mb-2 flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     Online ({onlineProfiles.length})
                   </h4>
                   <div className="space-y-2">
                     {onlineProfiles.map((profile) => (
-                      <div key={profile.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                      <div key={profile.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 dark:hover:bg-muted/30 group">
                         <div className="flex items-center gap-3">
                           <div className="relative">
                             <Avatar className="h-8 w-8">
                               <AvatarImage src={profile.avatar_url || undefined} />
-                              <AvatarFallback>
+                              <AvatarFallback className="bg-muted dark:bg-muted/50">
                                 {profile.name.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
@@ -138,12 +138,12 @@ export function ChatUsersList({ onDirectChat }: ChatUsersListProps) {
                   </h4>
                   <div className="space-y-2">
                     {offlineProfiles.map((profile) => (
-                      <div key={profile.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 group">
+                      <div key={profile.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 dark:hover:bg-muted/30 group">
                         <div className="flex items-center gap-3">
                           <div className="relative">
                             <Avatar className="h-8 w-8 opacity-60">
                               <AvatarImage src={profile.avatar_url || undefined} />
-                              <AvatarFallback>
+                              <AvatarFallback className="bg-muted dark:bg-muted/50">
                                 {profile.name.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
@@ -171,7 +171,7 @@ export function ChatUsersList({ onDirectChat }: ChatUsersListProps) {
                 </div>
               )}
 
-              {profiles.length === 0 && (
+              {availableUsers.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Nenhum usuário encontrado</p>
