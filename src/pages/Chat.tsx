@@ -370,14 +370,9 @@ export default function Chat() {
 
       <EditChatRoomDialog
         room={editingRoom}
-        open={isEditRoomDialogOpen}
-        onOpenChange={setIsEditRoomDialogOpen}
       />
 
-      <StartChatDialog
-        open={isStartChatDialogOpen}
-        onOpenChange={setIsStartChatDialogOpen}
-      />
+      <StartChatDialog />
 
       <DirectChatDialog
         open={isDirectChatDialogOpen}
