@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,7 +30,7 @@ export function ChatManagement() {
   const [formData, setFormData] = useState({
     name: '',
     unitId: 'general',
-    participants: [] as string[],
+    participantIds: [] as string[],
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,7 +61,7 @@ export function ChatManagement() {
       return
     }
 
-    if (formData.participants.length === 0) {
+    if (formData.participantIds.length === 0) {
       toast({
         title: 'Selecione participantes',
         description: 'É necessário selecionar pelo menos um participante para a sala.',
@@ -74,11 +75,11 @@ export function ChatManagement() {
       await createRoom.mutateAsync({
         name: formData.name,
         unitId: formData.unitId === 'general' ? undefined : formData.unitId,
-        participants: formData.participants,
+        participantIds: formData.participantIds,
       })
       
       console.log('Room created successfully, resetting form')
-      setFormData({ name: '', unitId: 'general', participants: [] })
+      setFormData({ name: '', unitId: 'general', participantIds: [] })
       setIsDialogOpen(false)
     } catch (error) {
       console.error('Error in form submission:', error)
@@ -94,9 +95,9 @@ export function ChatManagement() {
   const handleParticipantToggle = (userId: string) => {
     setFormData(prev => ({
       ...prev,
-      participants: prev.participants.includes(userId)
-        ? prev.participants.filter(id => id !== userId)
-        : [...prev.participants, userId]
+      participantIds: prev.participantIds.includes(userId)
+        ? prev.participantIds.filter(id => id !== userId)
+        : [...prev.participantIds, userId]
     }))
   }
 
@@ -183,7 +184,7 @@ export function ChatManagement() {
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
                       unitId: value,
-                      participants: [] // Reset participantes quando mudar unidade
+                      participantIds: [] // Reset participantes quando mudar unidade
                     }))}
                   >
                     <SelectTrigger>
@@ -221,7 +222,7 @@ export function ChatManagement() {
                             <input
                               type="checkbox"
                               id={`user-${user.id}`}
-                              checked={formData.participants.includes(user.id)}
+                              checked={formData.participantIds.includes(user.id)}
                               onChange={() => handleParticipantToggle(user.id)}
                               className="rounded"
                             />
@@ -240,9 +241,9 @@ export function ChatManagement() {
                     </div>
                   )}
                   
-                  {formData.participants.length > 0 && (
+                  {formData.participantIds.length > 0 && (
                     <p className="text-sm text-green-600 mt-2">
-                      {formData.participants.length} participante(s) selecionado(s) + você
+                      {formData.participantIds.length} participante(s) selecionado(s) + você
                     </p>
                   )}
                 </div>
@@ -295,7 +296,7 @@ export function ChatManagement() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>{room.profiles?.name}</TableCell>
+                  <TableCell>{room.profiles?.name || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={room.is_active ? "default" : "secondary"}>
                       {room.is_active ? "Ativo" : "Inativo"}

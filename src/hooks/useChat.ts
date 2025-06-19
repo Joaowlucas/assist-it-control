@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -21,6 +22,10 @@ export interface ChatRoom {
       avatar_url: string | null
     }
   }>
+  profiles?: {
+    name: string
+    avatar_url: string | null
+  }
 }
 
 export interface ChatMessage {
@@ -37,6 +42,18 @@ export interface ChatMessage {
   attachment_type: string | null
   attachment_size: number | null
   profiles?: {
+    name: string
+    avatar_url: string | null
+  }
+}
+
+export interface ChatParticipant {
+  id: string
+  room_id: string
+  user_id: string
+  joined_at: string
+  last_read_at: string | null
+  profiles: {
     name: string
     avatar_url: string | null
   }
@@ -60,7 +77,8 @@ export function useChatRooms() {
           chat_participants!inner(
             user_id,
             profiles(name, avatar_url)
-          )
+          ),
+          profiles!chat_rooms_created_by_fkey(name, avatar_url)
         `)
         .eq('chat_participants.user_id', profile.id)
         .eq('is_active', true)
@@ -102,6 +120,34 @@ export function useChatMessages(roomId: string) {
 
       console.log('Messages fetched:', data)
       return data as ChatMessage[]
+    },
+    enabled: !!roomId,
+  })
+}
+
+export function useChatParticipants(roomId: string) {
+  return useQuery({
+    queryKey: ['chat-participants', roomId],
+    queryFn: async () => {
+      if (!roomId) return []
+
+      console.log('Fetching participants for room:', roomId)
+
+      const { data, error } = await supabase
+        .from('chat_participants')
+        .select(`
+          *,
+          profiles(name, avatar_url)
+        `)
+        .eq('room_id', roomId)
+
+      if (error) {
+        console.error('Error fetching participants:', error)
+        throw error
+      }
+
+      console.log('Participants fetched:', data)
+      return data as ChatParticipant[]
     },
     enabled: !!roomId,
   })
@@ -264,6 +310,123 @@ export function useDeleteMessage() {
       toast({
         title: 'Erro',
         description: 'Erro ao excluir mensagem: ' + error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useDeleteChatRoom() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (roomId: string) => {
+      console.log('Deleting chat room:', roomId)
+
+      const { data, error } = await supabase
+        .from('chat_rooms')
+        .update({ is_active: false })
+        .eq('id', roomId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error deleting chat room:', error)
+        throw error
+      }
+
+      console.log('Chat room deleted:', data)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      toast({
+        title: 'Sala removida',
+        description: 'A sala de chat foi removida com sucesso',
+      })
+    },
+    onError: (error) => {
+      console.error('Error in deleteChatRoom mutation:', error)
+      toast({
+        title: 'Erro',
+        description: 'Erro ao remover sala: ' + error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useUpdateChatRoom() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async ({ roomId, name, unitId, participants }: {
+      roomId: string
+      name: string
+      unitId?: string | null
+      participants: string[]
+    }) => {
+      console.log('Updating chat room:', { roomId, name, unitId, participants })
+
+      // Atualizar dados da sala
+      const { error: roomError } = await supabase
+        .from('chat_rooms')
+        .update({
+          name,
+          unit_id: unitId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', roomId)
+
+      if (roomError) {
+        console.error('Error updating chat room:', roomError)
+        throw roomError
+      }
+
+      // Remover participantes existentes
+      const { error: deleteError } = await supabase
+        .from('chat_participants')
+        .delete()
+        .eq('room_id', roomId)
+
+      if (deleteError) {
+        console.error('Error removing old participants:', deleteError)
+        throw deleteError
+      }
+
+      // Adicionar novos participantes
+      const participantsData = participants.map(userId => ({
+        room_id: roomId,
+        user_id: userId,
+      }))
+
+      const { error: participantsError } = await supabase
+        .from('chat_participants')
+        .insert(participantsData)
+
+      if (participantsError) {
+        console.error('Error adding new participants:', participantsError)
+        throw participantsError
+      }
+
+      console.log('Chat room updated successfully')
+      return roomId
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      queryClient.invalidateQueries({ queryKey: ['chat-participants'] })
+      toast({
+        title: 'Sala atualizada',
+        description: 'A sala de chat foi atualizada com sucesso',
+      })
+    },
+    onError: (error) => {
+      console.error('Error in updateChatRoom mutation:', error)
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar sala: ' + error.message,
         variant: 'destructive',
       })
     },

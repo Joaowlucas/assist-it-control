@@ -8,7 +8,8 @@ import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection"
 import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 import { CompanySettingsSection } from "@/components/CompanySettingsSection"
 import { UnitManagementSection } from "@/components/UnitManagementSection"
-import { Settings as SettingsIcon, Users, MessageSquare, Building, Ticket } from "lucide-react"
+import { ChatManagement } from "@/components/ChatManagement"
+import { Settings as SettingsIcon, Users, MessageSquare, Building, Ticket, MessageCircle } from "lucide-react"
 
 export default function Settings() {
   return (
@@ -20,7 +21,7 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Usuários
@@ -28,6 +29,10 @@ export default function Settings() {
             <TabsTrigger value="tickets" className="flex items-center gap-2">
               <Ticket className="h-4 w-4" />
               Chamados
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Chat
             </TabsTrigger>
             <TabsTrigger value="whatsapp" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -69,6 +74,10 @@ export default function Settings() {
                 <TicketConfigurationTabs />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="chat" className="space-y-4">
+            <ChatManagement />
           </TabsContent>
 
           <TabsContent value="whatsapp" className="space-y-4">
