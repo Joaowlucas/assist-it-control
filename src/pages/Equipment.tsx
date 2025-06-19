@@ -219,8 +219,8 @@ export default function Equipment() {
                     </SelectTrigger>
                     <SelectContent>
                       {EQUIPMENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
+                        <SelectItem key={type} value={type}>
+                          {type}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -537,13 +537,20 @@ export default function Equipment() {
       {/* Diálogos */}
       {selectedEquipment && (
         <>
-          <EquipmentPhotoGallery
-            equipmentId={selectedEquipment.id}
-            open={isPhotoGalleryOpen}
-            onOpenChange={setIsPhotoGalleryOpen}
-          />
+          <Dialog open={isPhotoGalleryOpen} onOpenChange={setIsPhotoGalleryOpen}>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Fotos do Equipamento</DialogTitle>
+              </DialogHeader>
+              <EquipmentPhotoGallery
+                equipmentId={selectedEquipment.id}
+                canEdit={true}
+              />
+            </DialogContent>
+          </Dialog>
 
           <EquipmentPDFPreviewDialog
+            equipment={selectedEquipment}
             photos={equipmentPhotos}
             systemSettings={systemSettings}
             tombamento={selectedEquipment.tombamento}
@@ -573,8 +580,8 @@ export default function Equipment() {
                       </SelectTrigger>
                       <SelectContent>
                         {EQUIPMENT_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
+                          <SelectItem key={type} value={type}>
+                            {type}
                           </SelectItem>
                         ))}
                       </SelectContent>

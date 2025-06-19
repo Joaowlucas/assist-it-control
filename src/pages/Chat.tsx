@@ -32,7 +32,7 @@ export default function Chat() {
   const [isStartChatDialogOpen, setIsStartChatDialogOpen] = useState(false)
   const [isDirectChatDialogOpen, setIsDirectChatDialogOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<any>(null)
-  const [attachments, setAttachments] = useState<File[]>([])
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedUser, setSelectedUser] = useState<any>(null)
 
   const { profile } = useAuth()
@@ -49,14 +49,14 @@ export default function Chat() {
   )
 
   const handleSendMessage = async () => {
-    if (!selectedRoom || (!messageText.trim() && attachments.length === 0)) return
+    if (!selectedRoom || (!messageText.trim() && !selectedFile)) return
 
     try {
-      if (attachments.length > 0) {
+      if (selectedFile) {
         await sendMessage.mutateAsync({
           roomId: selectedRoom,
           content: messageText,
-          attachmentFile: attachments[0]
+          attachmentFile: selectedFile
         })
       } else {
         await sendMessage.mutateAsync({
@@ -65,7 +65,7 @@ export default function Chat() {
         })
       }
       setMessageText("")
-      setAttachments([])
+      setSelectedFile(null)
     } catch (error) {
       toast.error("Erro ao enviar mensagem")
     }
@@ -175,11 +175,6 @@ export default function Chat() {
                       <p className="text-xs text-muted-foreground truncate">
                         {room.last_message?.content || 'Sem mensagens'}
                       </p>
-                      {room.unread_count > 0 && (
-                        <Badge variant="default" className="ml-2 text-xs">
-                          {room.unread_count}
-                        </Badge>
-                      )}
                     </div>
                   </div>
                   {canManageRoom(room) && (
@@ -310,10 +305,10 @@ export default function Chat() {
                       <p className="text-sm">{message.content}</p>
                       {message.attachment_url && (
                         <ChatMessageAttachment
-                          attachmentUrl={message.attachment_url}
-                          attachmentName={message.attachment_name || 'Anexo'}
-                          attachmentType={message.attachment_type || 'file'}
-                          attachmentSize={message.attachment_size}
+                          attachment_url={message.attachment_url}
+                          attachment_name={message.attachment_name || 'Anexo'}
+                          attachment_type={message.attachment_type || 'file'}
+                          attachment_size={message.attachment_size}
                         />
                       )}
                       <p className="text-xs opacity-70 mt-1">
@@ -327,29 +322,24 @@ export default function Chat() {
 
             {/* Input de Mensagem */}
             <div className="p-4 border-t bg-card">
-              {attachments.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-2">
-                  {attachments.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-muted p-2 rounded">
-                      <Paperclip className="h-4 w-4" />
-                      <span className="text-sm truncate max-w-32">{file.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
-                        className="h-4 w-4 p-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
+              {selectedFile && (
+                <div className="mb-2 flex items-center gap-2 bg-muted p-2 rounded">
+                  <Paperclip className="h-4 w-4" />
+                  <span className="text-sm truncate max-w-32">{selectedFile.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedFile(null)}
+                    className="h-4 w-4 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
                 </div>
               )}
               <div className="flex gap-2">
                 <ChatAttachmentUpload
-                  onFileSelect={(files) => setAttachments(files)}
-                  maxFiles={5}
-                  maxSizeInMB={10}
+                  onFileSelect={(file) => setSelectedFile(file)}
+                  selectedFile={selectedFile}
                 />
                 <Input
                   placeholder="Digite sua mensagem..."
@@ -360,7 +350,7 @@ export default function Chat() {
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!messageText.trim() && attachments.length === 0}
+                  disabled={!messageText.trim() && !selectedFile}
                   size="sm"
                 >
                   <Send className="h-4 w-4" />
@@ -383,24 +373,24 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        isOpen={isCreateRoomDialogOpen}
-        onClose={() => setIsCreateRoomDialogOpen(false)}
+        open={isCreateRoomDialogOpen}
+        onOpenChange={setIsCreateRoomDialogOpen}
       />
 
       <EditChatRoomDialog
         room={editingRoom}
-        isOpen={isEditRoomDialogOpen}
-        onClose={() => setIsEditRoomDialogOpen(false)}
+        open={isEditRoomDialogOpen}
+        onOpenChange={setIsEditRoomDialogOpen}
       />
 
       <StartChatDialog
-        isOpen={isStartChatDialogOpen}
-        onClose={() => setIsStartChatDialogOpen(false)}
+        open={isStartChatDialogOpen}
+        onOpenChange={setIsStartChatDialogOpen}
       />
 
       <DirectChatDialog
-        isOpen={isDirectChatDialogOpen}
-        onClose={() => setIsDirectChatDialogOpen(false)}
+        open={isDirectChatDialogOpen}
+        onOpenChange={setIsDirectChatDialogOpen}
         targetUserId={selectedUser?.id}
       />
     </div>

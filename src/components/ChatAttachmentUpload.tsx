@@ -83,32 +83,15 @@ export function ChatAttachmentUpload({ onFileSelect, selectedFile }: ChatAttachm
   }
 
   return (
-    <div
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
       {...getRootProps()}
-      className={`
-        border-2 border-dashed rounded-md p-4 text-center cursor-pointer transition-colors
-        ${isDragActive 
-          ? 'border-primary bg-primary/5' 
-          : 'border-muted-foreground/25 hover:border-primary/50'
-        }
-      `}
+      className="h-10 w-10 p-0"
     >
       <input {...getInputProps()} />
-      <div className="flex flex-col items-center gap-2">
-        <Paperclip className="h-6 w-6 text-muted-foreground" />
-        {isDragActive ? (
-          <p className="text-sm text-muted-foreground">Solte o arquivo aqui...</p>
-        ) : (
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Clique ou arraste um arquivo aqui
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Imagens, PDFs, documentos (máx. 10MB)
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+      <Paperclip className="h-4 w-4" />
+    </Button>
   )
 }
