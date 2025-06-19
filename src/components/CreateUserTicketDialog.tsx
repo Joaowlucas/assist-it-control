@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useCreateTicket } from "@/hooks/useTickets"
+import { ImageUpload } from "@/components/ImageUpload"
+import { useCreateUserTicket } from "@/hooks/useUserTickets"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 
@@ -24,35 +25,51 @@ const TICKET_CATEGORIES = [
   { value: "outros", label: "Outros" }
 ] as const
 
+const TICKET_PRIORITIES = [
+  { value: "baixa", label: "Baixa" },
+  { value: "media", label: "Média" },
+  { value: "alta", label: "Alta" },
+  { value: "critica", label: "Crítica" }
+] as const
+
 export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [images, setImages] = useState<File[]>([])
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    category: 'outros' as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
+    priority: 'media' as 'baixa' | 'media' | 'alta' | 'critica'
+  })
+
   const { profile } = useAuth()
-  const createTicket = useCreateTicket()
+  const createTicket = useCreateUserTicket()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    const formData = new FormData(e.currentTarget)
-    
     try {
-      const ticketData = {
-        title: formData.get('title') as string,
-        description: formData.get('description') as string,
-        category: formData.get('category') as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
-        priority: formData.get('priority') as 'baixa' | 'media' | 'alta' | 'critica',
+      await createTicket.mutateAsync({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
         unit_id: profile!.unit_id!, // Usuário só pode criar ticket para sua unidade
-        requester_id: profile!.id,
-        status: 'aberto' as const,
-      }
-
-      await createTicket.mutateAsync(ticketData)
+        images: images
+      })
+      
       toast.success("Chamado criado com sucesso!")
       onOpenChange(false)
       
       // Reset form
-      const form = e.currentTarget
-      form.reset()
+      setFormData({
+        title: '',
+        description: '',
+        category: 'outros',
+        priority: 'media'
+      })
+      setImages([])
     } catch (error: any) {
       toast.error(error.message || "Erro ao criar chamado")
     } finally {
@@ -62,7 +79,7 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] mx-4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Novo Chamado</DialogTitle>
           <DialogDescription>
@@ -70,60 +87,79 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid gap-4">
+            <div>
               <Label htmlFor="title">Título *</Label>
               <Input 
                 id="title" 
-                name="title" 
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Ex: Computador não liga"
                 required 
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="category">Categoria *</Label>
-              <Select name="category" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TICKET_CATEGORIES.map((category) => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             
             <div>
-              <Label htmlFor="priority">Prioridade *</Label>
-              <Select name="priority" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a prioridade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="critica">Crítica</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="description">Descrição *</Label>
+              <Textarea 
+                id="description" 
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descreva detalhadamente o problema ou solicitação..."
+                className="min-h-[100px]"
+                required 
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="category">Categoria *</Label>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={(value) => setFormData({ ...formData, category: value as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TICKET_CATEGORIES.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="priority">Prioridade *</Label>
+                <Select 
+                  value={formData.priority} 
+                  onValueChange={(value) => setFormData({ ...formData, priority: value as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TICKET_PRIORITIES.map((priority) => (
+                      <SelectItem key={priority.value} value={priority.value}>
+                        {priority.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="description">Descrição *</Label>
-            <Textarea 
-              id="description" 
-              name="description" 
-              placeholder="Descreva detalhadamente o problema ou solicitação..."
-              className="min-h-[100px]"
-              required 
+          {/* Upload de Imagens */}
+          <div className="space-y-4">
+            <ImageUpload
+              images={images}
+              onImagesChange={setImages}
+              maxImages={5}
+              maxSize={5 * 1024 * 1024} // 5MB
             />
           </div>
 

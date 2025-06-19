@@ -9,13 +9,15 @@ import { useUserTickets } from "@/hooks/useUserTickets"
 import { useAuth } from "@/hooks/useAuth"
 import { CreateUserTicketDialog } from "@/components/CreateUserTicketDialog"
 import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
-import { Plus, Search, Eye, Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react"
+import { EditTicketDialog } from "@/components/EditTicketDialog"
+import { Plus, Search, Eye, Clock, CheckCircle, AlertCircle, XCircle, Edit } from "lucide-react"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 export default function UserTickets() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -97,7 +99,16 @@ export default function UserTickets() {
     setIsDetailsDialogOpen(true)
   }
 
-  // Estatísticas dos tickets - corrigindo os filtros
+  const handleEditTicket = (ticket: any) => {
+    setSelectedTicket(ticket)
+    setIsEditDialogOpen(true)
+  }
+
+  const canEditTicket = (ticket: any) => {
+    return ticket.status === 'aberto' || ticket.status === 'em_andamento'
+  }
+
+  // Estatísticas dos tickets
   const stats = [
     {
       title: "Total",
@@ -240,13 +251,26 @@ export default function UserTickets() {
                       {format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewTicket(ticket)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewTicket(ticket)}
+                          title="Visualizar chamado"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canEditTicket(ticket) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditTicket(ticket)}
+                            title="Editar chamado"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -275,6 +299,14 @@ export default function UserTickets() {
           onOpenChange={setIsDetailsDialogOpen}
           units={[]}
           technicians={[]}
+        />
+      )}
+
+      {selectedTicket && (
+        <EditTicketDialog
+          ticket={selectedTicket}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
         />
       )}
     </div>

@@ -84,21 +84,9 @@ export default function Chat() {
             name,
             type,
             created_by,
-            is_active,
-            members (
-              id,
-              user_id,
-              room_id,
-              created_at,
-              profile:profiles (
-                id,
-                name,
-                email,
-                avatar_url
-              )
-            )
+            is_active
           `)
-          .or(`type.eq.group,and(type.eq.direct,members.profile.id.eq.${user.id})`)
+          .eq('is_active', true)
 
         if (roomsError) {
           throw roomsError
@@ -108,7 +96,8 @@ export default function Chat() {
           const formattedRooms = roomsData.map(room => ({
             ...room,
             is_active: room.is_active ?? true,
-            created_by: room.created_by ?? user.id
+            created_by: room.created_by ?? user.id,
+            type: room.type === 'direct' ? 'direct' : 'group'
           })) as ChatRoom[]
           setRooms(formattedRooms)
         }
@@ -123,15 +112,16 @@ export default function Chat() {
 
     fetchRooms()
 
-    // Subscrição para novas salas (apenas para salas de grupo)
+    // Subscrição para novas salas
     const roomSubscription = supabase
       .channel('public:chat_rooms')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_rooms' }, async (payload) => {
-        if (payload.new) {
+        if (payload.new && typeof payload.new === 'object') {
           const newRoom = {
             ...payload.new,
             is_active: payload.new.is_active ?? true,
-            created_by: payload.new.created_by ?? user.id
+            created_by: payload.new.created_by ?? user.id,
+            type: payload.new.type === 'direct' ? 'direct' : 'group'
           } as ChatRoom
           if (newRoom.type === 'group') {
             setRooms(prevRooms => [...prevRooms, newRoom])
@@ -294,27 +284,16 @@ export default function Chat() {
             name,
             type,
             created_by,
-            is_active,
-            members (
-              id,
-              user_id,
-              room_id,
-              created_at,
-              profile:profiles (
-                id,
-                name,
-                email,
-                avatar_url
-              )
-            )
+            is_active
           `)
-          .or(`type.eq.group,and(type.eq.direct,members.profile.id.eq.${user!.id})`)
+          .eq('is_active', true)
 
         if (roomsData) {
           const formattedRooms = roomsData.map(room => ({
             ...room,
             is_active: room.is_active ?? true,
-            created_by: room.created_by ?? user!.id
+            created_by: room.created_by ?? user!.id,
+            type: room.type === 'direct' ? 'direct' : 'group'
           })) as ChatRoom[]
           setRooms(formattedRooms)
         }
@@ -465,9 +444,9 @@ export default function Chat() {
                         </div>
                         {message.attachment_url && (
                           <ChatMessageAttachment 
-                            attachmentUrl={message.attachment_url}
-                            attachmentName={message.attachment_name || ''}
-                            attachmentSize={message.attachment_size || 0}
+                            attachment_url={message.attachment_url}
+                            attachment_name={message.attachment_name || ''}
+                            attachment_size={message.attachment_size || 0}
                           />
                         )}
                         <div className="text-xs opacity-70 mt-1">
@@ -486,6 +465,7 @@ export default function Chat() {
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 <ChatAttachmentUpload 
                   onFileSelect={handleFileSelect}
+                  selectedFile={attachedFile}
                 />
                 <div className="flex-1 relative">
                   <Input
@@ -531,14 +511,14 @@ export default function Chat() {
 
       {/* Diálogos */}
       <CreateChatRoomDialog
-        isOpen={showCreateRoomDialog}
-        onClose={() => setShowCreateRoomDialog(false)}
+        open={showCreateRoomDialog}
+        onOpenChange={setShowCreateRoomDialog}
         onRoomCreated={handleCreateRoom}
       />
 
       <DirectChatDialog
         open={showDirectChatDialog}
-        onClose={() => setShowDirectChatDialog(false)}
+        onOpenChange={setShowDirectChatDialog}
         onChatCreated={handleDirectChatCreated}
       />
 
