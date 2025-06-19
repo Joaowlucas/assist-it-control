@@ -1,27 +1,30 @@
+
 import { ThemeProvider } from "@/components/theme-provider"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { Login } from "@/pages/Login"
-import { Dashboard } from "@/pages/Dashboard"
-import { Tickets } from "@/pages/Tickets"
-import { Equipment } from "@/pages/Equipment"
-import { Assignments } from "@/pages/Assignments"
-import { Settings } from "@/pages/Settings"
-import { Chat } from "@/pages/Chat"
-import { UserDashboard } from "@/pages/UserDashboard"
-import { UserTickets } from "@/pages/UserTickets"
-import { UserAssignments } from "@/pages/UserAssignments"
-import { NotFound } from "@/pages/NotFound"
+import Login from "@/pages/Login"
+import Dashboard from "@/pages/Dashboard"
+import Tickets from "@/pages/Tickets"
+import Equipment from "@/pages/Equipment"
+import Assignments from "@/pages/Assignments"
+import Settings from "@/pages/Settings"
+import Chat from "@/pages/Chat"
+import UserDashboard from "@/pages/UserDashboard"
+import UserTickets from "@/pages/UserTickets"
+import UserAssignments from "@/pages/UserAssignments"
+import NotFound from "@/pages/NotFound"
 import { AuthGuard } from "@/guards/AuthGuard"
 import { AdminGuard } from "@/guards/AdminGuard"
 import { AdminLayout } from "@/components/AdminLayout"
 import { UserLayout } from "@/components/UserLayout"
 import { ChatWithRoleLayout } from "@/components/ChatWithRoleLayout"
 import { Toaster } from "@/components/ui/toaster"
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
 
 function App() {
   return (
-    <QueryClient>
+    <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
         <Toaster />
         <BrowserRouter>
@@ -107,7 +110,7 @@ function App() {
           </Routes>
         </BrowserRouter>
       </ThemeProvider>
-    </QueryClient>
+    </QueryClientProvider>
   )
 }
 

@@ -1,384 +1,484 @@
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { MessageCircle, Plus, Search, Send, Users, Settings, Paperclip, X, Building2, UserPlus, MessageSquare } from "lucide-react"
-import { useChatRooms, useChatMessages, useCreateChatRoom, useSendMessage, useDeleteChatRoom } from "@/hooks/useChat"
-import { useAvailableChatUsers } from "@/hooks/useAvailableChatUsers"
-import { useAuth } from "@/hooks/useAuth"
-import { ChatRoomAvatar } from "@/components/ChatRoomAvatar"
+import { Search, Plus, MessageCircle, Send, X, Settings } from "lucide-react"
+import { ChatContactsSidebar } from "@/components/ChatContactsSidebar"
 import { CreateChatRoomDialog } from "@/components/CreateChatRoomDialog"
-import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
-import { StartChatDialog } from "@/components/StartChatDialog"
 import { DirectChatDialog } from "@/components/DirectChatDialog"
-import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
+import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
+import { ChatRoomAvatar } from "@/components/ChatRoomAvatar"
+import { useAuth } from "@/hooks/useAuth"
+import { useSupabase } from "@/hooks/useSupabase"
+import { useToast } from "@/components/ui/use-toast"
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { ChatMessageAttachment } from "@/components/ChatMessageAttachment"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { toast } from "sonner"
+import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
+
+interface ChatRoom {
+  id: string
+  created_at: string
+  name: string
+  type: 'group' | 'direct'
+  owner_id: string
+  members?: {
+    id: string
+    user_id: string
+    room_id: string
+    created_at: string
+    profile: {
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string
+    }
+  }[]
+}
+
+interface Message {
+  id: string
+  created_at: string
+  content: string
+  sender_id: string
+  room_id: string
+  attachment_url: string | null
+  attachment_name: string | null
+  attachment_size: number | null
+  sender?: {
+    id: string
+    full_name: string
+    email: string
+    avatar_url: string
+  }
+}
 
 export default function Chat() {
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null)
-  const [messageText, setMessageText] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [showContactsSidebar, setShowContactsSidebar] = useState(false)
-  const [isCreateRoomDialogOpen, setIsCreateRoomDialogOpen] = useState(false)
-  const [isEditRoomDialogOpen, setIsEditRoomDialogOpen] = useState(false)
-  const [isStartChatDialogOpen, setIsStartChatDialogOpen] = useState(false)
-  const [isDirectChatDialogOpen, setIsDirectChatDialogOpen] = useState(false)
-  const [editingRoom, setEditingRoom] = useState<any>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null)
+  const [rooms, setRooms] = useState<ChatRoom[]>([])
+  const [showCreateRoomDialog, setShowCreateRoomDialog] = useState(false)
+  const [showDirectChatDialog, setShowDirectChatDialog] = useState(false)
+  const [editingRoom, setEditingRoom] = useState<ChatRoom | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [newMessage, setNewMessage] = useState("")
+  const [sendingMessage, setSendingMessage] = useState(false)
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const { profile } = useAuth()
-  const { data: rooms = [], isLoading: roomsLoading } = useChatRooms()
-  const { data: messages = [] } = useChatMessages(selectedRoom || undefined)
-  const { data: availableUsers = [] } = useAvailableChatUsers()
-  const createRoom = useCreateChatRoom()
-  const sendMessage = useSendMessage()
-  const deleteRoom = useDeleteChatRoom()
+  const { user, profile } = useAuth()
+  const { supabase } = useSupabase()
+  const { toast } = useToast()
 
-  const currentRoom = rooms.find(room => room.id === selectedRoom)
-  const filteredRooms = rooms.filter(room => 
+  useEffect(() => {
+    if (!user) return
+
+    const fetchRooms = async () => {
+      try {
+        const { data: roomsData, error: roomsError } = await supabase
+          .from('chat_rooms')
+          .select(`
+            id,
+            created_at,
+            name,
+            type,
+            owner_id,
+            members (
+              id,
+              user_id,
+              room_id,
+              created_at,
+              profile:profiles (
+                id,
+                full_name,
+                email,
+                avatar_url
+              )
+            )
+          `)
+          .or(`type.eq.group,and(type.eq.direct,members.profile.id.eq.${user.id})`)
+
+        if (roomsError) {
+          throw roomsError
+        }
+
+        if (roomsData) {
+          setRooms(roomsData as ChatRoom[])
+        }
+      } catch (error: any) {
+        toast({
+          title: "Erro ao carregar as conversas",
+          description: error.message,
+          variant: "destructive",
+        })
+      }
+    }
+
+    fetchRooms()
+
+    // Subscrição para novas salas (apenas para salas de grupo)
+    const roomSubscription = supabase
+      .channel('public:chat_rooms')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_rooms' }, async (payload) => {
+        if (payload.new) {
+          const newRoom = payload.new as ChatRoom
+          if (newRoom.type === 'group') {
+            setRooms(prevRooms => [...prevRooms, newRoom])
+          }
+        }
+      })
+      .subscribe()
+
+    return () => {
+      roomSubscription.unsubscribe()
+    }
+  }, [user, supabase, toast])
+
+  useEffect(() => {
+    if (selectedRoom) {
+      fetchMessages(selectedRoom.id)
+    }
+  }, [selectedRoom])
+
+  useEffect(() => {
+    if (!selectedRoom) return
+
+    const messageSubscription = supabase
+      .channel(`public:chat_messages:room_id=eq.${selectedRoom.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, async (payload) => {
+        if (payload.new) {
+          const newMessage = payload.new as Message
+          setMessages(prevMessages => [...prevMessages, newMessage])
+        }
+      })
+      .subscribe()
+
+    return () => {
+      messageSubscription.unsubscribe()
+    }
+  }, [selectedRoom, supabase])
+
+  useEffect(() => {
+    // Scroll para a parte inferior sempre que novas mensagens são adicionadas
+    scrollToBottom()
+  }, [messages])
+
+  const fetchMessages = async (roomId: string) => {
+    setLoadingMessages(true)
+    try {
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('chat_messages')
+        .select(`
+          id,
+          created_at,
+          content,
+          sender_id,
+          room_id,
+          attachment_url,
+          attachment_name,
+          attachment_size,
+          sender:profiles (
+            id,
+            full_name,
+            email,
+            avatar_url
+          )
+        `)
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+
+      if (messagesError) {
+        throw messagesError
+      }
+
+      if (messagesData) {
+        setMessages(messagesData as Message[])
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar as mensagens",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingMessages(false)
+    }
+  }
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!newMessage.trim() && !attachedFile) return
+    if (!selectedRoom) return
+
+    setSendingMessage(true)
+
+    try {
+      let attachmentUrl = null
+      let attachmentName = null
+      let attachmentSize = null
+
+      if (attachedFile) {
+        const { data, error } = await supabase.storage
+          .from('chat-attachments')
+          .upload(`${user!.id}/${Date.now()}-${attachedFile.name}`, attachedFile, {
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (error) {
+          throw error
+        }
+
+        attachmentUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${data.fullPath}`
+        attachmentName = attachedFile.name
+        attachmentSize = attachedFile.size
+      }
+
+      const { error: messageError } = await supabase
+        .from('chat_messages')
+        .insert({
+          content: newMessage,
+          sender_id: user!.id,
+          room_id: selectedRoom.id,
+          attachment_url: attachmentUrl,
+          attachment_name: attachmentName,
+          attachment_size: attachmentSize,
+        })
+
+      if (messageError) {
+        throw messageError
+      }
+
+      setNewMessage("")
+      setAttachedFile(null)
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar a mensagem",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setSendingMessage(false)
+    }
+  }
+
+  const handleFileSelected = (file: File | null) => {
+    setAttachedFile(file)
+  }
+
+  const handleCreateRoom = (newRoom: ChatRoom) => {
+    setRooms([...rooms, newRoom])
+  }
+
+  const handleDirectChatCreated = (room: ChatRoom) => {
+    setRooms([...rooms, room])
+    setSelectedRoom(room)
+  }
+
+  const handleEditRoom = (room: ChatRoom) => {
+    setEditingRoom(room)
+  }
+
+  const getDirectChatPartner = (room: ChatRoom) => {
+    return room.members?.find(member => member.profile.id !== user?.id)?.profile
+  }
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  const filteredRooms = rooms.filter(room =>
     room.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleSendMessage = async () => {
-    if (!selectedRoom || (!messageText.trim() && !selectedFile)) return
-
-    try {
-      if (selectedFile) {
-        await sendMessage.mutateAsync({
-          roomId: selectedRoom,
-          content: messageText,
-          attachmentFile: selectedFile
-        })
-      } else {
-        await sendMessage.mutateAsync({
-          roomId: selectedRoom,
-          content: messageText
-        })
-      }
-      setMessageText("")
-      setSelectedFile(null)
-    } catch (error) {
-      toast.error("Erro ao enviar mensagem")
-    }
-  }
-
-  const handleEditRoom = (room: any) => {
-    setEditingRoom(room)
-    setIsEditRoomDialogOpen(true)
-  }
-
-  const handleDeleteRoom = async (roomId: string) => {
-    if (confirm("Tem certeza que deseja excluir esta sala?")) {
-      try {
-        await deleteRoom.mutateAsync(roomId)
-        if (selectedRoom === roomId) {
-          setSelectedRoom(null)
-        }
-        toast.success("Sala excluída com sucesso")
-      } catch (error) {
-        toast.error("Erro ao excluir sala")
-      }
-    }
-  }
-
-  const getRoomDisplayName = (room: any) => {
-    if (room.type === 'private' && room.participants?.length === 2) {
-      const otherParticipant = room.participants.find(p => p.user_id !== profile?.id)
-      return otherParticipant?.profiles?.name || room.name
-    }
-    if (room.type === 'unit' && room.units) {
-      return `${room.units.name} (Unidade)`
-    }
-    return room.name
-  }
-
-  const canManageRoom = (room: any) => {
-    return profile?.role === 'admin' || room.created_by === profile?.id
-  }
-
-  const handleDirectChat = (user: any) => {
-    setSelectedUser(user)
-    setIsDirectChatDialogOpen(true)
-  }
-
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar de Salas */}
-      <div className={`${showContactsSidebar ? 'w-80' : 'w-80'} border-r bg-card transition-all duration-300 flex flex-col`}>
-        <div className="p-4 border-b space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Chat</h2>
+    <div className="flex h-full">
+      {/* Sidebar de contatos */}
+      <div className="w-80 border-r border-border/50 bg-background/50 backdrop-blur-sm">
+        <div className="p-4 border-b border-border/50">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Chat</h2>
             <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowContactsSidebar(!showContactsSidebar)}
-                className="text-muted-foreground"
-              >
-                <Users className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCreateRoomDialogOpen(true)}
-                className="text-muted-foreground"
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowCreateRoomDialog(true)}
               >
                 <Plus className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowDirectChatDialog(true)}
+              >
+                <MessageCircle className="h-4 w-4" />
               </Button>
             </div>
           </div>
           
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Buscar conversas..."
+              className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
             />
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {filteredRooms.map((room) => (
-              <div
-                key={room.id}
-                className={`p-3 rounded-lg cursor-pointer transition-colors group ${
-                  selectedRoom === room.id ? 'bg-accent' : 'hover:bg-accent/50'
-                }`}
-                onClick={() => setSelectedRoom(room.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <ChatRoomAvatar room={room} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-sm truncate">
-                        {getRoomDisplayName(room)}
-                      </h3>
-                      {room.last_message && (
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(room.last_message.created_at), 'HH:mm')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground truncate">
-                        {room.last_message?.content || 'Sem mensagens'}
-                      </p>
-                    </div>
-                  </div>
-                  {canManageRoom(room) && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEditRoom(room)
-                        }}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Settings className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+        <ChatContactsSidebar 
+          rooms={filteredRooms}
+          selectedRoom={selectedRoom}
+          onRoomSelect={setSelectedRoom}
+          onRoomEdit={handleEditRoom}
+          currentUserId={user?.id || ''}
+        />
       </div>
 
-      {/* Sidebar de Contatos */}
-      {showContactsSidebar && (
-        <div className="w-64 border-r bg-card">
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Contatos</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsStartChatDialogOpen(true)}
-                className="text-muted-foreground"
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {availableUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="p-2 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                  onClick={() => handleDirectChat(user)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar_url || undefined} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{user.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.role}</p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {user.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
-
-      {/* Área Principal do Chat */}
+      {/* Área principal do chat */}
       <div className="flex-1 flex flex-col">
-        {selectedRoom && currentRoom ? (
+        {selectedRoom ? (
           <>
-            {/* Header da Conversa */}
-            <div className="p-4 border-b bg-card">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ChatRoomAvatar room={currentRoom} size="md" />
-                  <div>
-                    <h3 className="font-semibold">{getRoomDisplayName(currentRoom)}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {currentRoom.participants?.length || 0} participante(s)
-                    </p>
-                  </div>
+            {/* Header da conversa */}
+            <div className="p-4 border-b border-border/50 bg-background/80 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <ChatRoomAvatar room={selectedRoom} size="md" />
+                <div className="flex-1">
+                  <h3 className="font-semibold">{selectedRoom.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedRoom.type === 'group' && `${selectedRoom.members?.length || 0} membros`}
+                    {selectedRoom.type === 'direct' && getDirectChatPartner(selectedRoom)?.full_name}
+                  </p>
                 </div>
-                {canManageRoom(currentRoom) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditRoom(currentRoom)}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEditRoom(selectedRoom)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
             {/* Mensagens */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((message) => (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesEndRef}>
+              {loadingMessages ? (
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  Não há mensagens ainda. Comece a conversa!
+                </div>
+              ) : (
+                messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-3 ${
-                      message.sender_id === profile?.id ? 'justify-end' : 'justify-start'
-                    }`}
+                    className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
                   >
-                    {message.sender_id !== profile?.id && (
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={message.profiles?.avatar_url || undefined} />
-                        <AvatarFallback>
-                          {message.profiles?.name?.charAt(0) || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div
-                      className={`max-w-[70%] ${
-                        message.sender_id === profile?.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      } rounded-lg p-3`}
-                    >
-                      {message.sender_id !== profile?.id && (
-                        <p className="text-xs font-medium mb-1">
-                          {message.profiles?.name}
-                        </p>
-                      )}
-                      <p className="text-sm">{message.content}</p>
-                      {message.attachment_url && (
-                        <ChatMessageAttachment message={message} />
-                      )}
-                      <p className="text-xs opacity-70 mt-1">
-                        {format(new Date(message.created_at), 'HH:mm', { locale: ptBR })}
-                      </p>
+                    <div className={`max-w-[70%] ${message.sender_id === user?.id ? 'order-2' : 'order-1'}`}>
+                      <div
+                        className={`rounded-lg px-4 py-2 ${
+                          message.sender_id === user?.id
+                            ? 'bg-primary text-primary-foreground ml-2'
+                            : 'bg-muted mr-2'
+                        }`}
+                      >
+                        {message.sender_id !== user?.id && selectedRoom.type === 'group' && (
+                          <div className="text-xs font-medium mb-1 opacity-70">
+                            {message.sender?.full_name}
+                          </div>
+                        )}
+                        <div className="text-sm whitespace-pre-wrap break-words">
+                          {message.content}
+                        </div>
+                        {message.attachment_url && (
+                          <ChatMessageAttachment 
+                            attachmentUrl={message.attachment_url}
+                            fileName={message.attachment_name || ''}
+                            fileSize={message.attachment_size}
+                          />
+                        )}
+                        <div className="text-xs opacity-70 mt-1">
+                          {format(new Date(message.created_at), 'HH:mm', { locale: ptBR })}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-
-            {/* Input de Mensagem */}
-            <div className="p-4 border-t bg-card">
-              {selectedFile && (
-                <div className="mb-2 flex items-center gap-2 bg-muted p-2 rounded">
-                  <Paperclip className="h-4 w-4" />
-                  <span className="text-sm truncate max-w-32">{selectedFile.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedFile(null)}
-                    className="h-4 w-4 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
+                ))
               )}
-              <div className="flex gap-2">
-                <ChatAttachmentUpload
-                  onFileSelect={(file) => setSelectedFile(file)}
-                  selectedFile={selectedFile}
+            </div>
+
+            {/* Input de mensagem */}
+            <div className="p-4 border-t border-border/50 bg-background/80 backdrop-blur-sm">
+              <form onSubmit={handleSendMessage} className="flex gap-2">
+                <ChatAttachmentUpload 
+                  onFileSelected={handleFileSelected}
+                  disabled={sendingMessage}
                 />
-                <Input
-                  placeholder="Digite sua mensagem..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!messageText.trim() && !selectedFile}
-                  size="sm"
-                >
-                  <Send className="h-4 w-4" />
+                <div className="flex-1 relative">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Digite sua mensagem..."
+                    disabled={sendingMessage}
+                    className="pr-10"
+                  />
+                  {attachedFile && (
+                    <div className="absolute -top-16 left-0 right-0 bg-muted p-2 rounded-md text-sm flex items-center justify-between">
+                      <span className="truncate">📎 {attachedFile.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAttachedFile(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <Button type="submit" disabled={sendingMessage || (!newMessage.trim() && !attachedFile)}>
+                  {sendingMessage ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
-              </div>
+              </form>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-muted/20">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
-              <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Selecione uma conversa</h3>
-              <p className="text-muted-foreground">
-                Escolha uma conversa para começar a conversar
-              </p>
+              <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Selecione uma conversa para começar</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Diálogos */}
-      <CreateChatRoomDialog />
-
-      <EditChatRoomDialog
-        room={editingRoom}
+      <CreateChatRoomDialog
+        open={showCreateRoomDialog}
+        onOpenChange={setShowCreateRoomDialog}
+        onCreate={handleCreateRoom}
       />
-
-      <StartChatDialog />
 
       <DirectChatDialog
-        open={isDirectChatDialogOpen}
-        onOpenChange={setIsDirectChatDialogOpen}
-        targetUserId={selectedUser?.id}
+        open={showDirectChatDialog}
+        onOpenChange={setShowDirectChatDialog}
+        onChatCreated={handleDirectChatCreated}
       />
+
+      {editingRoom && (
+        <EditChatRoomDialog
+          room={editingRoom}
+          onClose={() => setEditingRoom(null)}
+        />
+      )}
     </div>
   )
 }

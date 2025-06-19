@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCreateTicket } from "@/hooks/useTickets"
-import { useTicketCategories } from "@/hooks/useTicketCategories"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 
@@ -16,10 +15,18 @@ interface CreateUserTicketDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// Categorias padronizadas do sistema
+const TICKET_CATEGORIES = [
+  { value: "hardware", label: "Hardware" },
+  { value: "software", label: "Software" },
+  { value: "rede", label: "Rede" },
+  { value: "acesso", label: "Acesso" },
+  { value: "outros", label: "Outros" }
+] as const
+
 export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { profile } = useAuth()
-  const { data: categories = [] } = useTicketCategories()
   const createTicket = useCreateTicket()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -32,7 +39,7 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
       const ticketData = {
         title: formData.get('title') as string,
         description: formData.get('description') as string,
-        category: formData.get('category') as string,
+        category: formData.get('category') as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
         priority: formData.get('priority') as 'baixa' | 'media' | 'alta' | 'critica',
         unit_id: profile!.unit_id!, // Usuário só pode criar ticket para sua unidade
         requester_id: profile!.id,
@@ -84,9 +91,9 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
+                  {TICKET_CATEGORIES.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

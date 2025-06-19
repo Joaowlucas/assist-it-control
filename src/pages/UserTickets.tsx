@@ -34,10 +34,10 @@ export default function UserTickets() {
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
       case 'em_andamento':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'resolvido':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+      case 'aguardando':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
       case 'fechado':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
       case 'cancelado':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
       default:
@@ -51,8 +51,8 @@ export default function UserTickets() {
         return 'Aberto'
       case 'em_andamento':
         return 'Em Andamento'
-      case 'resolvido':
-        return 'Resolvido'
+      case 'aguardando':
+        return 'Aguardando'
       case 'fechado':
         return 'Fechado'
       case 'cancelado':
@@ -97,7 +97,7 @@ export default function UserTickets() {
     setIsDetailsDialogOpen(true)
   }
 
-  // Estatísticas dos tickets
+  // Estatísticas dos tickets - corrigindo os filtros
   const stats = [
     {
       title: "Total",
@@ -121,8 +121,8 @@ export default function UserTickets() {
       bgColor: "bg-yellow-50 dark:bg-yellow-950"
     },
     {
-      title: "Resolvidos",
-      value: tickets.filter(t => t.status === 'resolvido').length,
+      title: "Fechados",
+      value: tickets.filter(t => t.status === 'fechado').length,
       icon: CheckCircle,
       color: "text-green-500",
       bgColor: "bg-green-50 dark:bg-green-950"
@@ -273,6 +273,8 @@ export default function UserTickets() {
           ticket={selectedTicket}
           open={isDetailsDialogOpen}
           onOpenChange={setIsDetailsDialogOpen}
+          units={[]}
+          technicians={[]}
         />
       )}
     </div>
