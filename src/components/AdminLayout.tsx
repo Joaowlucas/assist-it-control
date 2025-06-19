@@ -1,5 +1,5 @@
 
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { AdminProfileDropdown } from "@/components/AdminProfileDropdown"
 import { SidebarTrigger } from "@/components/ui/sidebar"
@@ -17,15 +17,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background text-foreground">
         <AppSidebar />
-        <SidebarInset className="flex flex-col">
+        <div className="flex-1 flex flex-col animate-fade-in">
           <header className="border-b border-border/50 bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 transition-all duration-300 sticky top-0 z-40">
             <div className="flex h-14 items-center justify-between px-3 md:px-6">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger className="h-8 w-8 hover:bg-muted/50 transition-colors duration-200" />
-                {isMobile && (
+              {/* Mobile: Sidebar trigger + title */}
+              {isMobile ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <SidebarTrigger className="h-8 w-8 hover:bg-muted/50 transition-colors duration-200 shrink-0" />
                   <span className="font-semibold text-foreground truncate">Menu</span>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="flex-1" />
+              )}
               
               {/* Right side: Theme toggle + Profile */}
               <div className="flex items-center gap-2">
@@ -39,7 +42,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               {children}
             </div>
           </main>
-        </SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   )

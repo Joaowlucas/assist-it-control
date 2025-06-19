@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Send, MessageCircle, Users, Paperclip, MoreVertical, Edit, Trash2, X, UserPlus, Building2, Search } from 'lucide-react'
-import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, useDeleteChatRoom, useCanDeleteChatRoom, ChatRoom } from '@/hooks/useChat'
+import { useChatRooms, useChatMessages, useSendMessage, useEditMessage, useDeleteMessage, ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -28,15 +28,12 @@ export default function Chat() {
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null)
   const [showContactsSidebar, setShowContactsSidebar] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [showRoomsList, setShowRoomsList] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const { data: messages, isLoading: messagesLoading } = useChatMessages(selectedRoom?.id || '')
-  const { data: canDeleteRoom } = useCanDeleteChatRoom(selectedRoom?.id || '')
   const sendMessage = useSendMessage()
   const editMessage = useEditMessage()
   const deleteMessage = useDeleteMessage()
-  const deleteChatRoom = useDeleteChatRoom()
 
   // Auto-scroll para a última mensagem
   useEffect(() => {
@@ -81,26 +78,11 @@ export default function Chat() {
     }
   }
 
-  const handleDeleteRoom = async () => {
-    if (!selectedRoom) return
-    
-    if (confirm('Tem certeza que deseja excluir esta conversa? Esta ação não pode ser desfeita.')) {
-      try {
-        await deleteChatRoom.mutateAsync(selectedRoom.id)
-        setSelectedRoom(null)
-        setShowRoomsList(true)
-      } catch (error) {
-        console.error('Error deleting room:', error)
-      }
-    }
-  }
-
   const handleRoomCreated = (roomId: string) => {
     // Encontrar a nova sala e selecioná-la
     const newRoom = rooms?.find(room => room.id === roomId)
     if (newRoom) {
       setSelectedRoom(newRoom)
-      setShowRoomsList(false) // Esconder lista em mobile após selecionar
     }
   }
 
@@ -110,13 +92,20 @@ export default function Chat() {
 
   const getRoomDisplayName = (room: ChatRoom) => {
     // Para conversas privadas (2 participantes), mostrar nome do outro usuário
-    if (!room.unit_id && room.participants && room.participants.length === 2) {
-      const otherParticipant = room.participants.find(p => p.user_id !== profile?.id)
+    if (!room.unit_id && room.chat_participants && room.chat_participants.length === 2) {
+      const otherParticipant = room.chat_participants.find(p => p.user_id !== profile?.id)
       if (otherParticipant) {
         return `${otherParticipant.profiles.name}`
       }
     }
     return room.name
+  }
+
+  const getRoomTypeIcon = (room: ChatRoom) => {
+    if (room.unit_id) {
+      return <Building2 className="h-4 w-4" />
+    }
+    return <MessageCircle className="h-4 w-4" />
   }
 
   const getRoomTypeColor = (room: ChatRoom) => {
@@ -127,17 +116,7 @@ export default function Chat() {
   }
 
   const getParticipantCount = (room: ChatRoom) => {
-    return room.participants?.length || 0
-  }
-
-  const handleRoomSelect = (room: ChatRoom) => {
-    setSelectedRoom(room)
-    setShowRoomsList(false) // Esconder lista em mobile
-  }
-
-  const handleBackToRooms = () => {
-    setShowRoomsList(true)
-    setSelectedRoom(null)
+    return room.chat_participants?.length || 0
   }
 
   if (roomsLoading) {
@@ -152,26 +131,23 @@ export default function Chat() {
   }
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] flex flex-col lg:flex-row">
-      {/* Lista de Salas - Responsiva */}
-      <div className={`${
-        showRoomsList ? 'flex' : 'hidden lg:flex'
-      } w-full lg:w-80 border-b lg:border-b-0 lg:border-r bg-muted/30 flex-col`}>
-        <div className="p-3 lg:p-4 border-b">
-          <div className="flex items-center justify-between mb-3 lg:mb-4">
-            <h2 className="text-base lg:text-lg font-semibold flex items-center gap-2">
-              <MessageCircle className="h-4 w-4 lg:h-5 lg:w-5" />
+    <div className="h-screen flex">
+      {/* Lista de Salas */}
+      <div className="w-80 border-r bg-muted/30">
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
               Chat Interno
             </h2>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowContactsSidebar(true)}
-              className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3"
+              className="flex items-center gap-2"
             >
-              <UserPlus className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden sm:inline">Nova Conversa</span>
-              <span className="sm:hidden">Nova</span>
+              <UserPlus className="h-4 w-4" />
+              Nova Conversa
             </Button>
           </div>
           
@@ -182,33 +158,29 @@ export default function Chat() {
               placeholder="Buscar salas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 text-sm"
+              className="pl-10"
             />
           </div>
         </div>
         
-        <ScrollArea className="flex-1">
-          <div className="p-2 lg:p-4 space-y-2">
+        <ScrollArea className="h-full">
+          <div className="p-4 space-y-2">
             {filteredRooms.map((room) => (
               <Card
                 key={room.id}
                 className={`cursor-pointer transition-colors hover:bg-accent ${
                   selectedRoom?.id === room.id ? 'bg-accent border-primary' : ''
                 }`}
-                onClick={() => handleRoomSelect(room)}
+                onClick={() => setSelectedRoom(room)}
               >
-                <CardContent className="p-2 lg:p-3">
-                  <div className="flex items-start gap-2 lg:gap-3">
-                    <ChatRoomAvatar room={room} size="sm" className="lg:w-10 lg:h-10" />
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-3">
+                    <ChatRoomAvatar room={room} size="md" />
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-xs lg:text-sm truncate">{getRoomDisplayName(room)}</h3>
-                        {!room.unit_id && (
-                          <Badge variant="secondary" className="text-xs px-1">
-                            Privada
-                          </Badge>
-                        )}
+                        {getRoomTypeIcon(room)}
+                        <h3 className="font-medium text-sm truncate">{getRoomDisplayName(room)}</h3>
                       </div>
                       
                       {room.unit_id && room.units?.name && (
@@ -217,17 +189,17 @@ export default function Chat() {
                         </p>
                       )}
                       
-                      <div className="flex items-center gap-1 lg:gap-2">
+                      <div className="flex items-center gap-2">
                         <Badge 
                           variant="secondary" 
-                          className={`text-xs ${getRoomTypeColor(room)} px-1 lg:px-2`}
+                          className={`text-xs ${getRoomTypeColor(room)}`}
                         >
-                          <Users className="h-2 w-2 lg:h-3 lg:w-3 mr-1" />
+                          <Users className="h-3 w-3 mr-1" />
                           {getParticipantCount(room)}
                         </Badge>
                         
                         {room.created_by === profile?.id && (
-                          <Badge variant="outline" className="text-xs px-1 lg:px-2">
+                          <Badge variant="outline" className="text-xs">
                             Criador
                           </Badge>
                         )}
@@ -239,39 +211,29 @@ export default function Chat() {
             ))}
             
             {filteredRooms.length === 0 && (
-              <div className="text-center py-6 lg:py-8 text-muted-foreground">
-                <MessageCircle className="h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm lg:text-base">{searchTerm ? 'Nenhuma sala encontrada' : 'Nenhuma sala de chat disponível'}</p>
-                <p className="text-xs lg:text-sm">Clique em "Nova Conversa" para começar</p>
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>{searchTerm ? 'Nenhuma sala encontrada' : 'Nenhuma sala de chat disponível'}</p>
+                <p className="text-sm">Clique em "Nova Conversa" para começar</p>
               </div>
             )}
           </div>
         </ScrollArea>
       </div>
 
-      {/* Área do Chat - Responsiva */}
-      <div className={`${
-        !showRoomsList || selectedRoom ? 'flex' : 'hidden lg:flex'
-      } flex-1 flex-col min-h-0`}>
+      {/* Área do Chat */}
+      <div className="flex-1 flex flex-col">
         {selectedRoom ? (
           <>
             {/* Header do Chat */}
-            <div className="p-3 lg:p-4 border-b bg-background">
+            <div className="p-4 border-b bg-background">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 lg:gap-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBackToRooms}
-                    className="lg:hidden p-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <ChatRoomAvatar room={selectedRoom} size="md" className="lg:w-12 lg:h-12" />
+                <div className="flex items-center gap-3">
+                  <ChatRoomAvatar room={selectedRoom} size="lg" />
                   <div>
-                    <h2 className="text-base lg:text-lg font-semibold">{getRoomDisplayName(selectedRoom)}</h2>
+                    <h2 className="text-lg font-semibold">{getRoomDisplayName(selectedRoom)}</h2>
                     {selectedRoom.units?.name && (
-                      <p className="text-xs lg:text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         {selectedRoom.units.name}
                       </p>
                     )}
@@ -279,66 +241,46 @@ export default function Chat() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="flex items-center gap-1 text-xs lg:text-sm px-1 lg:px-2">
-                    <Users className="h-2 w-2 lg:h-3 lg:w-3" />
-                    {getParticipantCount(selectedRoom)}
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {getParticipantCount(selectedRoom)} participantes
                   </Badge>
-                  
-                  {/* Opção de excluir conversa - apenas para criadores ou admins */}
-                  {canDeleteRoom && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="p-1">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={handleDeleteRoom}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir Conversa
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
                 </div>
               </div>
             </div>
 
             {/* Mensagens */}
-            <ScrollArea className="flex-1 p-2 lg:p-4">
-              <div className="space-y-3 lg:space-y-4">
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
                 {messagesLoading ? (
-                  <div className="text-center py-6 lg:py-8">
-                    <p className="text-muted-foreground text-sm lg:text-base">Carregando mensagens...</p>
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Carregando mensagens...</p>
                   </div>
                 ) : messages?.length === 0 ? (
-                  <div className="text-center py-6 lg:py-8 text-muted-foreground">
-                    <MessageCircle className="h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm lg:text-base">Seja o primeiro a enviar uma mensagem!</p>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Seja o primeiro a enviar uma mensagem!</p>
                   </div>
                 ) : (
                   messages?.filter(msg => !msg.is_deleted || msg.sender_id === profile?.id || profile?.role === 'admin').map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex gap-2 lg:gap-3 group ${
+                      className={`flex gap-3 group ${
                         msg.sender_id === profile?.id ? 'justify-end' : 'justify-start'
                       }`}
                     >
                       {msg.sender_id !== profile?.id && (
-                        <Avatar className="h-8 w-8 lg:h-10 lg:w-10">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={msg.profiles?.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs lg:text-sm">
+                          <AvatarFallback>
                             {msg.profiles?.name?.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       )}
                       
-                      <div className="max-w-[85%] sm:max-w-xs lg:max-w-md">
+                      <div className="max-w-xs lg:max-w-md">
                         <div
-                          className={`px-3 lg:px-4 py-2 lg:py-3 rounded-lg ${
+                          className={`px-4 py-3 rounded-lg ${
                             msg.sender_id === profile?.id
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
@@ -352,7 +294,7 @@ export default function Chat() {
                           
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <p className="text-xs lg:text-sm break-words">{msg.content}</p>
+                              <p className="text-sm break-words">{msg.content}</p>
                               {msg.edited_at && !msg.is_deleted && (
                                 <p className="text-xs opacity-70 mt-1">(editado)</p>
                               )}
@@ -364,9 +306,9 @@ export default function Chat() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-5 w-5 lg:h-6 lg:w-6 p-0 ml-1 lg:ml-2 opacity-0 group-hover:opacity-100"
+                                    className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100"
                                   >
-                                    <MoreVertical className="h-2 w-2 lg:h-3 lg:w-3" />
+                                    <MoreVertical className="h-3 w-3" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
@@ -401,9 +343,9 @@ export default function Chat() {
                       </div>
                       
                       {msg.sender_id === profile?.id && (
-                        <Avatar className="h-8 w-8 lg:h-10 lg:w-10">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={profile?.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs lg:text-sm">
+                          <AvatarFallback>
                             {profile?.name?.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -417,7 +359,7 @@ export default function Chat() {
 
             {/* Área de Upload de Anexos */}
             {showAttachmentUpload && (
-              <div className="p-3 lg:p-4 border-t bg-muted/30">
+              <div className="p-4 border-t bg-muted/30">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium">Anexar arquivo</h3>
                   <Button
@@ -439,53 +381,44 @@ export default function Chat() {
             )}
 
             {/* Input de Mensagem */}
-            <div className="p-3 lg:p-4 border-t">
+            <div className="p-4 border-t">
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
                   onClick={() => setShowAttachmentUpload(!showAttachmentUpload)}
-                  className={`${showAttachmentUpload ? 'bg-primary text-primary-foreground' : ''} h-9 w-9 lg:h-10 lg:w-10`}
+                  className={showAttachmentUpload ? 'bg-primary text-primary-foreground' : ''}
                 >
-                  <Paperclip className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <Paperclip className="h-4 w-4" />
                 </Button>
                 <Input
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Digite sua mensagem..."
                   disabled={sendMessage.isPending}
-                  className="flex-1 text-sm lg:text-base"
+                  className="flex-1"
                 />
                 <Button 
                   type="submit" 
                   disabled={(!message.trim() && !selectedFile) || sendMessage.isPending}
                   size="icon"
-                  className="h-9 w-9 lg:h-10 lg:w-10"
                 >
-                  <Send className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <Send className="h-4 w-4" />
                 </Button>
               </form>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <Button
-                variant="ghost"
-                onClick={handleBackToRooms}
-                className="lg:hidden mb-4"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Voltar para salas
-              </Button>
-              <MessageCircle className="h-8 w-8 lg:h-12 lg:w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-base lg:text-lg font-medium mb-2">Selecione uma sala de chat</h3>
-              <p className="text-muted-foreground mb-4 text-sm lg:text-base">
+              <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-medium mb-2">Selecione uma sala de chat</h3>
+              <p className="text-muted-foreground mb-4">
                 Escolha uma sala na lateral para começar a conversar
               </p>
-              <Button onClick={() => setShowContactsSidebar(true)} size="sm" className="lg:size-default">
-                <UserPlus className="h-3 w-3 lg:h-4 lg:w-4 mr-2" />
+              <Button onClick={() => setShowContactsSidebar(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
                 Iniciar Nova Conversa
               </Button>
             </div>
@@ -502,7 +435,7 @@ export default function Chat() {
 
       {/* Dialog para Editar Mensagem */}
       <Dialog open={!!editingMessage} onOpenChange={() => setEditingMessage(null)}>
-        <DialogContent className="mx-4">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Mensagem</DialogTitle>
             <DialogDescription>
