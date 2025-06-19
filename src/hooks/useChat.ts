@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -281,7 +280,7 @@ export function useEditMessage() {
 
 export function useDeleteMessage() {
   const queryClient = useQueryClient()
-  const { toast } = useToust()
+  const { toast } = useToast()
 
   return useMutation({
     mutationFn: async (messageId: string) => {

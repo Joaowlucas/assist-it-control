@@ -251,7 +251,7 @@ export function ChatManagement() {
       </Card>
 
       <EditChatRoomDialog
-        open={editDialogOpen}
+        isOpen={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         room={selectedRoom}
       />
