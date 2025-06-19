@@ -21,11 +21,11 @@ export function ChatRoomAvatar({ room, size = 'md', className = '' }: ChatRoomAv
   }
 
   // Para conversas privadas (2 participantes), mostrar avatares duplos
-  const isPrivateChat = !room.unit_id && room.chat_participants && room.chat_participants.length === 2
+  const isPrivateChat = !room.unit_id && room.participants && room.participants.length === 2
   
   if (isPrivateChat) {
-    const otherParticipant = room.chat_participants?.find(p => p.user_id !== profile?.id)
-    const currentUser = room.chat_participants?.find(p => p.user_id === profile?.id)
+    const otherParticipant = room.participants?.find(p => p.user_id !== profile?.id)
+    const currentUser = room.participants?.find(p => p.user_id === profile?.id)
     
     return (
       <div className={`relative ${sizeClasses[size]} ${className}`}>

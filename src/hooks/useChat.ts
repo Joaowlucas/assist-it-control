@@ -77,7 +77,7 @@ export function useChatRooms() {
         .select(`
           *,
           units(name),
-          chat_participants!inner(
+          participants:chat_participants(
             user_id,
             profiles(name, avatar_url)
           ),

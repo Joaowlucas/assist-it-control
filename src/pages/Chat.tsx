@@ -92,20 +92,13 @@ export default function Chat() {
 
   const getRoomDisplayName = (room: ChatRoom) => {
     // Para conversas privadas (2 participantes), mostrar nome do outro usuário
-    if (!room.unit_id && room.chat_participants && room.chat_participants.length === 2) {
-      const otherParticipant = room.chat_participants.find(p => p.user_id !== profile?.id)
+    if (!room.unit_id && room.participants && room.participants.length === 2) {
+      const otherParticipant = room.participants.find(p => p.user_id !== profile?.id)
       if (otherParticipant) {
         return `${otherParticipant.profiles.name}`
       }
     }
     return room.name
-  }
-
-  const getRoomTypeIcon = (room: ChatRoom) => {
-    if (room.unit_id) {
-      return <Building2 className="h-4 w-4" />
-    }
-    return <MessageCircle className="h-4 w-4" />
   }
 
   const getRoomTypeColor = (room: ChatRoom) => {
@@ -116,7 +109,7 @@ export default function Chat() {
   }
 
   const getParticipantCount = (room: ChatRoom) => {
-    return room.chat_participants?.length || 0
+    return room.participants?.length || 0
   }
 
   if (roomsLoading) {
@@ -179,7 +172,6 @@ export default function Chat() {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {getRoomTypeIcon(room)}
                         <h3 className="font-medium text-sm truncate">{getRoomDisplayName(room)}</h3>
                       </div>
                       
