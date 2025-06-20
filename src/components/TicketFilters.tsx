@@ -1,15 +1,9 @@
 
-import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Search, X } from "lucide-react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { cn } from "@/lib/utils"
+import { Search, X } from "lucide-react"
 
 interface TicketFiltersProps {
   searchTerm: string
@@ -22,13 +16,8 @@ interface TicketFiltersProps {
   onCategoryFilterChange: (value: string) => void
   assigneeFilter: string
   onAssigneeFilterChange: (value: string) => void
-  unitFilter: string
-  onUnitFilterChange: (value: string) => void
-  dateRange: { from?: Date; to?: Date }
-  onDateRangeChange: (range: { from?: Date; to?: Date }) => void
   onClearFilters: () => void
   technicians: Array<{ id: string; name: string }>
-  units: Array<{ id: string; name: string }>
 }
 
 export function TicketFilters({
@@ -42,16 +31,9 @@ export function TicketFilters({
   onCategoryFilterChange,
   assigneeFilter,
   onAssigneeFilterChange,
-  unitFilter,
-  onUnitFilterChange,
-  dateRange,
-  onDateRangeChange,
   onClearFilters,
-  technicians,
-  units
+  technicians
 }: TicketFiltersProps) {
-  const [showDatePicker, setShowDatePicker] = useState(false)
-
   return (
     <Card className="bg-card border-border">
       <CardContent className="p-4 space-y-4">
@@ -125,6 +107,7 @@ export function TicketFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Técnicos</SelectItem>
+              <SelectItem value="pending">Pendentes (Não Atribuídos)</SelectItem>
               <SelectItem value="unassigned">Não Atribuídos</SelectItem>
               {technicians.map((tech) => (
                 <SelectItem key={tech.id} value={tech.id}>
@@ -133,64 +116,6 @@ export function TicketFilters({
               ))}
             </SelectContent>
           </Select>
-
-          <Select value={unitFilter} onValueChange={onUnitFilterChange}>
-            <SelectTrigger className="border-input">
-              <SelectValue placeholder="Unidade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Unidades</SelectItem>
-              {units.map((unit) => (
-                <SelectItem key={unit.id} value={unit.id}>
-                  {unit.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex gap-4">
-          <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "justify-start text-left font-normal",
-                  !dateRange.from && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })} -{" "}
-                      {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
-                    </>
-                  ) : (
-                    format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })
-                  )
-                ) : (
-                  <span>Período</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange.from}
-                selected={{ from: dateRange.from, to: dateRange.to }}
-                onSelect={(range) => {
-                  onDateRangeChange({
-                    from: range?.from,
-                    to: range?.to
-                  })
-                }}
-                numberOfMonths={2}
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
         </div>
       </CardContent>
     </Card>
