@@ -115,6 +115,12 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
   }
 
   const canAddInternalComments = profile?.role === 'admin' || profile?.role === 'technician'
+  const isUser = profile?.role === 'user'
+
+  // Filtrar comentários internos para usuários normais
+  const filteredComments = isUser 
+    ? comments.filter(comment => !comment.is_internal)
+    : comments
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -300,14 +306,14 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Lista de comentários existentes */}
+          {/* Lista de comentários existentes - filtrados para usuários */}
           {commentsLoading ? (
             <div className="text-center text-slate-500 dark:text-slate-400 py-4">Carregando comentários...</div>
-          ) : comments.length === 0 ? (
+          ) : filteredComments.length === 0 ? (
             <div className="text-center text-slate-500 dark:text-slate-400 py-4">Nenhum comentário encontrado</div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {comments.map((comment) => (
+              {filteredComments.map((comment) => (
                 <div 
                   key={comment.id} 
                   className={`p-3 rounded-lg border ${
@@ -321,7 +327,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                       <span className="font-medium text-slate-900 dark:text-slate-100">
                         {comment.user?.name || 'Usuário'}
                       </span>
-                      {comment.is_internal && (
+                      {comment.is_internal && !isUser && (
                         <Badge variant="outline" className="text-xs text-amber-700 dark:text-amber-300">
                           Interno
                         </Badge>

@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -19,6 +18,7 @@ import { WhatsAppSendDialog } from "./WhatsAppSendDialog"
 import { TicketPDFPreviewDialog } from "./TicketPDFPreviewDialog"
 import { useTicketPDF } from "@/hooks/useTicketPDF"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
+import { useAuth } from "@/hooks/useAuth"
 
 interface Ticket {
   id: string
@@ -63,10 +63,14 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
   }
 
   const { toast } = useToast()
+  const { profile } = useAuth()
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
   const { generateTicketPDF, isGenerating } = useTicketPDF()
   const { data: systemSettings } = useSystemSettings()
+
+  // Verificar se é usuário normal
+  const isUser = profile?.role === 'user'
 
   const handleDownloadPDF = async () => {
     try {
@@ -92,36 +96,38 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
           <DialogHeader>
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <span className="text-slate-900 dark:text-slate-100">Chamado #{ticket.ticket_number}</span>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setWhatsappDialogOpen(true)}
-                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">WhatsApp</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviewPDF}
-                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Visualizar PDF</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadPDF}
-                  disabled={isGenerating}
-                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">{isGenerating ? 'Gerando...' : 'Baixar PDF'}</span>
-                </Button>
-              </div>
+              {!isUser && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWhatsappDialogOpen(true)}
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">WhatsApp</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviewPDF}
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Visualizar PDF</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadPDF}
+                    disabled={isGenerating}
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">{isGenerating ? 'Gerando...' : 'Baixar PDF'}</span>
+                  </Button>
+                </div>
+              )}
             </DialogTitle>
             <DialogDescription className="text-slate-600 dark:text-slate-300">
               Detalhes do chamado aberto por {ticket.requester.name} em{" "}
@@ -135,19 +141,23 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
         </DialogContent>
       </Dialog>
 
-      <WhatsAppSendDialog
-        open={whatsappDialogOpen}
-        onOpenChange={setWhatsappDialogOpen}
-        ticket={ticket}
-      />
+      {!isUser && (
+        <>
+          <WhatsAppSendDialog
+            open={whatsappDialogOpen}
+            onOpenChange={setWhatsappDialogOpen}
+            ticket={ticket}
+          />
 
-      <TicketPDFPreviewDialog
-        open={pdfPreviewOpen}
-        onOpenChange={setPdfPreviewOpen}
-        ticket={ticket}
-        systemSettings={systemSettings}
-        ticketNumber={ticket.ticket_number.toString()}
-      />
+          <TicketPDFPreviewDialog
+            open={pdfPreviewOpen}
+            onOpenChange={setPdfPreviewOpen}
+            ticket={ticket}
+            systemSettings={systemSettings}
+            ticketNumber={ticket.ticket_number.toString()}
+          />
+        </>
+      )}
     </>
   )
 }
