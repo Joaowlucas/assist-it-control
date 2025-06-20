@@ -104,11 +104,6 @@ export default function UserTickets() {
   }
 
   const canEditTicket = (ticket: any) => {
-    // Usuários podem editar seus próprios chamados se estiverem abertos ou em andamento
-    // Admins e técnicos podem editar qualquer chamado
-    if (profile?.role === 'admin' || profile?.role === 'technician') {
-      return ticket.status === 'aberto' || ticket.status === 'em_andamento'
-    }
     return ticket.status === 'aberto' || ticket.status === 'em_andamento'
   }
 
