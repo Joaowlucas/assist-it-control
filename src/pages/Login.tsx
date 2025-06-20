@@ -42,7 +42,7 @@ export default function Login() {
 
   if (user && profile) {
     // Verificar se há uma rota de origem no state
-    const from = location.state?.from?.pathname || (profile.role === 'user' ? '/user-dashboard' : '/')
+    const from = location.state?.from?.pathname || (profile.role === 'user' ? '/user-portal' : '/')
     return <Navigate to={from} replace />
   }
 

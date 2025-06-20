@@ -2,28 +2,28 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Download, FileText, Image as ImageIcon, File } from 'lucide-react'
+import { ChatMessage } from '@/hooks/useChat'
 
 interface ChatMessageAttachmentProps {
-  url: string
-  name?: string
-  size?: number
+  message: ChatMessage
 }
 
-export function ChatMessageAttachment({ url, name, size }: ChatMessageAttachmentProps) {
-  if (!url) return null
+export function ChatMessageAttachment({ message }: ChatMessageAttachmentProps) {
+  if (!message.attachment_url) return null
 
-  // Determine file type from URL or name
-  const isImage = name?.match(/\.(jpg|jpeg|png|gif|webp)$/i) || url.includes('image')
-  const isPdf = name?.endsWith('.pdf') || url.includes('.pdf')
+  const isImage = message.attachment_type?.startsWith('image/')
+  const isPdf = message.attachment_type === 'application/pdf'
   
   const handleDownload = () => {
-    const link = document.createElement('a')
-    link.href = url
-    link.download = name || 'download'
-    link.target = '_blank'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    if (message.attachment_url) {
+      const link = document.createElement('a')
+      link.href = message.attachment_url
+      link.download = message.attachment_name || 'download'
+      link.target = '_blank'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   const formatFileSize = (bytes?: number) => {
@@ -37,10 +37,10 @@ export function ChatMessageAttachment({ url, name, size }: ChatMessageAttachment
       <div className="mt-2">
         <div className="relative group max-w-xs">
           <img
-            src={url}
-            alt={name || 'Imagem'}
+            src={message.attachment_url}
+            alt={message.attachment_name || 'Imagem'}
             className="rounded-lg max-h-64 w-auto cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => window.open(url, '_blank')}
+            onClick={() => window.open(message.attachment_url, '_blank')}
           />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
             <Button
@@ -54,9 +54,9 @@ export function ChatMessageAttachment({ url, name, size }: ChatMessageAttachment
             </Button>
           </div>
         </div>
-        {name && (
+        {message.attachment_name && (
           <p className="text-xs text-muted-foreground mt-1">
-            {name} • {formatFileSize(size)}
+            {message.attachment_name} • {formatFileSize(message.attachment_size)}
           </p>
         )}
       </div>
@@ -75,10 +75,10 @@ export function ChatMessageAttachment({ url, name, size }: ChatMessageAttachment
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">
-            {name || 'Arquivo'}
+            {message.attachment_name || 'Arquivo'}
           </p>
           <p className="text-xs text-muted-foreground">
-            {formatFileSize(size)}
+            {formatFileSize(message.attachment_size)}
           </p>
         </div>
         <Button
