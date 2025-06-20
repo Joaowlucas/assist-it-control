@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react"
 import { useChat } from "@/hooks/useChat"
 import { useAuth } from "@/hooks/useAuth"
@@ -131,7 +130,6 @@ export default function Chat() {
   const getRoomType = (room: any) => {
     if (room.type === 'private') return 'Privado'
     if (room.type === 'group') return 'Grupo'
-    if (room.type === 'direct') return 'Direto'
     return 'Unidade'
   }
 

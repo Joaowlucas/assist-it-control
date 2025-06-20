@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -7,7 +6,7 @@ import { useEffect, useState } from 'react'
 export interface ChatRoom {
   id: string
   name: string
-  type: 'private' | 'unit' | 'group' | 'direct'
+  type: 'private' | 'unit' | 'group'
   unit_id?: string
   selected_units?: string[]
   image_url?: string
@@ -262,7 +261,7 @@ export function useChat() {
   const createRoomMutation = useMutation({
     mutationFn: async (params: {
       name: string
-      type?: 'private' | 'unit' | 'group' | 'direct'
+      type?: 'private' | 'unit' | 'group'
       unitId?: string
       selectedUnits?: string[]
       participantIds?: string[]
@@ -271,12 +270,9 @@ export function useChat() {
 
       console.log('Creating chat room:', params)
 
-      // Converter 'direct' para 'private' para compatibilidade com o banco
-      const dbType = params.type === 'direct' ? 'private' : (params.type || 'private')
-
       const roomData = {
         name: params.name,
-        type: dbType as 'private' | 'unit' | 'group',
+        type: params.type || 'private',
         unit_id: params.unitId || null,
         selected_units: params.selectedUnits || [],
         created_by: profile.id,
@@ -476,7 +472,7 @@ export function useChat() {
 
   const createRoom = async (params: {
     name: string
-    type?: 'private' | 'unit' | 'group' | 'direct'
+    type?: 'private' | 'unit' | 'group'
     unitId?: string
     selectedUnits?: string[]
     participantIds?: string[]
@@ -739,7 +735,7 @@ export function useCreateChatRoom() {
   return useMutation({
     mutationFn: async (params: {
       name: string
-      type?: 'private' | 'unit' | 'group' | 'direct'
+      type?: 'private' | 'unit' | 'group'
       unitId?: string
       selectedUnits?: string[]
       participantIds?: string[]

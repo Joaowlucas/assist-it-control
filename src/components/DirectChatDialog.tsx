@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -9,17 +8,15 @@ import { useProfiles } from '@/hooks/useProfiles'
 import { MessageCircle, Users } from 'lucide-react'
 
 interface DirectChatDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  targetUserId: string | null
-  onRoomCreated?: (roomId: string) => void
+  isOpen: boolean
+  onClose: (open: boolean) => void
+  onChatCreated?: (room: any) => void
 }
 
 export function DirectChatDialog({ 
-  open, 
-  onOpenChange, 
-  targetUserId, 
-  onRoomCreated 
+  isOpen, 
+  onClose,
+  onChatCreated 
 }: DirectChatDialogProps) {
   const { profile } = useAuth()
   const { data: profiles = [] } = useProfiles()
@@ -38,12 +35,14 @@ export function DirectChatDialog({
       
       const roomId = await createRoom.mutateAsync({
         name: roomName,
-        unitId: null, // Conversas privadas não têm unidade específica
+        type: 'private',
+        unitId: null,
         participantIds: [profile.id, targetUserId]
       })
 
-      onRoomCreated?.(roomId)
-      onOpenChange(false)
+      const newRoom = { id: roomId, name: roomName }
+      onChatCreated?.(newRoom)
+      onClose(false)
     } catch (error) {
       console.error('Error creating direct chat:', error)
     } finally {
@@ -56,7 +55,7 @@ export function DirectChatDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -109,7 +108,7 @@ export function DirectChatDialog({
           <div className="flex justify-end gap-2 pt-2">
             <Button 
               variant="outline" 
-              onClick={() => onOpenChange(false)}
+              onClick={() => onClose(false)}
               disabled={isCreating}
             >
               Cancelar

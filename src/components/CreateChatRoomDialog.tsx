@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -17,12 +16,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/integrations/supabase/client'
 
 interface CreateChatRoomDialogProps {
+  isOpen?: boolean
+  onClose?: () => void
   onRoomCreated?: (roomId: string) => void
 }
 
 type RoomType = 'private' | 'unit' | 'group'
 
-export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProps) {
+export function CreateChatRoomDialog({ isOpen, onClose, onRoomCreated }: CreateChatRoomDialogProps) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -33,6 +34,16 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
   const [roomImage, setRoomImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Use controlled state if props are provided, otherwise use internal state
+  const dialogOpen = isOpen !== undefined ? isOpen : open
+  const handleOpenChange = (newOpen: boolean) => {
+    if (onClose && !newOpen) {
+      onClose()
+    } else {
+      setOpen(newOpen)
+    }
+  }
 
   const { profile } = useAuth()
   const { data: units = [], isLoading: unitsLoading } = useUnits()
@@ -137,7 +148,12 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
       setSelectedUsers([])
       setRoomImage(null)
       setImagePreview(null)
-      setOpen(false)
+      
+      if (onClose) {
+        onClose()
+      } else {
+        setOpen(false)
+      }
 
       onRoomCreated?.(roomId)
     } catch (error) {
@@ -217,13 +233,15 @@ export function CreateChatRoomDialog({ onRoomCreated }: CreateChatRoomDialogProp
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Sala
-        </Button>
-      </DialogTrigger>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
+      {!isOpen && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Sala
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
