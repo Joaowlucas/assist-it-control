@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
@@ -22,9 +23,9 @@ export function useTickets() {
         .from('tickets')
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name),
+          requester:profiles!requester_id(name, email),
+          assignee:profiles!assignee_id(name, email),
+          unit:units!unit_id(name),
           attachments:ticket_attachments(
             *,
             uploader:profiles(name, email)
@@ -83,9 +84,9 @@ export function useTicket(id: string) {
         .from('tickets')
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name),
+          requester:profiles!requester_id(name, email),
+          assignee:profiles!assignee_id(name, email),
+          unit:units!unit_id(name),
           comments:ticket_comments(
             *,
             user:profiles(name, email)
@@ -138,9 +139,9 @@ export function useCreateTicket() {
         .insert(ticket)
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name)
+          requester:profiles!requester_id(name, email),
+          assignee:profiles!assignee_id(name, email),
+          unit:units!unit_id(name)
         `)
         .single()
       
@@ -184,9 +185,9 @@ export function useUpdateTicket() {
         .eq('id', id)
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name)
+          requester:profiles!requester_id(name, email),
+          assignee:profiles!assignee_id(name, email),
+          unit:units!unit_id(name)
         `)
         .single()
       
