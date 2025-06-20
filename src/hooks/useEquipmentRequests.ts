@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "./useAuth"
@@ -8,7 +7,6 @@ export interface EquipmentRequest {
   id: string
   requester_id: string
   equipment_type: string
-  description: string
   justification: string
   priority: 'baixa' | 'media' | 'alta'
   status: 'pendente' | 'aprovado' | 'rejeitado' | 'entregue' | 'cancelado'
@@ -33,7 +31,6 @@ export interface EquipmentRequest {
 
 export interface CreateEquipmentRequestData {
   equipment_type: string
-  description: string
   justification: string
   priority: 'baixa' | 'media' | 'alta'
   specifications?: Record<string, any>
@@ -80,7 +77,6 @@ export function useEquipmentRequests() {
         .insert({
           requester_id: profile.id,
           equipment_type: data.equipment_type,
-          description: data.description,
           justification: data.justification,
           priority: data.priority,
           specifications: data.specifications || {},

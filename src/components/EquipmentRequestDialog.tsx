@@ -17,7 +17,6 @@ interface EquipmentRequestDialogProps {
 export function EquipmentRequestDialog({ open, onOpenChange }: EquipmentRequestDialogProps) {
   const [formData, setFormData] = useState({
     equipment_type: '',
-    description: '',
     justification: '',
     priority: 'media' as 'baixa' | 'media' | 'alta'
   })
@@ -28,7 +27,7 @@ export function EquipmentRequestDialog({ open, onOpenChange }: EquipmentRequestD
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.equipment_type || !formData.description || !formData.justification) {
+    if (!formData.equipment_type || !formData.justification) {
       toast({
         title: 'Erro',
         description: 'Preencha todos os campos obrigatórios',
@@ -42,7 +41,6 @@ export function EquipmentRequestDialog({ open, onOpenChange }: EquipmentRequestD
       
       setFormData({
         equipment_type: '',
-        description: '',
         justification: '',
         priority: 'media'
       })
@@ -88,25 +86,13 @@ export function EquipmentRequestDialog({ open, onOpenChange }: EquipmentRequestD
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição *</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Descreva o equipamento que você precisa..."
-              rows={3}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
             <Label htmlFor="justification">Justificativa *</Label>
             <Textarea
               id="justification"
               value={formData.justification}
               onChange={(e) => handleInputChange('justification', e.target.value)}
-              placeholder="Explique por que você precisa deste equipamento..."
-              rows={3}
+              placeholder="Explique qual equipamento você precisa e por que você precisa dele..."
+              rows={4}
               required
             />
           </div>
