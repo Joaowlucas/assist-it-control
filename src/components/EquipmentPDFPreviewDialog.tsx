@@ -26,13 +26,29 @@ export function EquipmentPDFPreviewDialog({
   const { downloadPDFFromPreview, printFromPreview, isGenerating } = useEquipmentPDF()
 
   const handleDownload = async () => {
-    if (!equipment || !systemSettings) return
-    await downloadPDFFromPreview(equipment, photos, systemSettings, tombamento)
+    if (!equipment || !systemSettings) {
+      console.warn('Dados necessários não disponíveis para gerar PDF')
+      return
+    }
+    
+    try {
+      await downloadPDFFromPreview(equipment, photos || [], systemSettings, tombamento)
+    } catch (error) {
+      console.error('Erro ao fazer download do PDF:', error)
+    }
   }
 
   const handlePrint = async () => {
-    if (!equipment || !systemSettings) return
-    await printFromPreview(equipment, photos, systemSettings)
+    if (!equipment || !systemSettings) {
+      console.warn('Dados necessários não disponíveis para impressão')
+      return
+    }
+    
+    try {
+      await printFromPreview(equipment, photos || [], systemSettings)
+    } catch (error) {
+      console.error('Erro ao imprimir:', error)
+    }
   }
 
   return (
@@ -46,7 +62,7 @@ export function EquipmentPDFPreviewDialog({
                 variant="outline"
                 size="sm"
                 onClick={handlePrint}
-                disabled={isGenerating}
+                disabled={isGenerating || !equipment || !systemSettings}
                 className="hidden md:flex"
                 title="Imprimir"
               >
@@ -61,7 +77,7 @@ export function EquipmentPDFPreviewDialog({
                 onClick={handleDownload}
                 disabled={isGenerating || !equipment || !systemSettings}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
               >
                 {isGenerating ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -89,7 +105,7 @@ export function EquipmentPDFPreviewDialog({
               {equipment && systemSettings ? (
                 <EquipmentPrintView 
                   equipment={equipment} 
-                  photos={photos}
+                  photos={photos || []}
                   systemSettings={systemSettings} 
                 />
               ) : (

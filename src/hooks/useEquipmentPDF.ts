@@ -82,7 +82,7 @@ export function useEquipmentPDF() {
             <title>Equipamento ${equipment.tombamento}</title>
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { font-family: Arial, sans-serif; }
+              body { font-family: Arial, sans-serif; line-height: 1.4; }
               @media print {
                 body { margin: 0; padding: 0; }
                 .no-print { display: none !important; }
@@ -90,8 +90,9 @@ export function useEquipmentPDF() {
                   width: 100% !important; 
                   max-width: none !important; 
                   margin: 0 !important; 
-                  padding: 20px !important; 
+                  padding: 15px !important; 
                 }
+                .page-break { page-break-before: always; }
               }
               @media screen {
                 body { padding: 20px; background: #f5f5f5; }
@@ -100,6 +101,7 @@ export function useEquipmentPDF() {
                   box-shadow: 0 0 10px rgba(0,0,0,0.1); 
                   margin: 0 auto;
                   max-width: 800px;
+                  padding: 20px;
                 }
               }
             </style>
@@ -119,43 +121,39 @@ export function useEquipmentPDF() {
       let loadedImages = 0
       const totalImages = images.length
 
+      const checkAllImagesLoaded = () => {
+        if (loadedImages === totalImages) {
+          setTimeout(() => {
+            printWindow.print()
+            setTimeout(() => printWindow.close(), 1000)
+          }, 500)
+        }
+      }
+
       if (totalImages === 0) {
         setTimeout(() => {
           printWindow.print()
-          printWindow.close()
+          setTimeout(() => printWindow.close(), 1000)
         }, 500)
       } else {
         Array.from(images).forEach((img) => {
           if (img.complete) {
             loadedImages++
+            checkAllImagesLoaded()
           } else {
             img.onload = () => {
               loadedImages++
-              if (loadedImages === totalImages) {
-                setTimeout(() => {
-                  printWindow.print()
-                  printWindow.close()
-                }, 500)
-              }
+              checkAllImagesLoaded()
             }
             img.onerror = () => {
               loadedImages++
-              if (loadedImages === totalImages) {
-                setTimeout(() => {
-                  printWindow.print()
-                  printWindow.close()
-                }, 500)
-              }
+              checkAllImagesLoaded()
             }
           }
         })
-
-        if (loadedImages === totalImages) {
-          setTimeout(() => {
-            printWindow.print()
-            printWindow.close()
-          }, 500)
-        }
+        
+        // Timeout de segurança
+        setTimeout(checkAllImagesLoaded, 3000)
       }
 
       toast({
@@ -191,40 +189,51 @@ export function useEquipmentPDF() {
         background-color: white;
         font-family: Arial, sans-serif;
         padding: 32px;
+        line-height: 1.5;
       `
       document.body.appendChild(tempElement)
 
-      // Aguardar imagens carregarem
+      // Aguardar imagens carregarem com timeout individual
       const images = tempElement.querySelectorAll('img')
-      await Promise.allSettled(
-        Array.from(images).map((img) => {
-          return new Promise((resolve, reject) => {
-            if (img.complete) {
-              resolve(img)
-              return
-            }
-            img.onload = () => resolve(img)
-            img.onerror = () => resolve(img) // Resolve mesmo com erro para não travar
-            // Timeout de segurança
-            setTimeout(() => resolve(img), 3000)
-          })
+      const imagePromises = Array.from(images).map((img) => {
+        return new Promise((resolve) => {
+          if (img.complete) {
+            resolve(img)
+            return
+          }
+          
+          const timeout = setTimeout(() => resolve(img), 5000) // 5s timeout por imagem
+          
+          img.onload = () => {
+            clearTimeout(timeout)
+            resolve(img)
+          }
+          img.onerror = () => {
+            clearTimeout(timeout)
+            resolve(img)
+          }
         })
-      )
+      })
 
-      // Aguardar um pouco mais para garantir renderização
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await Promise.allSettled(imagePromises)
+      
+      // Aguardar renderização adicional
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
       // Capturar como canvas com configurações otimizadas
       const canvas = await html2canvas(tempElement, {
-        scale: 1.5,
+        scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 800,
         height: tempElement.scrollHeight,
         logging: false,
-        imageTimeout: 5000,
-        removeContainer: true
+        imageTimeout: 10000,
+        removeContainer: true,
+        ignoreElements: (element) => {
+          return element.classList?.contains('no-print') || false
+        }
       })
 
       // Criar PDF
@@ -249,7 +258,7 @@ export function useEquipmentPDF() {
         heightLeft -= pageHeight
       }
 
-      // Fazer download
+      //Fazer download
       const fileName = `Equipamento_${tombamento}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(fileName)
 
@@ -304,100 +313,108 @@ export function useEquipmentPDF() {
 
     const formatDate = (date: string) => {
       if (!date) return '-'
-      return new Date(date).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      })
+      try {
+        return new Date(date).toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        })
+      } catch {
+        return '-'
+      }
     }
 
     const formatDateTime = (date: string) => {
       if (!date) return '-'
-      return new Date(date).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      try {
+        return new Date(date).toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      } catch {
+        return '-'
+      }
     }
 
     return `
-      <div style="font-family: Arial, sans-serif; padding: 32px; background: white; max-width: 800px; margin: 0 auto; color: #333;">
+      <div style="font-family: Arial, sans-serif; padding: 20px; background: white; max-width: 800px; margin: 0 auto; color: #333; line-height: 1.5;">
         <!-- Header -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 2px solid #d1d5db; flex-wrap: wrap; gap: 16px;">
-          <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 300px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb; flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 250px;">
             ${systemSettings?.company_logo_url ? `
-              <img src="${systemSettings.company_logo_url}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain; flex-shrink: 0;" crossorigin="anonymous" />
+              <img src="${systemSettings.company_logo_url}" alt="Logo" style="height: 60px; width: 60px; object-fit: contain; flex-shrink: 0;" crossorigin="anonymous" />
             ` : ''}
             <div style="flex: 1;">
-              <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0; line-height: 1.2;">
+              <h1 style="font-size: 20px; font-weight: bold; color: #111827; margin: 0; line-height: 1.3;">
                 ${systemSettings?.company_name || 'Sistema de Equipamentos'}
               </h1>
               <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 14px;">Relatório de Equipamento</p>
             </div>
           </div>
-          <div style="text-align: right; font-size: 14px; color: #6b7280; flex-shrink: 0;">
+          <div style="text-align: right; font-size: 12px; color: #6b7280; flex-shrink: 0;">
             <p style="margin: 0; font-weight: 500;">Data de Geração:</p>
             <p style="font-weight: 500; margin: 4px 0 0 0;">${formatDateTime(new Date().toISOString())}</p>
           </div>
         </div>
 
         <!-- Informações Principais -->
-        <div style="margin-bottom: 24px;">
-          <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 16px;">Informações do Equipamento</h2>
-          <div style="background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px;">
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Tombamento:</strong> <span style="color: #111827;">${equipment.tombamento || '-'}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Status:</strong> <span style="color: #111827;">${getStatusText(equipment.status)}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Nome:</strong> <span style="color: #111827;">${equipment.name}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Tipo:</strong> <span style="color: #111827; text-transform: capitalize;">${equipment.type}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Marca:</strong> <span style="color: #111827;">${equipment.brand || '-'}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Modelo:</strong> <span style="color: #111827;">${equipment.model || '-'}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Número de Série:</strong> <span style="color: #111827;">${equipment.serial_number || '-'}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Unidade:</strong> <span style="color: #111827;">${equipment.unit?.name || '-'}</span></div>
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 12px;">Informações do Equipamento</h2>
+          <div style="background: #f9fafb; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Tombamento:</strong> <span style="color: #111827;">${equipment.tombamento || '-'}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Status:</strong> <span style="color: #111827;">${getStatusText(equipment.status)}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Nome:</strong> <span style="color: #111827;">${equipment.name}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Tipo:</strong> <span style="color: #111827; text-transform: capitalize;">${equipment.type}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Marca:</strong> <span style="color: #111827;">${equipment.brand || '-'}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Modelo:</strong> <span style="color: #111827;">${equipment.model || '-'}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Número de Série:</strong> <span style="color: #111827;">${equipment.serial_number || '-'}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Unidade:</strong> <span style="color: #111827;">${equipment.unit?.name || '-'}</span></div>
             </div>
           </div>
         </div>
 
         <!-- Localização e Datas -->
-        <div style="margin-bottom: 24px;">
-          <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 16px;">Localização e Datas</h2>
-          <div style="background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px;">
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Localização:</strong> <span style="color: #111827;">${equipment.location || '-'}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Data de Compra:</strong> <span style="color: #111827;">${formatDate(equipment.purchase_date)}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Vencimento da Garantia:</strong> <span style="color: #111827;">${formatDate(equipment.warranty_end_date)}</span></div>
-              <div style="padding: 8px 0;"><strong style="color: #374151;">Criado em:</strong> <span style="color: #111827;">${formatDateTime(equipment.created_at)}</span></div>
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 12px;">Localização e Datas</h2>
+          <div style="background: #f9fafb; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Localização:</strong> <span style="color: #111827;">${equipment.location || '-'}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Data de Compra:</strong> <span style="color: #111827;">${formatDate(equipment.purchase_date)}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Vencimento da Garantia:</strong> <span style="color: #111827;">${formatDate(equipment.warranty_end_date)}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Criado em:</strong> <span style="color: #111827;">${formatDateTime(equipment.created_at)}</span></div>
             </div>
           </div>
         </div>
 
         <!-- Descrição -->
         ${equipment.description ? `
-          <div style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 16px;">Descrição/Observações</h2>
-            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
-              <p style="color: #374151; white-space: pre-wrap; margin: 0; font-size: 14px; line-height: 1.5;">${equipment.description}</p>
+          <div style="margin-bottom: 20px;">
+            <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 12px;">Descrição/Observações</h2>
+            <div style="background: #f9fafb; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <p style="color: #374151; white-space: pre-wrap; margin: 0; font-size: 13px; line-height: 1.4;">${equipment.description}</p>
             </div>
           </div>
         ` : ''}
 
         <!-- Fotos -->
         ${photos && photos.length > 0 ? `
-          <div style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 16px;">Fotos do Equipamento</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+          <div style="margin-bottom: 20px;">
+            <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 12px;">Fotos do Equipamento</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
               ${photos.slice(0, 6).map((photo: any) => `
-                <div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; background: white;">
+                <div style="border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; background: white;">
                   <img src="${photo.photo_url}" alt="${photo.caption || 'Foto do equipamento'}" 
-                       style="width: 100%; height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; display: block;" 
+                       style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 6px; display: block;" 
                        crossorigin="anonymous" />
                   ${photo.caption ? `
-                    <p style="font-size: 12px; color: #6b7280; margin: 0 0 4px 0; text-overflow: ellipsis; overflow: hidden;">${photo.caption}</p>
+                    <p style="font-size: 11px; color: #6b7280; margin: 0 0 4px 0; word-wrap: break-word;">${photo.caption}</p>
                   ` : ''}
                   ${photo.is_primary ? `
-                    <div style="font-size: 10px; color: #92400e; background: #fef3c7; padding: 2px 6px; border-radius: 3px; display: inline-block;">
+                    <div style="font-size: 10px; color: #92400e; background: #fef3c7; padding: 2px 4px; border-radius: 3px; display: inline-block;">
                       Principal
                     </div>
                   ` : ''}
@@ -405,7 +422,7 @@ export function useEquipmentPDF() {
               `).join('')}
             </div>
             ${photos.length > 6 ? `
-              <p style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 16px; font-style: italic;">
+              <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 12px; font-style: italic;">
                 E mais ${photos.length - 6} foto(s) não mostrada(s) neste relatório
               </p>
             ` : ''}
@@ -413,7 +430,7 @@ export function useEquipmentPDF() {
         ` : ''}
 
         <!-- Footer -->
-        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #d1d5db; text-align: center; font-size: 12px; color: #6b7280;">
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; text-align: center; font-size: 11px; color: #6b7280;">
           <p style="margin: 0;">Este relatório foi gerado automaticamente pelo sistema de equipamentos</p>
           <p style="margin: 4px 0 0 0;">${systemSettings?.company_name || 'Sistema de Equipamentos'} - ${new Date().getFullYear()}</p>
         </div>
