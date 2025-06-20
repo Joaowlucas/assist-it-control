@@ -23,9 +23,9 @@ export function useTickets() {
         .from('tickets')
         .select(`
           *,
-          requester:profiles(name, email),
-          assignee:profiles(name, email),
-          unit:units(name),
+          requester:profiles!tickets_requester_id_fkey(name, email),
+          assignee:profiles!tickets_assignee_id_fkey(name, email),
+          unit:units!tickets_unit_id_fkey(name),
           attachments:ticket_attachments(
             *,
             uploader:profiles(name, email)
@@ -84,9 +84,9 @@ export function useTicket(id: string) {
         .from('tickets')
         .select(`
           *,
-          requester:profiles(name, email),
-          assignee:profiles(name, email),
-          unit:units(name),
+          requester:profiles!tickets_requester_id_fkey(name, email),
+          assignee:profiles!tickets_assignee_id_fkey(name, email),
+          unit:units!tickets_unit_id_fkey(name),
           comments:ticket_comments(
             *,
             user:profiles(name, email)
@@ -139,9 +139,9 @@ export function useCreateTicket() {
         .insert(ticket)
         .select(`
           *,
-          requester:profiles(name, email),
-          assignee:profiles(name, email),
-          unit:units(name)
+          requester:profiles!tickets_requester_id_fkey(name, email),
+          assignee:profiles!tickets_assignee_id_fkey(name, email),
+          unit:units!tickets_unit_id_fkey(name)
         `)
         .single()
       
@@ -185,9 +185,9 @@ export function useUpdateTicket() {
         .eq('id', id)
         .select(`
           *,
-          requester:profiles(name, email),
-          assignee:profiles(name, email),
-          unit:units(name)
+          requester:profiles!tickets_requester_id_fkey(name, email),
+          assignee:profiles!tickets_assignee_id_fkey(name, email),
+          unit:units!tickets_unit_id_fkey(name)
         `)
         .single()
       
