@@ -28,15 +28,33 @@ export function TicketPrintView({ ticket, systemSettings }: TicketPrintViewProps
     }
   }
 
+  const formatDate = (date: string) => {
+    if (!date) return '-'
+    try {
+      return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR })
+    } catch {
+      return '-'
+    }
+  }
+
+  const formatDateTime = (date: string) => {
+    if (!date) return '-'
+    try {
+      return format(new Date(date), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+    } catch {
+      return '-'
+    }
+  }
+
   return (
-    <div className="bg-white p-8 max-w-4xl mx-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
+    <div className="p-8 bg-white text-black max-w-4xl mx-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-gray-300">
         <div className="flex items-center gap-4">
           {systemSettings?.company_logo_url && (
-            <img
-              src={systemSettings.company_logo_url}
-              alt="Logo da empresa"
+            <img 
+              src={systemSettings.company_logo_url} 
+              alt="Logo" 
               className="h-16 w-16 object-contain"
             />
           )}
@@ -44,50 +62,28 @@ export function TicketPrintView({ ticket, systemSettings }: TicketPrintViewProps
             <h1 className="text-2xl font-bold text-gray-900">
               {systemSettings?.company_name || 'Sistema de Chamados'}
             </h1>
-            <p className="text-gray-600">Relatório de Chamado de Suporte</p>
+            <p className="text-gray-600 text-sm">Relatório de Chamado de Suporte</p>
           </div>
         </div>
         <div className="text-right text-sm text-gray-600">
-          <p>Data de Geração:</p>
-          <p className="font-medium">{format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
+          <p className="font-medium">Data de Geração:</p>
+          <p className="font-medium">{formatDateTime(new Date().toISOString())}</p>
         </div>
       </div>
 
-      {/* Informações Principais */}
+      {/* Informações do Chamado */}
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Informações do Chamado</h2>
-        <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
-          <div>
-            <span className="font-medium text-gray-700">Número:</span>
-            <span className="ml-2">#{ticket.ticket_number}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Status:</span>
-            <span className="ml-2">{getStatusText(ticket.status)}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Prioridade:</span>
-            <span className="ml-2">{getPriorityText(ticket.priority)}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Categoria:</span>
-            <span className="ml-2 capitalize">{ticket.category}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Solicitante:</span>
-            <span className="ml-2">{ticket.requester?.name}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Unidade:</span>
-            <span className="ml-2">{ticket.unit?.name}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Técnico:</span>
-            <span className="ml-2">{ticket.assignee?.name || 'Não atribuído'}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Criado em:</span>
-            <span className="ml-2">{format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+        <div className="bg-gray-50 p-4 rounded-lg border">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div><strong className="text-gray-700">Número:</strong> <span className="text-gray-900">#{ticket.ticket_number}</span></div>
+            <div><strong className="text-gray-700">Status:</strong> <span className="text-gray-900">{getStatusText(ticket.status)}</span></div>
+            <div><strong className="text-gray-700">Prioridade:</strong> <span className="text-gray-900">{getPriorityText(ticket.priority)}</span></div>
+            <div><strong className="text-gray-700">Categoria:</strong> <span className="text-gray-900 capitalize">{ticket.category}</span></div>
+            <div><strong className="text-gray-700">Solicitante:</strong> <span className="text-gray-900">{ticket.requester?.name}</span></div>
+            <div><strong className="text-gray-700">Unidade:</strong> <span className="text-gray-900">{ticket.unit?.name}</span></div>
+            <div><strong className="text-gray-700">Técnico:</strong> <span className="text-gray-900">{ticket.assignee?.name || 'Não atribuído'}</span></div>
+            <div><strong className="text-gray-700">Criado em:</strong> <span className="text-gray-900">{formatDateTime(ticket.created_at)}</span></div>
           </div>
         </div>
       </div>
@@ -98,8 +94,8 @@ export function TicketPrintView({ ticket, systemSettings }: TicketPrintViewProps
         <p className="text-gray-800 mb-4">{ticket.title}</p>
         
         <h2 className="text-xl font-bold text-gray-900 mb-2">Descrição</h2>
-        <div className="bg-gray-50 p-4 rounded">
-          <p className="text-gray-800 whitespace-pre-wrap">{ticket.description}</p>
+        <div className="bg-gray-50 p-4 rounded-lg border">
+          <p className="text-gray-700 whitespace-pre-wrap text-sm">{ticket.description}</p>
         </div>
       </div>
 
@@ -148,10 +144,10 @@ export function TicketPrintView({ ticket, systemSettings }: TicketPrintViewProps
                     )}
                   </div>
                   <span className="text-xs text-gray-500">
-                    {format(new Date(comment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    {formatDateTime(comment.created_at)}
                   </span>
                 </div>
-                <p className="text-gray-700 text-sm whitespace-pre-wrap">{comment.content}</p>
+                <p className="text-gray-700 whitespace-pre-wrap text-sm">{comment.content}</p>
               </div>
             ))}
           </div>
@@ -159,9 +155,9 @@ export function TicketPrintView({ ticket, systemSettings }: TicketPrintViewProps
       )}
 
       {/* Footer */}
-      <div className="mt-8 pt-4 border-t border-gray-300 text-center text-xs text-gray-500">
+      <div className="mt-8 pt-4 border-t text-center text-xs text-gray-600">
         <p>Este relatório foi gerado automaticamente pelo sistema de chamados</p>
-        <p>{systemSettings?.company_name || 'Sistema de Chamados'} - {format(new Date(), 'yyyy', { locale: ptBR })}</p>
+        <p className="mt-1">{systemSettings?.company_name || 'Sistema de Chamados'} - {new Date().getFullYear()}</p>
       </div>
     </div>
   )

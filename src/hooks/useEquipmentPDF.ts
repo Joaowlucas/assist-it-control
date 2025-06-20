@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -65,16 +64,13 @@ export function useEquipmentPDF() {
 
   const printFromPreview = async (equipment: any, photos: any[], systemSettings: any) => {
     try {
-      // Criar o mesmo conteúdo HTML usado para PDF
       const printContent = createEquipmentPrintHTML(equipment, photos, systemSettings)
       
-      // Criar elemento temporário para impressão
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
         throw new Error('Não foi possível abrir a janela de impressão')
       }
 
-      // Escrever o conteúdo na nova janela
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -116,7 +112,6 @@ export function useEquipmentPDF() {
       
       printWindow.document.close()
       
-      // Aguardar imagens carregarem antes de imprimir
       const images = printWindow.document.images
       let loadedImages = 0
       const totalImages = images.length
@@ -152,8 +147,7 @@ export function useEquipmentPDF() {
           }
         })
         
-        // Timeout de segurança
-        setTimeout(checkAllImagesLoaded, 3000)
+        setTimeout(checkAllImagesLoaded, 5000)
       }
 
       toast({
@@ -175,10 +169,8 @@ export function useEquipmentPDF() {
     setIsGenerating(true)
     
     try {
-      // Criar conteúdo HTML para o PDF
       const printContent = createEquipmentPrintHTML(equipment, photos, systemSettings)
       
-      // Criar elemento temporário
       const tempElement = document.createElement('div')
       tempElement.innerHTML = printContent
       tempElement.style.cssText = `
@@ -193,7 +185,7 @@ export function useEquipmentPDF() {
       `
       document.body.appendChild(tempElement)
 
-      // Aguardar imagens carregarem com timeout individual
+      // Aguardar imagens carregarem com promise mais robusta
       const images = tempElement.querySelectorAll('img')
       const imagePromises = Array.from(images).map((img) => {
         return new Promise((resolve) => {
@@ -202,14 +194,25 @@ export function useEquipmentPDF() {
             return
           }
           
-          const timeout = setTimeout(() => resolve(img), 5000) // 5s timeout por imagem
+          let timeoutId: NodeJS.Timeout
+          
+          const cleanup = () => {
+            clearTimeout(timeoutId)
+            img.onload = null
+            img.onerror = null
+          }
+          
+          timeoutId = setTimeout(() => {
+            cleanup()
+            resolve(img)
+          }, 3000) // 3s timeout por imagem
           
           img.onload = () => {
-            clearTimeout(timeout)
+            cleanup()
             resolve(img)
           }
           img.onerror = () => {
-            clearTimeout(timeout)
+            cleanup()
             resolve(img)
           }
         })
@@ -217,40 +220,36 @@ export function useEquipmentPDF() {
 
       await Promise.allSettled(imagePromises)
       
-      // Aguardar renderização adicional
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Aguardar renderização
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Capturar como canvas com configurações otimizadas
       const canvas = await html2canvas(tempElement, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 800,
         height: tempElement.scrollHeight,
         logging: false,
-        imageTimeout: 10000,
+        imageTimeout: 5000,
         removeContainer: true,
         ignoreElements: (element) => {
           return element.classList?.contains('no-print') || false
         }
       })
 
-      // Criar PDF
-      const imgData = canvas.toDataURL('image/png', 0.95)
+      const imgData = canvas.toDataURL('image/png', 0.9)
       const pdf = new jsPDF('p', 'mm', 'a4')
       
-      const imgWidth = 210 // A4 width in mm
-      const pageHeight = 295 // A4 height in mm
+      const imgWidth = 210
+      const pageHeight = 295
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
       let position = 0
 
-      // Primeira página
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
-      // Páginas adicionais se necessário
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight
         pdf.addPage()
@@ -258,11 +257,9 @@ export function useEquipmentPDF() {
         heightLeft -= pageHeight
       }
 
-      //Fazer download
       const fileName = `Equipamento_${tombamento}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(fileName)
 
-      // Limpar elemento temporário
       document.body.removeChild(tempElement)
 
       toast({

@@ -10,7 +10,6 @@ export function useTicketPDF() {
   const { toast } = useToast()
 
   const fetchTicketData = async (ticketId: string) => {
-    // Buscar dados completos do chamado
     const { data: ticket, error: ticketError } = await supabase
       .from('tickets')
       .select(`
@@ -32,7 +31,6 @@ export function useTicketPDF() {
 
     if (ticketError) throw ticketError
 
-    // Buscar configurações do sistema
     const { data: systemSettings, error: settingsError } = await supabase
       .from('system_settings')
       .select('*')
@@ -40,7 +38,6 @@ export function useTicketPDF() {
 
     if (settingsError) throw settingsError
 
-    // Adicionar URLs públicas aos anexos
     const ticketWithUrls = {
       ...ticket,
       attachments: ticket.attachments?.map((attachment: any) => {
@@ -79,30 +76,35 @@ export function useTicketPDF() {
 
   const printFromPreview = async (ticket: any, systemSettings: any) => {
     try {
-      // Criar o mesmo conteúdo HTML usado para PDF
       const printContent = createPrintHTML(ticket, systemSettings)
       
-      // Criar elemento temporário para impressão
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
         throw new Error('Não foi possível abrir a janela de impressão')
       }
 
-      // Escrever o conteúdo na nova janela
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
             <title>Chamado #${ticket.ticket_number}</title>
             <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: Arial, sans-serif; line-height: 1.4; }
               @media print {
-                body { margin: 0; }
+                body { margin: 0; padding: 0; }
                 .no-print { display: none !important; }
                 .page-break { page-break-before: always; }
               }
               @media screen {
                 body { padding: 20px; background: #f5f5f5; }
-                .print-container { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                .print-container { 
+                  background: white; 
+                  box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+                  margin: 0 auto;
+                  max-width: 800px;
+                  padding: 20px;
+                }
               }
             </style>
           </head>
@@ -116,12 +118,42 @@ export function useTicketPDF() {
       
       printWindow.document.close()
       
-      // Aguardar imagens carregarem antes de imprimir
-      printWindow.onload = () => {
+      const images = printWindow.document.images
+      let loadedImages = 0
+      const totalImages = images.length
+
+      const checkAllImagesLoaded = () => {
+        if (loadedImages === totalImages) {
+          setTimeout(() => {
+            printWindow.print()
+            setTimeout(() => printWindow.close(), 1000)
+          }, 500)
+        }
+      }
+
+      if (totalImages === 0) {
         setTimeout(() => {
           printWindow.print()
-          printWindow.close()
-        }, 1000)
+          setTimeout(() => printWindow.close(), 1000)
+        }, 500)
+      } else {
+        Array.from(images).forEach((img) => {
+          if (img.complete) {
+            loadedImages++
+            checkAllImagesLoaded()
+          } else {
+            img.onload = () => {
+              loadedImages++
+              checkAllImagesLoaded()
+            }
+            img.onerror = () => {
+              loadedImages++
+              checkAllImagesLoaded()
+            }
+          }
+        })
+        
+        setTimeout(checkAllImagesLoaded, 5000)
       }
 
       toast({
@@ -143,46 +175,80 @@ export function useTicketPDF() {
     setIsGenerating(true)
     
     try {
-      // Criar conteúdo HTML para o PDF
       const printContent = createPrintHTML(ticket, systemSettings)
       
-      // Criar elemento temporário
       const tempElement = document.createElement('div')
       tempElement.innerHTML = printContent
-      tempElement.style.position = 'absolute'
-      tempElement.style.left = '-9999px'
-      tempElement.style.width = '800px'
-      tempElement.style.backgroundColor = 'white'
+      tempElement.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        width: 800px;
+        background-color: white;
+        font-family: Arial, sans-serif;
+        padding: 32px;
+        line-height: 1.5;
+      `
       document.body.appendChild(tempElement)
 
       // Aguardar imagens carregarem
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      const images = tempElement.querySelectorAll('img')
+      const imagePromises = Array.from(images).map((img) => {
+        return new Promise((resolve) => {
+          if (img.complete) {
+            resolve(img)
+            return
+          }
+          
+          let timeoutId: NodeJS.Timeout
+          
+          const cleanup = () => {
+            clearTimeout(timeoutId)
+            img.onload = null
+            img.onerror = null
+          }
+          
+          timeoutId = setTimeout(() => {
+            cleanup()
+            resolve(img)
+          }, 3000)
+          
+          img.onload = () => {
+            cleanup()
+            resolve(img)
+          }
+          img.onerror = () => {
+            cleanup()
+            resolve(img)
+          }
+        })
+      })
 
-      // Capturar como canvas
+      await Promise.allSettled(imagePromises)
+      
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
       const canvas = await html2canvas(tempElement, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 800
       })
 
-      // Criar PDF
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = canvas.toDataURL('image/png', 0.9)
       const pdf = new jsPDF('p', 'mm', 'a4')
       
-      const imgWidth = 210 // A4 width in mm
-      const pageHeight = 295 // A4 height in mm
+      const imgWidth = 210
+      const pageHeight = 295
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
 
       let position = 0
 
-      // Adicionar primeira página
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
-      // Adicionar páginas adicionais se necessário
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight
         pdf.addPage()
@@ -190,11 +256,9 @@ export function useTicketPDF() {
         heightLeft -= pageHeight
       }
 
-      // Fazer download
       const fileName = `Chamado_${ticketNumber}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(fileName)
 
-      // Limpar elemento temporário
       document.body.removeChild(tempElement)
 
       toast({
@@ -264,71 +328,72 @@ export function useTicketPDF() {
     }
 
     return `
-      <div style="font-family: Arial, sans-serif; padding: 32px; background: white; max-width: 800px;">
+      <div style="font-family: Arial, sans-serif; padding: 20px; background: white; max-width: 800px; margin: 0 auto; color: #333; line-height: 1.5;">
         <!-- Header -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 2px solid #d1d5db;">
-          <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb; flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 250px;">
             ${systemSettings?.company_logo_url ? `
-              <img src="${systemSettings.company_logo_url}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain;" />
+              <img src="${systemSettings.company_logo_url}" alt="Logo" style="height: 60px; width: 60px; object-fit: contain; flex-shrink: 0;" crossorigin="anonymous" />
             ` : ''}
-            <div>
-              <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">
+            <div style="flex: 1;">
+              <h1 style="font-size: 20px; font-weight: bold; color: #111827; margin: 0; line-height: 1.3;">
                 ${systemSettings?.company_name || 'Sistema de Chamados'}
               </h1>
-              <p style="color: #6b7280; margin: 4px 0 0 0;">Relatório de Chamado de Suporte</p>
+              <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 14px;">Relatório de Chamado de Suporte</p>
             </div>
           </div>
-          <div style="text-align: right; font-size: 14px; color: #6b7280;">
-            <p style="margin: 0;">Data de Geração:</p>
+          <div style="text-align: right; font-size: 12px; color: #6b7280; flex-shrink: 0;">
+            <p style="margin: 0; font-weight: 500;">Data de Geração:</p>
             <p style="font-weight: 500; margin: 4px 0 0 0;">${formatDate(new Date().toISOString())}</p>
           </div>
         </div>
 
         <!-- Informações Principais -->
-        <div style="margin-bottom: 24px;">
-          <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 16px;">Informações do Chamado</h2>
-          <div style="background: #f9fafb; padding: 16px; border-radius: 8px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-              <div><strong>Número:</strong> #${ticket.ticket_number}</div>
-              <div><strong>Status:</strong> ${getStatusText(ticket.status)}</div>
-              <div><strong>Prioridade:</strong> ${getPriorityText(ticket.priority)}</div>
-              <div><strong>Categoria:</strong> ${ticket.category}</div>
-              <div><strong>Solicitante:</strong> ${ticket.requester?.name}</div>
-              <div><strong>Unidade:</strong> ${ticket.unit?.name}</div>
-              <div><strong>Técnico:</strong> ${ticket.assignee?.name || 'Não atribuído'}</div>
-              <div><strong>Criado em:</strong> ${formatDate(ticket.created_at)}</div>
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 12px;">Informações do Chamado</h2>
+          <div style="background: #f9fafb; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Número:</strong> <span style="color: #111827;">#${ticket.ticket_number}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Status:</strong> <span style="color: #111827;">${getStatusText(ticket.status)}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Prioridade:</strong> <span style="color: #111827;">${getPriorityText(ticket.priority)}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Categoria:</strong> <span style="color: #111827; text-transform: capitalize;">${ticket.category}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Solicitante:</strong> <span style="color: #111827;">${ticket.requester?.name}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Unidade:</strong> <span style="color: #111827;">${ticket.unit?.name}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Técnico:</strong> <span style="color: #111827;">${ticket.assignee?.name || 'Não atribuído'}</span></div>
+              <div style="padding: 6px 0;"><strong style="color: #374151;">Criado em:</strong> <span style="color: #111827;">${formatDate(ticket.created_at)}</span></div>
             </div>
           </div>
         </div>
 
         <!-- Título e Descrição -->
-        <div style="margin-bottom: 24px;">
-          <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 8px;">Título</h2>
-          <p style="color: #374151; margin-bottom: 16px;">${ticket.title}</p>
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 8px;">Título</h2>
+          <p style="color: #374151; margin-bottom: 16px; font-size: 13px;">${ticket.title}</p>
           
-          <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 8px;">Descrição</h2>
-          <div style="background: #f9fafb; padding: 16px; border-radius: 8px;">
-            <p style="color: #374151; white-space: pre-wrap; margin: 0;">${ticket.description}</p>
+          <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 8px;">Descrição</h2>
+          <div style="background: #f9fafb; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <p style="color: #374151; white-space: pre-wrap; margin: 0; font-size: 13px; line-height: 1.4;">${ticket.description}</p>
           </div>
         </div>
 
         <!-- Anexos -->
         ${ticket.attachments && ticket.attachments.length > 0 ? `
-          <div style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 16px;">Anexos</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="margin-bottom: 20px;">
+            <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 12px;">Anexos</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
               ${ticket.attachments.map((attachment: any) => `
-                <div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 8px;">
+                <div style="border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; background: white;">
                   ${attachment.mime_type?.startsWith('image/') ? `
                     <img src="${attachment.public_url}" alt="${attachment.file_name}" 
-                         style="width: 100%; height: 128px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" />
+                         style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 6px; display: block;" 
+                         crossorigin="anonymous" />
                   ` : `
                     <div style="text-align: center; padding: 16px;">
-                      <p style="font-weight: 500; color: #374151; margin: 0;">${attachment.file_name}</p>
-                      <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">Arquivo anexado</p>
+                      <p style="font-weight: 500; color: #374151; margin: 0; font-size: 13px;">${attachment.file_name}</p>
+                      <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0;">Arquivo anexado</p>
                     </div>
                   `}
-                  <p style="font-size: 12px; color: #6b7280; margin: 0; text-overflow: ellipsis; overflow: hidden;">${attachment.file_name}</p>
+                  <p style="font-size: 11px; color: #6b7280; margin: 0; word-wrap: break-word;">${attachment.file_name}</p>
                 </div>
               `).join('')}
             </div>
@@ -337,25 +402,25 @@ export function useTicketPDF() {
 
         <!-- Comentários -->
         ${ticket.comments && ticket.comments.length > 0 ? `
-          <div style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 16px;">Histórico de Comentários</h2>
+          <div style="margin-bottom: 20px;">
+            <h2 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 12px;">Histórico de Comentários</h2>
             <div style="display: flex; flex-direction: column; gap: 12px;">
               ${ticket.comments.map((comment: any) => `
-                <div style="border-left: 4px solid #bfdbfe; background: #f9fafb; padding: 12px;">
-                  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                <div style="border-left: 4px solid #bfdbfe; background: #f9fafb; padding: 12px; border-radius: 0 6px 6px 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-weight: 500; color: #374151;">${comment.user?.name}</span>
+                      <span style="font-weight: 500; color: #374151; font-size: 13px;">${comment.user?.name}</span>
                       ${comment.is_internal ? `
-                        <span style="font-size: 12px; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px;">
+                        <span style="font-size: 10px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 3px;">
                           Interno
                         </span>
                       ` : ''}
                     </div>
-                    <span style="font-size: 12px; color: #6b7280;">
+                    <span style="font-size: 11px; color: #6b7280; flex-shrink: 0;">
                       ${formatDate(comment.created_at)}
                     </span>
                   </div>
-                  <p style="color: #374151; font-size: 14px; white-space: pre-wrap; margin: 0;">${comment.content}</p>
+                  <p style="color: #374151; font-size: 12px; white-space: pre-wrap; margin: 0; line-height: 1.4;">${comment.content}</p>
                 </div>
               `).join('')}
             </div>
@@ -363,7 +428,7 @@ export function useTicketPDF() {
         ` : ''}
 
         <!-- Footer -->
-        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; text-align: center; font-size: 12px; color: #6b7280;">
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; text-align: center; font-size: 11px; color: #6b7280;">
           <p style="margin: 0;">Este relatório foi gerado automaticamente pelo sistema de chamados</p>
           <p style="margin: 4px 0 0 0;">${systemSettings?.company_name || 'Sistema de Chamados'} - ${new Date().getFullYear()}</p>
         </div>
