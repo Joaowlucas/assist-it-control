@@ -169,7 +169,7 @@ export default function Tickets() {
 
   // Verificar se o usuário pode editar/excluir chamados
   const canEditTicket = (ticket: any) => {
-    return profile?.role === 'admin'
+    return profile?.role === 'admin' || profile?.role === 'technician'
   }
 
   // Verificar se o usuário pode se atribuir ao chamado

@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -76,8 +75,8 @@ export function TicketDetailsDialog({
   const { generateTicketPDF, isGenerating } = useTicketPDF()
   const { data: systemSettings } = useSystemSettings()
 
-  // Verificar se deve mostrar ações administrativas
-  const showAdminActions = !hideAdminActions && profile?.role !== 'user'
+  // Verificar se deve mostrar ações administrativas - agora inclui técnicos
+  const showAdminActions = !hideAdminActions && (profile?.role === 'admin' || profile?.role === 'technician')
 
   const handleDownloadPDF = async () => {
     try {
