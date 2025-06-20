@@ -254,7 +254,7 @@ export default function Chat() {
                   }`}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-medium">
-                        {message.sender?.name || 'Usuário'}
+                        {message.profiles?.name || 'Usuário'}
                       </span>
                       <span className="text-xs opacity-70">
                         {format(new Date(message.created_at), 'HH:mm')}
@@ -298,8 +298,6 @@ export default function Chat() {
 
       {/* Dialogs */}
       <CreateChatRoomDialog
-        isOpen={isCreateRoomOpen}
-        onClose={() => setIsCreateRoomOpen(false)}
         onRoomCreated={(roomId) => {
           setIsCreateRoomOpen(false)
           // Auto-select the new room

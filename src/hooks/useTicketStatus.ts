@@ -27,9 +27,9 @@ export function useUpdateTicketStatus() {
         .eq('id', id)
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name)
+          requester:profiles!requester_id(name, email),
+          assignee:profiles!assignee_id(name, email),
+          unit:units!unit_id(name)
         `)
         .single()
       
@@ -89,9 +89,9 @@ export function useAssignTicket() {
         .eq('id', id)
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units(name)
+          requester:profiles!requester_id(name, email),
+          assignee:profiles!assignee_id(name, email),
+          unit:units!unit_id(name)
         `)
         .single()
       
