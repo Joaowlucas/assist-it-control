@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -104,7 +105,13 @@ export default function UserTickets() {
   }
 
   const canEditTicket = (ticket: any) => {
-    return ticket.status === 'aberto' || ticket.status === 'em_andamento'
+    // Usuários podem editar seus próprios chamados se estiverem abertos ou em andamento
+    if (profile?.role === 'user') {
+      return (ticket.status === 'aberto' || ticket.status === 'em_andamento') && ticket.requester.id === profile.id
+    }
+    
+    // Técnicos e admins podem editar chamados que atendem/gerenciam
+    return profile?.role === 'admin' || profile?.role === 'technician'
   }
 
   // Estatísticas dos tickets
@@ -157,9 +164,14 @@ export default function UserTickets() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Meus Chamados</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {profile?.role === 'user' ? 'Meus Chamados' : 'Chamados'}
+          </h2>
           <p className="text-muted-foreground">
-            Acompanhe seus chamados de suporte técnico
+            {profile?.role === 'user' 
+              ? 'Acompanhe seus chamados de suporte técnico'
+              : 'Gerencie os chamados de suporte técnico'
+            }
           </p>
         </div>
         
@@ -298,7 +310,7 @@ export default function UserTickets() {
           onOpenChange={setIsDetailsDialogOpen}
           units={[]}
           technicians={[]}
-          hideAdminActions={true}
+          hideAdminActions={profile?.role === 'user'}
         />
       )}
 

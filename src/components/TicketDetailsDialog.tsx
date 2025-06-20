@@ -77,7 +77,8 @@ export function TicketDetailsDialog({
   const { data: systemSettings } = useSystemSettings()
 
   // Verificar se deve mostrar ações administrativas
-  const showAdminActions = !hideAdminActions && profile?.role !== 'user'
+  // Técnicos agora também podem gerenciar chamados de suas unidades
+  const showAdminActions = !hideAdminActions && (profile?.role === 'admin' || profile?.role === 'technician')
 
   const handleDownloadPDF = async () => {
     try {
