@@ -1,66 +1,37 @@
-import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AuthGuard } from "@/components/AuthGuard";
-import { AdminLayout } from "@/components/AdminLayout";
-import { UserLayout } from "@/components/UserLayout";
-import { ChatWithRoleLayout } from "@/components/ChatWithRoleLayout";
-import Dashboard from "./pages/Dashboard";
-import Tickets from "./pages/Tickets";
-import Equipment from "./pages/Equipment";
-import Assignments from "./pages/Assignments";
-import Settings from "./pages/Settings";
-import UserPortal from "./pages/UserPortal";
-import UserDashboard from "./pages/UserDashboard";
-import UserTickets from "./pages/UserTickets";
-import UserAssignments from "./pages/UserAssignments";
-import Login from "./pages/Login";
-import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutos
-      gcTime: 15 * 60 * 1000, // 15 minutos
-      refetchOnWindowFocus: false,
-      refetchOnMount: 'always',
-      refetchOnReconnect: 'always',
-      retry: (failureCount, error) => {
-        if (error && 'status' in error && typeof error.status === 'number') {
-          if (error.status >= 400 && error.status < 500) return false
-        }
-        return failureCount < 2
-      },
-    },
-    mutations: {
-      retry: 1,
-    },
-  },
-});
+import { ThemeProvider } from "@/components/theme-provider"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import Login from "@/pages/Login"
+import Dashboard from "@/pages/Dashboard"
+import Tickets from "@/pages/Tickets"
+import Equipment from "@/pages/Equipment"
+import Assignments from "@/pages/Assignments"
+import Settings from "@/pages/Settings"
+import Chat from "@/pages/Chat"
+import UserDashboard from "@/pages/UserDashboard"
+import UserTickets from "@/pages/UserTickets"
+import UserAssignments from "@/pages/UserAssignments"
+import NotFound from "@/pages/NotFound"
+import { AuthGuard } from "@/guards/AuthGuard"
+import { AdminGuard } from "@/guards/AdminGuard"
+import { AdminLayout } from "@/components/AdminLayout"
+import { UserLayout } from "@/components/UserLayout"
+import { ChatWithRoleLayout } from "@/components/ChatWithRoleLayout"
+import { Toaster } from "@/components/ui/toaster"
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from '@/hooks/useAuth'
 
-// Prefetch system settings para garantir que estejam disponíveis
-queryClient.prefetchQuery({
-  queryKey: ['system-settings'],
-  staleTime: 60 * 60 * 1000, // 1 hora
-})
+const queryClient = new QueryClient()
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="assist-it-theme">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+          <Toaster />
+          <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
-              
-              {/* Admin/Technician Routes */}
               <Route path="/" element={
                 <AuthGuard requiredRole="admin_tech">
                   <AdminLayout>
@@ -89,6 +60,20 @@ const App = () => (
                   </AdminLayout>
                 </AuthGuard>
               } />
+              <Route path="/settings" element={
+                <AuthGuard>
+                  <AdminGuard>
+                    <AdminLayout>
+                      <Settings />
+                    </AdminLayout>
+                  </AdminGuard>
+                </AuthGuard>
+              } />
+              <Route path="/chat" element={
+                <AuthGuard>
+                  <ChatWithRoleLayout />
+                </AuthGuard>
+              } />
               
               {/* User Routes */}
               <Route path="/user-dashboard" element={
@@ -113,38 +98,13 @@ const App = () => (
                 </AuthGuard>
               } />
               
-              {/* Chat Route - Available for all authenticated users with role-based layout */}
-              <Route path="/chat" element={
-                <AuthGuard>
-                  <ChatWithRoleLayout />
-                </AuthGuard>
-              } />
-              
-              {/* Admin Only Routes - Users management moved to Settings */}
-              <Route path="/settings" element={
-                <AuthGuard requiredRole="admin">
-                  <AdminLayout>
-                    <Settings />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
-              
-              {/* Keep old user portal route for compatibility */}
-              <Route path="/user-portal" element={
-                <AuthGuard requiredRole="user">
-                  <UserLayout>
-                    <UserPortal />
-                  </UserLayout>
-                </AuthGuard>
-              } />
-              
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+          </BrowserRouter>
+        </ThemeProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  )
+}
 
-export default App;
+export default App

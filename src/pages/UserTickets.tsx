@@ -1,38 +1,47 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Plus, FileText } from "lucide-react"
 import { useUserTickets } from "@/hooks/useUserTickets"
-import { CreateTicketDialog } from "@/components/CreateTicketDialog"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { useAuth } from "@/hooks/useAuth"
+import { CreateUserTicketDialog } from "@/components/CreateUserTicketDialog"
+import { TicketDetailsDialog } from "@/components/TicketDetailsDialog"
+import { EditTicketDialog } from "@/components/EditTicketDialog"
+import { Plus, Search, Eye, Clock, CheckCircle, AlertCircle, XCircle, Edit } from "lucide-react"
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function UserTickets() {
-  const [searchTerm, setSearchTerm] = useState("")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const { profile } = useAuth()
   const { data: tickets = [], isLoading } = useUserTickets()
 
   const filteredTickets = tickets.filter(ticket =>
-    ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.ticket_number.toString().includes(searchTerm)
+    ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ticket.category.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'aberto':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-      case 'em_andamento':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-      case 'aguardando':
+      case 'em_andamento':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+      case 'aguardando':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
       case 'fechado':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+      case 'cancelado':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
     }
@@ -48,6 +57,8 @@ export default function UserTickets() {
         return 'Aguardando'
       case 'fechado':
         return 'Fechado'
+      case 'cancelado':
+        return 'Cancelado'
       default:
         return status
     }
@@ -55,14 +66,14 @@ export default function UserTickets() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'baixa':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'media':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'alta':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
       case 'critica':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      case 'alta':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+      case 'media':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+      case 'baixa':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
     }
@@ -70,66 +81,103 @@ export default function UserTickets() {
 
   const getPriorityLabel = (priority: string) => {
     switch (priority) {
-      case 'baixa':
-        return 'Baixa'
-      case 'media':
-        return 'Média'
-      case 'alta':
-        return 'Alta'
       case 'critica':
         return 'Crítica'
+      case 'alta':
+        return 'Alta'
+      case 'media':
+        return 'Média'
+      case 'baixa':
+        return 'Baixa'
       default:
         return priority
     }
   }
 
+  const handleViewTicket = (ticket: any) => {
+    setSelectedTicket(ticket)
+    setIsDetailsDialogOpen(true)
+  }
+
+  const handleEditTicket = (ticket: any) => {
+    setSelectedTicket(ticket)
+    setIsEditDialogOpen(true)
+  }
+
+  const canEditTicket = (ticket: any) => {
+    return ticket.status === 'aberto' || ticket.status === 'em_andamento'
+  }
+
+  // Estatísticas dos tickets
   const stats = [
     {
-      title: "Total de Chamados",
+      title: "Total",
       value: tickets.length,
+      icon: AlertCircle,
       color: "text-blue-500",
       bgColor: "bg-blue-50 dark:bg-blue-950"
     },
     {
       title: "Abertos",
       value: tickets.filter(t => t.status === 'aberto').length,
-      color: "text-orange-500",
-      bgColor: "bg-orange-50 dark:bg-orange-950"
-    },
-    {
-      title: "Em Andamento",
-      value: tickets.filter(t => t.status === 'em_andamento').length,
+      icon: Clock,
       color: "text-blue-500",
       bgColor: "bg-blue-50 dark:bg-blue-950"
     },
     {
+      title: "Em Andamento",
+      value: tickets.filter(t => t.status === 'em_andamento').length,
+      icon: AlertCircle,
+      color: "text-yellow-500",
+      bgColor: "bg-yellow-50 dark:bg-yellow-950"
+    },
+    {
       title: "Fechados",
       value: tickets.filter(t => t.status === 'fechado').length,
+      icon: CheckCircle,
       color: "text-green-500",
       bgColor: "bg-green-50 dark:bg-green-950"
     }
   ]
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Meus Chamados</h1>
+          <h2 className="text-3xl font-bold tracking-tight">Meus Chamados</h2>
           <p className="text-muted-foreground">
-            Gerencie seus chamados de suporte
+            Acompanhe seus chamados de suporte técnico
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
+        
+        <Button 
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="w-full sm:w-auto"
+        >
+          <Plus className="mr-2 h-4 w-4" />
           Novo Chamado
         </Button>
       </div>
 
-      {/* Cards de estatísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Estatísticas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
           <Card key={index}>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
@@ -138,7 +186,7 @@ export default function UserTickets() {
                   <p className="text-2xl font-bold">{stat.value}</p>
                 </div>
                 <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                  <FileText className={`h-6 w-6 ${stat.color}`} />
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
               </div>
             </CardContent>
@@ -146,13 +194,9 @@ export default function UserTickets() {
         ))}
       </div>
 
-      {/* Lista de chamados */}
+      {/* Filtros */}
       <Card>
-        <CardHeader>
-          <CardTitle>Lista de Chamados</CardTitle>
-          <CardDescription>
-            Todos os seus chamados de suporte
-          </CardDescription>
+        <CardHeader className="pb-3">
           <div className="flex items-center space-x-2">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
@@ -163,35 +207,40 @@ export default function UserTickets() {
             />
           </div>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <div className="text-muted-foreground">Carregando chamados...</div>
-            </div>
-          ) : (
+      </Card>
+
+      {/* Lista de Chamados */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Chamados</CardTitle>
+          <CardDescription>
+            {filteredTickets.length} de {tickets.length} chamados
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Número</TableHead>
                   <TableHead>Título</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>Prioridade</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Criado em</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTickets.map((ticket) => (
                   <TableRow key={ticket.id}>
                     <TableCell className="font-medium">
-                      #{ticket.ticket_number}
+                      {ticket.title}
                     </TableCell>
+                    <TableCell>{ticket.category}</TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{ticket.title}</div>
-                        <div className="text-sm text-muted-foreground truncate max-w-xs">
-                          {ticket.description}
-                        </div>
-                      </div>
+                      <Badge className={getPriorityColor(ticket.priority)}>
+                        {getPriorityLabel(ticket.priority)}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(ticket.status)}>
@@ -199,33 +248,67 @@ export default function UserTickets() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getPriorityColor(ticket.priority)}>
-                        {getPriorityLabel(ticket.priority)}
-                      </Badge>
+                      {format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewTicket(ticket)}
+                          title="Visualizar chamado"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canEditTicket(ticket) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditTicket(ticket)}
+                            title="Editar chamado"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          )}
-          
-          {filteredTickets.length === 0 && !isLoading && (
+          </div>
+
+          {filteredTickets.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Nenhum chamado encontrado</p>
+              {searchTerm ? 'Nenhum chamado encontrado' : 'Nenhum chamado criado ainda'}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Dialog de criação */}
-      <CreateTicketDialog
+      {/* Diálogos */}
+      <CreateUserTicketDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
       />
+
+      {selectedTicket && (
+        <TicketDetailsDialog
+          ticket={selectedTicket}
+          open={isDetailsDialogOpen}
+          onOpenChange={setIsDetailsDialogOpen}
+          units={[]}
+          technicians={[]}
+        />
+      )}
+
+      {selectedTicket && (
+        <EditTicketDialog
+          ticket={selectedTicket}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+        />
+      )}
     </div>
   )
 }

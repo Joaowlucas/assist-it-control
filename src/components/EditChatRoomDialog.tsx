@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -11,10 +10,11 @@ import { supabase } from '@/integrations/supabase/client'
 interface EditChatRoomDialogProps {
   room: ChatRoom | null
   isOpen: boolean
-  onOpenChange: (open: boolean) => void
+  onClose: (open: boolean) => void
+  onRoomUpdated?: () => void
 }
 
-export function EditChatRoomDialog({ room, isOpen, onOpenChange }: EditChatRoomDialogProps) {
+export function EditChatRoomDialog({ room, isOpen, onClose, onRoomUpdated }: EditChatRoomDialogProps) {
   const { data: participants } = useChatParticipants(room?.id || '')
   const updateRoom = useUpdateChatRoom()
   
@@ -95,7 +95,8 @@ export function EditChatRoomDialog({ room, isOpen, onOpenChange }: EditChatRoomD
         imageUrl: imageUrl,
       })
       
-      onOpenChange(false)
+      onRoomUpdated?.()
+      onClose(false)
     } catch (error) {
       console.error('Error updating room:', error)
     }
@@ -104,7 +105,7 @@ export function EditChatRoomDialog({ room, isOpen, onOpenChange }: EditChatRoomD
   if (!room) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Sala de Chat</DialogTitle>
@@ -178,7 +179,7 @@ export function EditChatRoomDialog({ room, isOpen, onOpenChange }: EditChatRoomD
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => onOpenChange(false)}
+              onClick={() => onClose(false)}
               disabled={updateRoom.isPending}
             >
               Cancelar
