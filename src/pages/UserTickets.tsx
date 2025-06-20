@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -299,6 +298,7 @@ export default function UserTickets() {
           onOpenChange={setIsDetailsDialogOpen}
           units={[]}
           technicians={[]}
+          hideAdminActions={true}
         />
       )}
 

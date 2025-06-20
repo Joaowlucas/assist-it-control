@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 
 import { supabase } from '@/integrations/supabase/client'
-import { useRooms, useMessages, useCreateMessage } from '@/hooks/useChat'
+import { useChatRooms, useChatMessages, useSendMessage } from '@/hooks/useChat'
 
 export default function Chat() {
   const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false)
@@ -40,9 +40,9 @@ export default function Chat() {
 
   const { profile, signOut } = useAuth()
   const { toast } = useToast()
-  const { data: rooms = [], isLoading: isLoadingRooms } = useRooms()
-  const { data: messages = [] } = useMessages(selectedRoom?.id)
-  const { mutate: createMessage } = useCreateMessage()
+  const { data: rooms = [], isLoading: isLoadingRooms } = useChatRooms()
+  const { data: messages = [] } = useChatMessages(selectedRoom?.id)
+  const { mutate: sendMessage } = useSendMessage()
 
   const filteredRooms = rooms.filter(room => {
     if (selectedFilter === 'all') return true
@@ -98,7 +98,7 @@ export default function Chat() {
         }
       }
 
-      await createMessage({
+      await sendMessage({
         room_id: selectedRoom.id,
         content: newMessage.trim() || '',
         sender_id: profile.id,
@@ -298,8 +298,8 @@ export default function Chat() {
 
       {/* Dialogs */}
       <CreateChatRoomDialog
-        open={isCreateRoomOpen}
-        onOpenChange={setIsCreateRoomOpen}
+        isOpen={isCreateRoomOpen}
+        onClose={() => setIsCreateRoomOpen(false)}
         onRoomCreated={(roomId) => {
           setIsCreateRoomOpen(false)
           // Auto-select the new room
@@ -309,16 +309,17 @@ export default function Chat() {
       <DirectChatDialog
         open={isDirectChatOpen}
         onOpenChange={setIsDirectChatOpen}
-        onChatCreated={(room) => {
+        targetUserId={null}
+        onRoomCreated={(roomId) => {
           setIsDirectChatOpen(false)
-          setSelectedRoom(room)
+          // Handle room creation
         }}
       />
 
       {selectedRoom && (
         <EditChatRoomDialog
           room={selectedRoom}
-          open={isEditRoomOpen}
+          isOpen={isEditRoomOpen}
           onOpenChange={setIsEditRoomOpen}
         />
       )}

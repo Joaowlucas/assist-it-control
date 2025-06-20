@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -54,9 +55,15 @@ interface TicketDetailsDialogProps {
     id: string
     name: string
   }[]
+  hideAdminActions?: boolean
 }
 
-export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetailsDialogProps) {
+export function TicketDetailsDialog({ 
+  ticket, 
+  open, 
+  onOpenChange, 
+  hideAdminActions = false 
+}: TicketDetailsDialogProps) {
   // Early return if ticket is null - BEFORE any hooks
   if (!ticket) {
     return null
@@ -69,8 +76,8 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
   const { generateTicketPDF, isGenerating } = useTicketPDF()
   const { data: systemSettings } = useSystemSettings()
 
-  // Verificar se é usuário normal
-  const isUser = profile?.role === 'user'
+  // Verificar se deve mostrar ações administrativas
+  const showAdminActions = !hideAdminActions && profile?.role !== 'user'
 
   const handleDownloadPDF = async () => {
     try {
@@ -96,7 +103,7 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
           <DialogHeader>
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <span className="text-slate-900 dark:text-slate-100">Chamado #{ticket.ticket_number}</span>
-              {!isUser && (
+              {showAdminActions && (
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
@@ -141,7 +148,7 @@ export function TicketDetailsDialog({ ticket, open, onOpenChange }: TicketDetail
         </DialogContent>
       </Dialog>
 
-      {!isUser && (
+      {showAdminActions && (
         <>
           <WhatsAppSendDialog
             open={whatsappDialogOpen}
