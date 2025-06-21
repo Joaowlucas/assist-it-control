@@ -59,7 +59,7 @@ export function DirectChatDialog({
     switch (role) {
       case 'admin':
         return 'Admin'
-      case 'technician'
+      case 'technician':
         return 'Técnico'
       default:
         return 'Usuário'
@@ -274,4 +274,42 @@ export function DirectChatDialog({
       </DialogContent>
     </Dialog>
   )
+
+  async function handleCreateOrOpenChat() {
+    if (!profile?.id || !selectedUserId || !selectedUser) return
+
+    setIsCreating(true)
+
+    try {
+      // Se já existe uma conversa, usar ela
+      if (existingChatId) {
+        onRoomCreated?.(existingChatId)
+        onOpenChange(false)
+        return
+      }
+
+      // Criar nova conversa privada
+      const roomName = `${profile.name} • ${selectedUser.name}`
+      
+      const roomId = await createRoom.mutateAsync({
+        name: roomName,
+        type: 'private',
+        participantIds: [profile.id, selectedUserId]
+      })
+
+      onRoomCreated?.(roomId)
+      onOpenChange(false)
+      setSelectedUserId(null)
+      setSearchTerm('')
+    } catch (error) {
+      console.error('Error creating/opening chat:', error)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  function resetDialog() {
+    setSelectedUserId(null)
+    setSearchTerm('')
+  }
 }
