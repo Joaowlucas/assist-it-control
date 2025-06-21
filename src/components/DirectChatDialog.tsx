@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -38,7 +38,8 @@ export function DirectChatDialog({
       
       const roomId = await createRoom.mutateAsync({
         name: roomName,
-        unitId: null, // Conversas privadas não têm unidade específica
+        type: 'private',
+        unitId: null,
         participantIds: [profile.id, targetUserId]
       })
 

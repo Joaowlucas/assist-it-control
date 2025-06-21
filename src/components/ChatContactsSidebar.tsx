@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Search, User, Settings, Shield, MessageCircle } from 'lucide-react'
-import { useAvailableChatUsers, useCreateChatRoom } from '@/hooks/useChat'
+import { useAvailableChatUsers } from '@/hooks/useAvailableChatUsers'
+import { useCreateChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 
 interface ChatContactsSidebarProps {
@@ -62,6 +63,7 @@ export function ChatContactsSidebar({ open, onOpenChange, onDirectChat }: ChatCo
     try {
       const roomId = await createChatRoom.mutateAsync({
         name: `${profile?.name} • ${userName}`,
+        type: 'private',
         participantIds: [userId],
       })
       
@@ -135,9 +137,9 @@ export function ChatContactsSidebar({ open, onOpenChange, onDirectChat }: ChatCo
                         <span>{getRoleLabel(user.role)}</span>
                       </Badge>
                     </div>
-                    {user.units?.name && (
+                    {user.unit_name && (
                       <p className="text-sm text-muted-foreground truncate">
-                        {user.units.name}
+                        {user.unit_name}
                       </p>
                     )}
                   </div>

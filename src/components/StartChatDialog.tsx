@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { MessageCircle, Search, User, Settings, Shield } from 'lucide-react'
-import { useAvailableChatUsers, useCreateChatRoom } from '@/hooks/useChat'
+import { MessageCircle, Search, User, Settings, Shield, Plus } from 'lucide-react'
+import { useAvailableChatUsers } from '@/hooks/useAvailableChatUsers'
+import { useCreateChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 
 interface StartChatDialogProps {
@@ -61,6 +62,7 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
     try {
       const roomId = await createChatRoom.mutateAsync({
         name: `${profile?.name} • ${userName}`,
+        type: 'private',
         participantIds: [userId],
       })
       
@@ -73,14 +75,19 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
   }
 
   if (isLoading) {
-    return null
+    return (
+      <Button variant="outline" size="sm" disabled>
+        <MessageCircle className="h-4 w-4 mr-2" />
+        Carregando...
+      </Button>
+    )
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <MessageCircle className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 mr-2" />
           Nova Conversa
         </Button>
       </DialogTrigger>
@@ -138,9 +145,9 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
                         <span>{getRoleLabel(user.role)}</span>
                       </Badge>
                     </div>
-                    {user.units?.name && (
+                    {user.unit_name && (
                       <p className="text-sm text-muted-foreground truncate">
-                        {user.units.name}
+                        {user.unit_name}
                       </p>
                     )}
                   </div>

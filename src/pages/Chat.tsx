@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,12 +8,12 @@ import { useAuth } from "@/hooks/useAuth"
 import { CreateChatRoomDialog } from "@/components/CreateChatRoomDialog"
 import { DirectChatDialog } from "@/components/DirectChatDialog"
 import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
+import { StartChatDialog } from "@/components/StartChatDialog"
 import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
 import { ChatSidebar } from "@/components/ChatSidebar"
 import { ChatRoomHeader } from "@/components/ChatRoomHeader"
 import { ChatMessage } from "@/components/ChatMessage"
-import { MessageCircle, Send } from "lucide-react"
-import { supabase } from '@/integrations/supabase/client'
+import { MessageCircle, Send, Plus } from "lucide-react"
 import { useChatRooms, useChatMessages, useSendMessage, useChatParticipants } from '@/hooks/useChat'
 
 export default function Chat() {
@@ -65,7 +65,6 @@ export default function Chat() {
 
   const handleCreateRoom = (roomId: string) => {
     setIsCreateRoomOpen(false)
-    // Optionally auto-select the new room
     const newRoom = rooms.find(r => r.id === roomId)
     if (newRoom) {
       setSelectedRoom(newRoom)
@@ -74,6 +73,13 @@ export default function Chat() {
 
   const handleDirectChat = (roomId: string) => {
     setIsDirectChatOpen(false)
+    const room = rooms.find(r => r.id === roomId)
+    if (room) {
+      setSelectedRoom(room)
+    }
+  }
+
+  const handleChatCreated = (roomId: string) => {
     const room = rooms.find(r => r.id === roomId)
     if (room) {
       setSelectedRoom(room)
@@ -150,12 +156,13 @@ export default function Chat() {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
+            <div className="text-center space-y-4">
               <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Selecione uma conversa</h3>
-              <p className="text-sm">
+              <p className="text-sm mb-4">
                 Escolha uma conversa da lista ou inicie uma nova
               </p>
+              <StartChatDialog onChatCreated={handleChatCreated} />
             </div>
           </div>
         )}
