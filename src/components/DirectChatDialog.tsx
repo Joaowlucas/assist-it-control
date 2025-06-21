@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAvailableChatUsers } from '@/hooks/useAvailableChatUsers'
 import { useExistingPrivateChat } from '@/hooks/useExistingChat'
 import { MessageCircle, Search, Users, Shield, Settings, User } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface DirectChatDialogProps {
   open: boolean
@@ -28,6 +29,7 @@ export function DirectChatDialog({
   const { profile } = useAuth()
   const { data: availableUsers = [], isLoading } = useAvailableChatUsers()
   const createRoom = useCreateChatRoom()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUserId, setSelectedUserId] = useState<string | null>(targetUserId || null)
   const [isCreating, setIsCreating] = useState(false)
@@ -85,13 +87,17 @@ export function DirectChatDialog({
     try {
       // Se já existe uma conversa, usar ela
       if (existingChatId) {
+        console.log('Opening existing chat:', existingChatId)
         onRoomCreated?.(existingChatId)
         onOpenChange(false)
+        resetDialog()
         return
       }
 
       // Criar nova conversa privada
       const roomName = `${profile.name} • ${selectedUser.name}`
+      
+      console.log('Creating new private chat:', roomName)
       
       const roomId = await createRoom.mutateAsync({
         name: roomName,
@@ -99,12 +105,23 @@ export function DirectChatDialog({
         participantIds: [profile.id, selectedUserId]
       })
 
+      console.log('Chat room created successfully:', roomId)
+      
+      toast({
+        title: "Sucesso",
+        description: "Conversa criada com sucesso!",
+      })
+
       onRoomCreated?.(roomId)
       onOpenChange(false)
-      setSelectedUserId(null)
-      setSearchTerm('')
+      resetDialog()
     } catch (error) {
       console.error('Error creating/opening chat:', error)
+      toast({
+        title: "Erro",
+        description: "Erro ao criar conversa. Tente novamente.",
+        variant: "destructive",
+      })
     } finally {
       setIsCreating(false)
     }

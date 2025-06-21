@@ -21,6 +21,8 @@ export function useAvailableChatUsers() {
     queryFn: async () => {
       if (!profile?.id) return []
 
+      console.log('Fetching available chat users for:', profile.role)
+
       const { data, error } = await supabase.rpc('get_available_chat_users', {
         requesting_user_id: profile.id
       })
@@ -30,6 +32,7 @@ export function useAvailableChatUsers() {
         throw error
       }
 
+      console.log('Available users fetched:', data?.length || 0)
       return (data as AvailableChatUser[]) || []
     },
     enabled: !!profile?.id,
