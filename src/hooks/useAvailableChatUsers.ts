@@ -17,13 +17,13 @@ export function useAvailableChatUsers() {
   const { profile } = useAuth()
 
   return useQuery({
-    queryKey: ['available-chat-users', profile?.id],
+    queryKey: ['available-chat-users-final', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return []
 
       console.log('Fetching available chat users for:', profile.role)
 
-      const { data, error } = await supabase.rpc('get_available_chat_users', {
+      const { data, error } = await supabase.rpc('get_available_chat_users_final', {
         requesting_user_id: profile.id
       })
 

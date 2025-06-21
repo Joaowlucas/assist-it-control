@@ -1179,6 +1179,18 @@ export type Database = {
           unit_name: string
         }[]
       }
+      get_available_chat_users_final: {
+        Args: { requesting_user_id: string }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          role: Database["public"]["Enums"]["user_role"]
+          unit_id: string
+          avatar_url: string
+          unit_name: string
+        }[]
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1207,6 +1219,14 @@ export type Database = {
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_user_role_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_unit_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       increment_tutorial_views: {
         Args: { tutorial_id: string }
