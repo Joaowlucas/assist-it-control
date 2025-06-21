@@ -47,7 +47,7 @@ const App = () => (
               {/* Protected routes */}
               <Route element={<AuthGuard><SidebarProvider /></AuthGuard>}>
                 {/* Admin routes */}
-                <Route element={<AdminGuard><></>}</AdminGuard>}>
+                <Route element={<AdminGuard><></></AdminGuard>}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/tickets" element={<Tickets />} />
                   <Route path="/equipment" element={<Equipment />} />
