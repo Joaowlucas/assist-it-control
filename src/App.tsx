@@ -45,25 +45,23 @@ const App = () => (
               <Route path="/user-portal" element={<UserPortal />} />
               
               {/* Protected routes */}
-              <Route element={<AuthGuard />}>
-                <Route element={<SidebarProvider />}>
-                  {/* Admin routes */}
-                  <Route element={<AdminGuard />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/tickets" element={<Tickets />} />
-                    <Route path="/equipment" element={<Equipment />} />
-                    <Route path="/assignments" element={<Assignments />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Route>
-                  
-                  {/* User routes */}
-                  <Route path="/user-dashboard" element={<UserDashboard />} />
-                  <Route path="/user-tickets" element={<UserTickets />} />
-                  <Route path="/user-assignments" element={<UserAssignments />} />
-                  
-                  {/* Chat route - available for all authenticated users */}
-                  <Route path="/chat" element={<ChatOptimized />} />
+              <Route element={<AuthGuard><SidebarProvider /></AuthGuard>}>
+                {/* Admin routes */}
+                <Route element={<AdminGuard><></>}</AdminGuard>}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/tickets" element={<Tickets />} />
+                  <Route path="/equipment" element={<Equipment />} />
+                  <Route path="/assignments" element={<Assignments />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Route>
+                
+                {/* User routes */}
+                <Route path="/user-dashboard" element={<UserDashboard />} />
+                <Route path="/user-tickets" element={<UserTickets />} />
+                <Route path="/user-assignments" element={<UserAssignments />} />
+                
+                {/* Chat route - available for all authenticated users */}
+                <Route path="/chat" element={<ChatOptimized />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />
