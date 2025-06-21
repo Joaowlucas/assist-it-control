@@ -5,22 +5,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
+import { CreateChatRoomDialog } from "@/components/CreateChatRoomDialog"
 import { DirectChatDialog } from "@/components/DirectChatDialog"
 import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
 import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
-import { ChatSidebarUnified } from "@/components/ChatSidebarUnified"
-import { CreateGroupRoomDialog } from "@/components/CreateGroupRoomDialog"
-import { CreateUnitRoomDialog } from "@/components/CreateUnitRoomDialog"
+import { ChatSidebar } from "@/components/ChatSidebar"
 import { ChatRoomHeader } from "@/components/ChatRoomHeader"
 import { ChatMessage } from "@/components/ChatMessage"
 import { MessageCircle, Send } from "lucide-react"
+import { supabase } from '@/integrations/supabase/client'
 import { useChatRooms, useChatMessages, useSendMessage, useChatParticipants } from '@/hooks/useChat'
 
 export default function Chat() {
+  const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false)
   const [isDirectChatOpen, setIsDirectChatOpen] = useState(false)
   const [isEditRoomOpen, setIsEditRoomOpen] = useState(false)
-  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
-  const [isCreateUnitRoomOpen, setIsCreateUnitRoomOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<any>(null)
   const [newMessage, setNewMessage] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -64,6 +63,15 @@ export default function Chat() {
     }
   }
 
+  const handleCreateRoom = (roomId: string) => {
+    setIsCreateRoomOpen(false)
+    // Optionally auto-select the new room
+    const newRoom = rooms.find(r => r.id === roomId)
+    if (newRoom) {
+      setSelectedRoom(newRoom)
+    }
+  }
+
   const handleDirectChat = (roomId: string) => {
     setIsDirectChatOpen(false)
     const room = rooms.find(r => r.id === roomId)
@@ -72,40 +80,15 @@ export default function Chat() {
     }
   }
 
-  const handleGroupCreated = (roomId: string) => {
-    setIsCreateGroupOpen(false)
-    const room = rooms.find(r => r.id === roomId)
-    if (room) {
-      setSelectedRoom(room)
-    }
-    toast({
-      title: "Sucesso",
-      description: "Grupo criado com sucesso!",
-    })
-  }
-
-  const handleUnitRoomCreated = (roomId: string) => {
-    setIsCreateUnitRoomOpen(false)
-    const room = rooms.find(r => r.id === roomId)
-    if (room) {
-      setSelectedRoom(room)
-    }
-    toast({
-      title: "Sucesso",
-      description: "Sala de unidade criada com sucesso!",
-    })
-  }
-
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar Unificado */}
-      <ChatSidebarUnified
+      {/* Sidebar */}
+      <ChatSidebar
         rooms={rooms}
         selectedRoom={selectedRoom}
         onRoomSelect={handleRoomSelect}
+        onCreateRoom={() => setIsCreateRoomOpen(true)}
         onDirectChat={() => setIsDirectChatOpen(true)}
-        onCreateGroup={() => setIsCreateGroupOpen(true)}
-        onCreateUnitRoom={() => setIsCreateUnitRoomOpen(true)}
         onSignOut={signOut}
       />
 
@@ -170,40 +153,22 @@ export default function Chat() {
             <div className="text-center">
               <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Selecione uma conversa</h3>
-              <p className="text-sm mb-4">
+              <p className="text-sm">
                 Escolha uma conversa da lista ou inicie uma nova
               </p>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsDirectChatOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Iniciar Chat Direto
-              </Button>
             </div>
           </div>
         )}
       </div>
 
       {/* Dialogs */}
+      <CreateChatRoomDialog onRoomCreated={handleCreateRoom} />
+
       <DirectChatDialog
         open={isDirectChatOpen}
         onOpenChange={setIsDirectChatOpen}
         targetUserId={null}
         onRoomCreated={handleDirectChat}
-      />
-
-      <CreateGroupRoomDialog
-        open={isCreateGroupOpen}
-        onOpenChange={setIsCreateGroupOpen}
-        onRoomCreated={handleGroupCreated}
-      />
-
-      <CreateUnitRoomDialog
-        open={isCreateUnitRoomOpen}
-        onOpenChange={setIsCreateUnitRoomOpen}
-        onRoomCreated={handleUnitRoomCreated}
       />
 
       {selectedRoom && (
