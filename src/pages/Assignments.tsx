@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -16,16 +17,14 @@ import { useAvailableEquipment } from '@/hooks/useAvailableEquipment'
 import { useAvailableUsers } from '@/hooks/useAvailableUsers'
 import { useCreateAssignment } from '@/hooks/useCreateAssignment'
 import { useEndAssignment } from '@/hooks/useEndAssignment'
-import { useDeleteAssignment } from '@/hooks/useDeleteAssignment'
 import { AllAssignmentsModal } from '@/components/AllAssignmentsModal'
 import { MonthlyReturnsModal } from '@/components/MonthlyReturnsModal'
 import { PendingRequestsModal } from '@/components/PendingRequestsModal'
 import { ConfirmEndAssignmentDialog } from '@/components/ConfirmEndAssignmentDialog'
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog'
 import { AssignmentPDFPreviewDialog } from '@/components/AssignmentPDFPreviewDialog'
 import { useAssignmentPDF } from '@/hooks/useAssignmentPDF'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
-import { Search, Plus, Calendar, Users, Archive, FileText, Eye, Trash2, Settings } from 'lucide-react'
+import { Search, Plus, FileText, Settings } from 'lucide-react'
 
 export default function Assignments() {
   // State variables
@@ -36,7 +35,6 @@ export default function Assignments() {
   const [selectedUserId, setSelectedUserId] = useState('')
   const [notes, setNotes] = useState('')
   const [confirmEndDialog, setConfirmEndDialog] = useState<{open: boolean, assignment: any}>({open: false, assignment: null})
-  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<{open: boolean, assignment: any}>({open: false, assignment: null})
   const [pdfPreviewDialog, setPdfPreviewDialog] = useState<{open: boolean, assignment: any}>({open: false, assignment: null})
 
   const { toast } = useToast()
@@ -46,7 +44,6 @@ export default function Assignments() {
   const { data: availableUsers } = useAvailableUsers()
   const { mutate: createAssignment, isPending: isCreating } = useCreateAssignment()
   const { mutate: endAssignment } = useEndAssignment()
-  const { mutate: deleteAssignment } = useDeleteAssignment()
   const { previewAssignmentPDF } = useAssignmentPDF()
   const { data: systemSettings } = useSystemSettings()
 
@@ -58,7 +55,7 @@ export default function Assignments() {
       const matchesSearch = 
         assignment.equipment?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        assignment.equipment?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase())
+        (assignment.equipment as any)?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter
       
@@ -77,10 +74,20 @@ export default function Assignments() {
       return
     }
 
+    if (!profile?.id) {
+      toast({
+        title: 'Erro',
+        description: 'Usuário não identificado.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     createAssignment({
       equipment_id: selectedEquipmentId,
       user_id: selectedUserId,
-      notes: notes.trim() || null,
+      assigned_by: profile.id,
+      notes: notes.trim() || undefined,
     }, {
       onSuccess: () => {
         toast({
@@ -132,13 +139,11 @@ export default function Assignments() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold text-gray-900">Atribuições de Equipamentos</h1>
         <div className="flex flex-wrap gap-2">
-          <AllAssignmentsModal />
-          <MonthlyReturnsModal />
-          <PendingRequestsModal />
+          <AllAssignmentsModal open={false} onOpenChange={() => {}} />
+          <MonthlyReturnsModal open={false} onOpenChange={() => {}} />
+          <PendingRequestsModal open={false} onOpenChange={() => {}} />
         </div>
       </div>
-
-      {/* Stats Cards */}
 
       {/* Filters and Create Button */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -181,7 +186,6 @@ export default function Assignments() {
                   Equipamento
                 </label>
                 <Select
-                  id="equipment"
                   value={selectedEquipmentId}
                   onValueChange={setSelectedEquipmentId}
                 >
@@ -191,7 +195,7 @@ export default function Assignments() {
                   <SelectContent>
                     {availableEquipment?.map((equipment) => (
                       <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.name} ({equipment.tombamento})
+                        {equipment.name} ({(equipment as any).tombamento || 'S/T'})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -202,7 +206,6 @@ export default function Assignments() {
                   Usuário
                 </label>
                 <Select
-                  id="user"
                   value={selectedUserId}
                   onValueChange={setSelectedUserId}
                 >
@@ -212,7 +215,7 @@ export default function Assignments() {
                   <SelectContent>
                     {availableUsers?.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.unit?.name})
+                        {user.name} ({(user as any).unit?.name || 'S/U'})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -266,7 +269,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-gray-500">
-                          {assignment.equipment?.tombamento}
+                          {(assignment.equipment as any)?.tombamento || 'S/T'}
                         </div>
                       </div>
                     </TableCell>
@@ -274,7 +277,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.user?.name}</div>
                         <div className="text-sm text-gray-500">
-                          {assignment.user?.unit?.name}
+                          {(assignment.user as any)?.unit?.name || 'S/U'}
                         </div>
                       </div>
                     </TableCell>
@@ -306,14 +309,6 @@ export default function Assignments() {
                             <Settings className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setConfirmDeleteDialog({open: true, assignment})}
-                          title="Excluir Atribuição"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -329,33 +324,15 @@ export default function Assignments() {
         open={confirmEndDialog.open}
         onOpenChange={(open) => setConfirmEndDialog({open, assignment: null})}
         assignment={confirmEndDialog.assignment}
-        onConfirm={(assignment) => {
-          endAssignment(assignment.id, {
-            onSuccess: () => {
-              toast({
-                title: 'Sucesso',
-                description: 'Atribuição finalizada com sucesso.',
-              })
-              setConfirmEndDialog({open: false, assignment: null})
-            }
-          })
-        }}
-      />
-
-      <ConfirmDeleteDialog
-        open={confirmDeleteDialog.open}
-        onOpenChange={(open) => setConfirmDeleteDialog({open, assignment: null})}
-        title="Excluir Atribuição"
-        description="Tem certeza que deseja excluir esta atribuição? Esta ação não pode ser desfeita."
         onConfirm={() => {
-          if (confirmDeleteDialog.assignment) {
-            deleteAssignment(confirmDeleteDialog.assignment.id, {
+          if (confirmEndDialog.assignment) {
+            endAssignment(confirmEndDialog.assignment.id, {
               onSuccess: () => {
                 toast({
                   title: 'Sucesso',
-                  description: 'Atribuição excluída com sucesso.',
+                  description: 'Atribuição finalizada com sucesso.',
                 })
-                setConfirmDeleteDialog({open: false, assignment: null})
+                setConfirmEndDialog({open: false, assignment: null})
               }
             })
           }
