@@ -1159,9 +1159,25 @@ export type Database = {
         Args: { room_id: string }
         Returns: boolean
       }
+      find_existing_private_chat: {
+        Args: { user1_id: string; user2_id: string }
+        Returns: string
+      }
       generate_tombamento: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_available_chat_users: {
+        Args: { requesting_user_id: string }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          role: Database["public"]["Enums"]["user_role"]
+          unit_id: string
+          avatar_url: string
+          unit_name: string
+        }[]
       }
       get_current_user_role: {
         Args: Record<PropertyKey, never>

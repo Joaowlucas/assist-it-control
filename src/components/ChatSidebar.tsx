@@ -10,12 +10,10 @@ import { ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { 
   Search, 
-  Plus, 
   UserPlus, 
   MessageSquare, 
   Building2, 
   Users,
-  Settings,
   LogOut,
   Crown
 } from 'lucide-react'
@@ -24,7 +22,6 @@ interface ChatSidebarProps {
   rooms: ChatRoom[]
   selectedRoom: ChatRoom | null
   onRoomSelect: (room: ChatRoom) => void
-  onCreateRoom: () => void
   onDirectChat: () => void
   onSignOut: () => void
 }
@@ -33,7 +30,6 @@ export function ChatSidebar({
   rooms, 
   selectedRoom, 
   onRoomSelect, 
-  onCreateRoom, 
   onDirectChat,
   onSignOut 
 }: ChatSidebarProps) {
@@ -168,6 +164,9 @@ export function ChatSidebar({
               <p className="text-sm">
                 {searchTerm ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa disponível'}
               </p>
+              <p className="text-xs mt-2">
+                Use o botão "Chat Direto" para iniciar uma conversa
+              </p>
             </div>
           ) : (
             filteredRooms.map((room) => (
@@ -213,16 +212,8 @@ export function ChatSidebar({
 
       <Separator />
 
-      {/* Action Buttons */}
-      <div className="p-4 space-y-2">
-        <Button 
-          variant="outline" 
-          className="w-full justify-start" 
-          onClick={onCreateRoom}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Conversa
-        </Button>
+      {/* Action Button - Only Chat Direto */}
+      <div className="p-4">
         <Button 
           variant="outline" 
           className="w-full justify-start" 
