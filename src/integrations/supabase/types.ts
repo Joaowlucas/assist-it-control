@@ -1147,6 +1147,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_access_chat_room_v2: {
+        Args: { room_id: string }
+        Returns: boolean
+      }
       can_delete_chat_room: {
         Args: { room_id: string; user_id: string }
         Returns: boolean

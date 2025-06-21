@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -117,7 +116,7 @@ export function useChatRooms() {
     enabled: !!profile?.id,
   })
 
-  // Tempo real para salas de chat
+  // Real-time updates for chat rooms
   useEffect(() => {
     if (!profile?.id) return
 
@@ -186,7 +185,6 @@ export function useChatMessages(roomId?: string) {
           profiles(id, name, avatar_url, role)
         `)
         .eq('room_id', roomId)
-        .eq('is_deleted', false)
         .order('created_at', { ascending: true })
 
       if (error) {
@@ -200,7 +198,7 @@ export function useChatMessages(roomId?: string) {
     enabled: !!roomId && !!profile?.id,
   })
 
-  // Tempo real para mensagens
+  // Real-time updates for messages
   useEffect(() => {
     if (!roomId || !profile?.id) return
 
@@ -308,7 +306,7 @@ export function useCreateChatRoom() {
         throw roomError
       }
 
-      // Para grupos privados e personalizados, adicionar participantes específicos
+      // For private groups and custom groups, add specific participants
       if (params.participantIds && params.participantIds.length > 0) {
         const participantData = params.participantIds.map(userId => ({
           room_id: room.id,
@@ -389,11 +387,11 @@ export function useSendMessage() {
       let attachmentType = params.attachmentType
       let attachmentSize = params.attachmentSize
 
-      // Upload do arquivo se fornecido
+      // Upload file if provided
       if (params.attachmentFile) {
         const fileExt = params.attachmentFile.name.split('.').pop()
-        const fileName = `${Date.now()}.${fileExt}`
-        const filePath = `chat-attachments/${fileName}`
+        const fileName = `${profile.id}/${Date.now()}.${fileExt}`
+        const filePath = fileName
 
         const { error: uploadError } = await supabase.storage
           .from('chat-attachments')
@@ -510,10 +508,10 @@ export function useCanDeleteChatRoom(roomId: string) {
     queryFn: async () => {
       if (!roomId || !profile?.id) return false
 
-      // Admin pode deletar qualquer sala
+      // Admin can delete any room
       if (profile.role === 'admin') return true
 
-      // Verificar se o usuário é o criador da sala
+      // Check if user is the creator of the room
       const { data: room, error } = await supabase
         .from('chat_rooms')
         .select('created_by')
@@ -556,5 +554,5 @@ export function useDeleteChatRoom() {
   })
 }
 
-// Re-export useAvailableChatUsers para manter compatibilidade
+// Re-export useAvailableChatUsers for compatibility
 export { useAvailableChatUsers } from './useAvailableChatUsers'
