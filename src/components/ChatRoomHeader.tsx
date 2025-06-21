@@ -3,6 +3,7 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
 import { MessageSquare, Settings, Users, Building2, Crown } from 'lucide-react'
@@ -71,7 +72,16 @@ export function ChatRoomHeader({ room, participantCount = 0, onEditRoom }: ChatR
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-lg">{room.name}</h2>
             {room.created_by === profile?.id && (
-              <Crown className="h-4 w-4 text-yellow-500" title="Você é o criador desta sala" />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Crown className="h-4 w-4 text-yellow-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Você é o criador desta sala</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           
