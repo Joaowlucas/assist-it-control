@@ -20,11 +20,10 @@ import { useEndAssignment } from '@/hooks/useEndAssignment'
 import { AllAssignmentsModal } from '@/components/AllAssignmentsModal'
 import { MonthlyReturnsModal } from '@/components/MonthlyReturnsModal'
 import { PendingRequestsModal } from '@/components/PendingRequestsModal'
-import { ConfirmEndAssignmentDialog } from '@/components/ConfirmEndAssignmentDialog'
 import { AssignmentPDFPreviewDialog } from '@/components/AssignmentPDFPreviewDialog'
 import { useAssignmentPDF } from '@/hooks/useAssignmentPDF'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
-import { Search, Plus, FileText, Settings } from 'lucide-react'
+import { Search, Plus, FileText, X } from 'lucide-react'
 
 export default function Assignments() {
   // State variables
@@ -34,7 +33,6 @@ export default function Assignments() {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [notes, setNotes] = useState('')
-  const [confirmEndDialog, setConfirmEndDialog] = useState<{open: boolean, assignment: any}>({open: false, assignment: null})
   const [pdfPreviewDialog, setPdfPreviewDialog] = useState<{open: boolean, assignment: any}>({open: false, assignment: null})
 
   const { toast } = useToast()
@@ -125,19 +123,30 @@ export default function Assignments() {
     }
   }
 
+  const handleEndAssignment = (assignment: any) => {
+    endAssignment(assignment.id, {
+      onSuccess: () => {
+        toast({
+          title: 'Sucesso',
+          description: 'Atribuição finalizada com sucesso.',
+        })
+      }
+    })
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 dark:bg-gray-900 min-h-screen">
       {/* Header and Stats Cards */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold text-gray-900">Atribuições de Equipamentos</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Atribuições de Equipamentos</h1>
         <div className="flex flex-wrap gap-2">
           <AllAssignmentsModal open={false} onOpenChange={() => {}} />
           <MonthlyReturnsModal open={false} onOpenChange={() => {}} />
@@ -154,14 +163,14 @@ export default function Assignments() {
               placeholder="Buscar por equipamento, usuário ou tombamento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="ativo">Ativo</SelectItem>
               <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -171,30 +180,30 @@ export default function Assignments() {
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700">
               <Plus className="h-4 w-4 mr-2" />
               Nova Atribuição
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle>Criar Nova Atribuição</DialogTitle>
+              <DialogTitle className="dark:text-white">Criar Nova Atribuição</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="equipment" className="text-right font-medium">
+                <label htmlFor="equipment" className="text-right font-medium dark:text-white">
                   Equipamento
                 </label>
                 <Select
                   value={selectedEquipmentId}
                   onValueChange={setSelectedEquipmentId}
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <SelectValue placeholder="Selecione um equipamento" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="dark:bg-gray-700 dark:border-gray-600">
                     {availableEquipment?.map((equipment) => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
+                      <SelectItem key={equipment.id} value={equipment.id} className="dark:text-white">
                         {equipment.name} ({(equipment as any).tombamento || 'S/T'})
                       </SelectItem>
                     ))}
@@ -202,19 +211,19 @@ export default function Assignments() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="user" className="text-right font-medium">
+                <label htmlFor="user" className="text-right font-medium dark:text-white">
                   Usuário
                 </label>
                 <Select
                   value={selectedUserId}
                   onValueChange={setSelectedUserId}
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <SelectValue placeholder="Selecione um usuário" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="dark:bg-gray-700 dark:border-gray-600">
                     {availableUsers?.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
+                      <SelectItem key={user.id} value={user.id} className="dark:text-white">
                         {user.name} ({(user as any).unit?.name || 'S/U'})
                       </SelectItem>
                     ))}
@@ -222,22 +231,22 @@ export default function Assignments() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-start gap-4">
-                <label htmlFor="notes" className="text-right font-medium">
+                <label htmlFor="notes" className="text-right font-medium dark:text-white">
                   Observações
                 </label>
                 <Textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="col-span-3"
+                  className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setIsCreateDialogOpen(false)}>
+              <Button type="button" variant="secondary" onClick={() => setIsCreateDialogOpen(false)} className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
                 Cancelar
               </Button>
-              <Button type="submit" onClick={handleCreateAssignment} disabled={isCreating}>
+              <Button type="submit" onClick={handleCreateAssignment} disabled={isCreating} className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-700 dark:hover:bg-gray-600">
                 {isCreating ? 'Criando...' : 'Criar Atribuição'}
               </Button>
             </div>
@@ -246,42 +255,42 @@ export default function Assignments() {
       </div>
 
       {/* Assignments Table */}
-      <Card>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
-          <CardTitle>Atribuições Ativas</CardTitle>
+          <CardTitle className="dark:text-white">Atribuições Ativas</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Data de Início</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
+                <TableRow className="dark:border-gray-700">
+                  <TableHead className="dark:text-gray-300">Equipamento</TableHead>
+                  <TableHead className="dark:text-gray-300">Usuário</TableHead>
+                  <TableHead className="dark:text-gray-300">Data de Início</TableHead>
+                  <TableHead className="dark:text-gray-300">Status</TableHead>
+                  <TableHead className="dark:text-gray-300">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAssignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
+                  <TableRow key={assignment.id} className="dark:border-gray-700">
                     <TableCell>
                       <div>
-                        <div className="font-medium">{assignment.equipment?.name}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium dark:text-white">{assignment.equipment?.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
                           {(assignment.equipment as any)?.tombamento || 'S/T'}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{assignment.user?.name}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium dark:text-white">{assignment.user?.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
                           {(assignment.user as any)?.unit?.name || 'S/U'}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="dark:text-white">
                       {format(new Date(assignment.start_date), 'dd/MM/yyyy', { locale: ptBR })}
                     </TableCell>
                     <TableCell>
@@ -296,6 +305,7 @@ export default function Assignments() {
                           size="sm"
                           onClick={() => handlePreviewPDF(assignment)}
                           title="Visualizar PDF"
+                          className="dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
                         >
                           <FileText className="h-4 w-4" />
                         </Button>
@@ -303,10 +313,11 @@ export default function Assignments() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setConfirmEndDialog({open: true, assignment})}
+                            onClick={() => handleEndAssignment(assignment)}
                             title="Finalizar Atribuição"
+                            className="dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
                           >
-                            <Settings className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -319,26 +330,7 @@ export default function Assignments() {
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
-      <ConfirmEndAssignmentDialog
-        open={confirmEndDialog.open}
-        onOpenChange={(open) => setConfirmEndDialog({open, assignment: null})}
-        assignment={confirmEndDialog.assignment}
-        onConfirm={() => {
-          if (confirmEndDialog.assignment) {
-            endAssignment(confirmEndDialog.assignment.id, {
-              onSuccess: () => {
-                toast({
-                  title: 'Sucesso',
-                  description: 'Atribuição finalizada com sucesso.',
-                })
-                setConfirmEndDialog({open: false, assignment: null})
-              }
-            })
-          }
-        }}
-      />
-
+      {/* PDF Preview Dialog */}
       <AssignmentPDFPreviewDialog
         open={pdfPreviewDialog.open}
         onOpenChange={(open) => setPdfPreviewDialog({open, assignment: null})}

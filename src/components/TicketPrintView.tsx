@@ -99,37 +99,25 @@ export function TicketPrintView({ ticket, systemSettings }: TicketPrintViewProps
         </div>
       </div>
 
-      {/* Anexos - Layout otimizado */}
+      {/* Anexos - Formato quadrado */}
       {ticket.attachments && ticket.attachments.length > 0 && (
         <div className="mb-6 page-break-inside-avoid">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Anexos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ticket.attachments.map((attachment: any, index: number) => (
-              <div key={attachment.id} className="border border-gray-300 rounded p-3 bg-white">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {ticket.attachments.map((attachment: any) => (
+              <div key={attachment.id} className="border border-gray-300 rounded overflow-hidden">
                 {attachment.mime_type?.startsWith('image/') ? (
-                  <div>
-                    <img
-                      src={attachment.public_url}
-                      alt={attachment.file_name}
-                      className="w-full h-48 object-cover rounded mb-2 border"
-                      style={{ maxHeight: '192px', objectFit: 'cover' }}
-                    />
-                    <p className="text-xs text-gray-600 truncate font-medium">{attachment.file_name}</p>
-                    <p className="text-xs text-gray-500">
-                      {(attachment.file_size / 1024).toFixed(1)} KB
-                    </p>
-                  </div>
+                  <img
+                    src={attachment.public_url}
+                    alt={attachment.file_name}
+                    className="w-full h-32 object-cover"
+                    style={{ aspectRatio: '1/1' }}
+                  />
                 ) : (
-                  <div className="text-center py-8">
-                    <div className="bg-gray-100 rounded p-4 mb-2">
-                      <svg className="w-8 h-8 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">{attachment.file_name}</p>
-                    <p className="text-xs text-gray-500">
-                      {(attachment.file_size / 1024).toFixed(1)} KB
-                    </p>
+                  <div className="w-full h-32 bg-gray-100 flex items-center justify-center" style={{ aspectRatio: '1/1' }}>
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
                 )}
               </div>
