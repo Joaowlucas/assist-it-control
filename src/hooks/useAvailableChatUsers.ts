@@ -21,9 +21,8 @@ export function useAvailableChatUsers() {
     queryFn: async () => {
       if (!profile?.id) return []
 
-      console.log('Fetching available users for chat using new safe function')
+      console.log('Fetching available users for chat using optimized function')
 
-      // Usar a nova função SECURITY DEFINER sem parâmetros
       const { data, error } = await supabase.rpc('get_chat_available_users')
 
       if (error) {
@@ -35,5 +34,7 @@ export function useAvailableChatUsers() {
       return (data as AvailableChatUser[]) || []
     },
     enabled: !!profile?.id,
+    staleTime: 60000, // Cache por 1 minuto
+    refetchInterval: 300000, // Refetch a cada 5 minutos
   })
 }
