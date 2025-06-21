@@ -8,7 +8,9 @@ import { useAuth } from "@/hooks/useAuth"
 import { DirectChatDialog } from "@/components/DirectChatDialog"
 import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
 import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
-import { ChatSidebar } from "@/components/ChatSidebar"
+import { ChatSidebarUnified } from "@/components/ChatSidebarUnified"
+import { CreateGroupRoomDialog } from "@/components/CreateGroupRoomDialog"
+import { CreateUnitRoomDialog } from "@/components/CreateUnitRoomDialog"
 import { ChatRoomHeader } from "@/components/ChatRoomHeader"
 import { ChatMessage } from "@/components/ChatMessage"
 import { MessageCircle, Send } from "lucide-react"
@@ -17,6 +19,8 @@ import { useChatRooms, useChatMessages, useSendMessage, useChatParticipants } fr
 export default function Chat() {
   const [isDirectChatOpen, setIsDirectChatOpen] = useState(false)
   const [isEditRoomOpen, setIsEditRoomOpen] = useState(false)
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
+  const [isCreateUnitRoomOpen, setIsCreateUnitRoomOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<any>(null)
   const [newMessage, setNewMessage] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -68,14 +72,40 @@ export default function Chat() {
     }
   }
 
+  const handleGroupCreated = (roomId: string) => {
+    setIsCreateGroupOpen(false)
+    const room = rooms.find(r => r.id === roomId)
+    if (room) {
+      setSelectedRoom(room)
+    }
+    toast({
+      title: "Sucesso",
+      description: "Grupo criado com sucesso!",
+    })
+  }
+
+  const handleUnitRoomCreated = (roomId: string) => {
+    setIsCreateUnitRoomOpen(false)
+    const room = rooms.find(r => r.id === roomId)
+    if (room) {
+      setSelectedRoom(room)
+    }
+    toast({
+      title: "Sucesso",
+      description: "Sala de unidade criada com sucesso!",
+    })
+  }
+
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <ChatSidebar
+      {/* Sidebar Unificado */}
+      <ChatSidebarUnified
         rooms={rooms}
         selectedRoom={selectedRoom}
         onRoomSelect={handleRoomSelect}
         onDirectChat={() => setIsDirectChatOpen(true)}
+        onCreateGroup={() => setIsCreateGroupOpen(true)}
+        onCreateUnitRoom={() => setIsCreateUnitRoomOpen(true)}
         onSignOut={signOut}
       />
 
@@ -162,6 +192,18 @@ export default function Chat() {
         onOpenChange={setIsDirectChatOpen}
         targetUserId={null}
         onRoomCreated={handleDirectChat}
+      />
+
+      <CreateGroupRoomDialog
+        open={isCreateGroupOpen}
+        onOpenChange={setIsCreateGroupOpen}
+        onRoomCreated={handleGroupCreated}
+      />
+
+      <CreateUnitRoomDialog
+        open={isCreateUnitRoomOpen}
+        onOpenChange={setIsCreateUnitRoomOpen}
+        onRoomCreated={handleUnitRoomCreated}
       />
 
       {selectedRoom && (

@@ -110,6 +110,12 @@ export function ChatSidebarUnified({
   const groupRooms = rooms.filter(r => r.type === 'group')
   const unitRooms = rooms.filter(r => r.type === 'unit')
 
+  // Verificar se o usuário pode ver as abas baseado no que tem acesso
+  const canSeeGroups = profile?.role === 'admin' || groupRooms.length > 0
+  const canSeeUnits = profile?.role === 'admin' || unitRooms.length > 0
+  const canCreateGroup = profile?.role === 'admin'
+  const canCreateUnitRoom = profile?.role === 'admin'
+
   return (
     <div className="w-80 bg-background border-r border-border flex flex-col">
       {/* Header */}
@@ -164,25 +170,26 @@ export function ChatSidebarUnified({
           Chat Direto
         </Button>
         
-        {profile?.role === 'admin' && (
-          <>
-            <Button
-              onClick={onCreateGroup}
-              className="w-full flex items-center gap-2"
-              variant="outline"
-            >
-              <Users className="h-4 w-4" />
-              Criar Grupo
-            </Button>
-            <Button
-              onClick={onCreateUnitRoom}
-              className="w-full flex items-center gap-2"
-              variant="outline"
-            >
-              <Building2 className="h-4 w-4" />
-              Sala de Unidade
-            </Button>
-          </>
+        {canCreateGroup && onCreateGroup && (
+          <Button
+            onClick={onCreateGroup}
+            className="w-full flex items-center gap-2"
+            variant="outline"
+          >
+            <Users className="h-4 w-4" />
+            Criar Grupo
+          </Button>
+        )}
+        
+        {canCreateUnitRoom && onCreateUnitRoom && (
+          <Button
+            onClick={onCreateUnitRoom}
+            className="w-full flex items-center gap-2"
+            variant="outline"
+          >
+            <Building2 className="h-4 w-4" />
+            Sala de Unidade
+          </Button>
         )}
       </div>
 
@@ -199,41 +206,41 @@ export function ChatSidebarUnified({
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-3">
+        <div className="grid grid-cols-2 gap-1 mb-3">
           <Button
             variant={activeTab === 'all' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('all')}
-            className="flex-1 text-xs"
+            className="text-xs"
           >
-            Todas
+            Todas ({rooms.length})
           </Button>
           <Button
             variant={activeTab === 'direct' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('direct')}
-            className="flex-1 text-xs"
+            className="text-xs"
           >
             <Lock className="h-3 w-3 mr-1" />
             Diretas ({directRooms.length})
           </Button>
-          {(profile?.role === 'admin' || unitRooms.length > 0) && (
+          {canSeeUnits && (
             <Button
               variant={activeTab === 'units' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveTab('units')}
-              className="flex-1 text-xs"
+              className="text-xs"
             >
               <Building2 className="h-3 w-3 mr-1" />
               Unidades ({unitRooms.length})
             </Button>
           )}
-          {(profile?.role === 'admin' || groupRooms.length > 0) && (
+          {canSeeGroups && (
             <Button
               variant={activeTab === 'groups' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveTab('groups')}
-              className="flex-1 text-xs"
+              className="text-xs"
             >
               <Users className="h-3 w-3 mr-1" />
               Grupos ({groupRooms.length})
