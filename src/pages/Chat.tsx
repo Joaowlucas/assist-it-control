@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,7 @@ import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
 import { ChatSidebar } from "@/components/ChatSidebar"
 import { ChatRoomHeader } from "@/components/ChatRoomHeader"
 import { ChatMessage } from "@/components/ChatMessage"
-import { MessageCircle, Send, Plus } from "lucide-react"
+import { MessageCircle, Send, Smile } from "lucide-react"
 import { useChatRooms, useChatMessages, useSendMessage, useChatParticipants } from '@/hooks/useChat'
 
 export default function Chat() {
@@ -31,7 +31,15 @@ export default function Chat() {
   const { data: participants = [] } = useChatParticipants(selectedRoom?.id)
   const sendMessage = useSendMessage()
 
+  // Selecionar primeira conversa automaticamente quando carrega
+  useEffect(() => {
+    if (!selectedRoom && rooms.length > 0) {
+      setSelectedRoom(rooms[0])
+    }
+  }, [rooms, selectedRoom])
+
   const handleRoomSelect = (room: any) => {
+    console.log('Selecting room:', room.name, room.id)
     setSelectedRoom(room)
   }
 
@@ -41,6 +49,8 @@ export default function Chat() {
     if (!selectedRoom || !profile) return
 
     try {
+      console.log('Sending message to room:', selectedRoom.id)
+      
       const messageData: any = {
         roomId: selectedRoom.id,
         content: newMessage.trim() || '',
@@ -53,11 +63,13 @@ export default function Chat() {
       await sendMessage.mutateAsync(messageData)
       setNewMessage('')
       setSelectedFile(null)
+      
+      console.log('Message sent successfully')
     } catch (error) {
       console.error('Error sending message:', error)
       toast({
         title: "Erro",
-        description: "Erro ao enviar mensagem.",
+        description: "Erro ao enviar mensagem. Tente novamente.",
         variant: "destructive",
       })
     }
@@ -86,6 +98,24 @@ export default function Chat() {
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage(e as any)
+    }
+  }
+
+  if (isLoadingRooms) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <MessageCircle className="h-16 w-16 mx-auto opacity-50" />
+          <p>Carregando conversas...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
@@ -112,19 +142,27 @@ export default function Chat() {
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
-                {messages.map((message) => (
-                  <ChatMessage
-                    key={message.id}
-                    message={message}
-                    isOwn={message.sender_id === profile?.id}
-                  />
-                ))}
+                {messages.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma mensagem ainda.</p>
+                    <p className="text-sm">Seja o primeiro a enviar uma mensagem!</p>
+                  </div>
+                ) : (
+                  messages.map((message) => (
+                    <ChatMessage
+                      key={message.id}
+                      message={message}
+                      isOwn={message.sender_id === profile?.id}
+                    />
+                  ))
+                )}
               </div>
             </ScrollArea>
 
             {/* Message Input */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="flex items-end gap-2">
+            <div className="p-4 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <form onSubmit={handleSendMessage} className="flex items-end gap-2">
                 <ChatAttachmentUpload
                   onFileSelect={setSelectedFile}
                   selectedFile={selectedFile}
@@ -135,34 +173,48 @@ export default function Chat() {
                     placeholder="Digite sua mensagem..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="min-h-[40px] resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSendMessage(e)
-                      }
-                    }}
+                    onKeyDown={handleKeyDown}
+                    className="min-h-[48px] resize-none"
+                    disabled={sendMessage.isPending}
                   />
                 </div>
                 <Button 
                   type="submit" 
                   disabled={(!newMessage.trim() && !selectedFile) || sendMessage.isPending}
-                  className="h-10"
+                  className="h-12 px-4"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
-              </div>
-            </form>
+              </form>
+              
+              {selectedFile && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  Anexo selecionado: {selectedFile.name}
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center space-y-4">
-              <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Selecione uma conversa</h3>
-              <p className="text-sm mb-4">
-                Escolha uma conversa da lista ou inicie uma nova
+            <div className="text-center space-y-4 max-w-md">
+              <MessageCircle className="h-24 w-24 mx-auto mb-6 opacity-30" />
+              <h3 className="text-xl font-medium mb-2">Bem-vindo ao Chat Interno</h3>
+              <p className="text-sm mb-6 leading-relaxed">
+                {profile?.role === 'admin' ? 
+                  'Como administrador, você pode conversar com qualquer usuário e criar grupos.' :
+                  profile?.role === 'technician' ?
+                  'Você pode conversar com administradores e usuários das unidades que atende.' :
+                  'Você pode conversar com administradores, técnicos e usuários da sua unidade.'
+                }
               </p>
-              <StartChatDialog onChatCreated={handleChatCreated} />
+              <div className="space-y-3">
+                <StartChatDialog onChatCreated={handleChatCreated} />
+                {rooms.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Ou selecione uma conversa na barra lateral
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}

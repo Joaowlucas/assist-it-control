@@ -1207,6 +1207,18 @@ export type Database = {
           unit_name: string
         }[]
       }
+      get_chat_available_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          email: string
+          role: string
+          unit_id: string
+          avatar_url: string
+          unit_name: string
+        }[]
+      }
       get_current_user_info: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1218,6 +1230,14 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_current_user_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          user_role: string
+          user_unit_id: string
+        }[]
       }
       get_notification_recipients: {
         Args: { notification_type: string; entity_data?: Json }
@@ -1266,6 +1286,10 @@ export type Database = {
       }
       technician_has_unit_access: {
         Args: { technician_id: string; unit_id: string }
+        Returns: boolean
+      }
+      user_can_access_chat_room: {
+        Args: { room_id: string }
         Returns: boolean
       }
     }

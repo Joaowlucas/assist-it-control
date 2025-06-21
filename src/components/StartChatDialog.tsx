@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { MessageCircle, Search, User, Settings, Shield, Plus } from 'lucide-react'
+import { MessageCircle, Search, User, Settings, Shield, Plus, Building2 } from 'lucide-react'
 import { useAvailableChatUsers } from '@/hooks/useAvailableChatUsers'
 import { useCreateChatRoom } from '@/hooks/useChat'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/use-toast'
 
 interface StartChatDialogProps {
   onChatCreated?: (roomId: string) => void
@@ -20,9 +21,11 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
   const { profile } = useAuth()
   const { data: availableUsers = [], isLoading } = useAvailableChatUsers()
   const createChatRoom = useCreateChatRoom()
+  const { toast } = useToast()
 
   const filteredUsers = availableUsers.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.unit_name && user.unit_name.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   const getRoleIcon = (role: string) => {
@@ -59,11 +62,23 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
   }
 
   const handleStartChat = async (userId: string, userName: string) => {
+    if (!profile?.id) return
+
     try {
+      console.log('Starting direct chat with user:', userId, userName)
+      
+      // Criar nome da conversa no formato: "Seu Nome • Nome do Destinatário"
+      const roomName = `${profile.name} • ${userName}`
+      
       const roomId = await createChatRoom.mutateAsync({
-        name: `${profile?.name} • ${userName}`,
+        name: roomName,
         type: 'private',
         participantIds: [userId],
+      })
+      
+      toast({
+        title: "Sucesso",
+        description: `Conversa iniciada com ${userName}`,
       })
       
       setOpen(false)
@@ -71,6 +86,11 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
       onChatCreated?.(roomId)
     } catch (error) {
       console.error('Error starting chat:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar a conversa. Tente novamente.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -86,12 +106,12 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
+        <Button variant="outline" size="sm" className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
           Nova Conversa
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5" />
@@ -99,7 +119,7 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="flex-1 flex flex-col space-y-4 min-h-0">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -110,18 +130,24 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
             />
           </div>
 
-          <div className="max-h-60 overflow-y-auto space-y-2">
+          <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
             {filteredUsers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>
+                <p className="mb-2">
                   {searchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário disponível'}
                 </p>
-                {profile?.role === 'user' && (
-                  <p className="text-sm mt-2">
-                    Você pode conversar apenas com administradores e técnicos da sua unidade
-                  </p>
-                )}
+                <div className="text-sm space-y-1">
+                  {profile?.role === 'admin' && (
+                    <p>Como admin, você pode conversar com qualquer usuário.</p>
+                  )}
+                  {profile?.role === 'technician' && (
+                    <p>Você pode conversar com admins e usuários das unidades que atende.</p>
+                  )}
+                  {profile?.role === 'user' && (
+                    <p>Você pode conversar com admins, técnicos e usuários da sua unidade.</p>
+                  )}
+                </div>
               </div>
             ) : (
               filteredUsers.map((user) => (
@@ -130,7 +156,7 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
                   className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => handleStartChat(user.id, user.name)}
                 >
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-12 w-12">
                     <AvatarImage src={user.avatar_url || undefined} />
                     <AvatarFallback className="bg-muted">
                       {user.name.charAt(0).toUpperCase()}
@@ -138,19 +164,24 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
                   </Avatar>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium truncate">{user.name}</p>
                       <Badge className={`${getRoleColor(user.role)} text-xs flex items-center gap-1`}>
                         {getRoleIcon(user.role)}
                         <span>{getRoleLabel(user.role)}</span>
                       </Badge>
                     </div>
-                    {user.unit_name && (
-                      <p className="text-sm text-muted-foreground truncate">
-                        {user.unit_name}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      {user.unit_name && (
+                        <>
+                          <Building2 className="h-3 w-3" />
+                          <span className="truncate">{user.unit_name}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
+
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
                 </div>
               ))
             )}

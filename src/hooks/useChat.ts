@@ -77,7 +77,7 @@ export function useChatRooms() {
     queryFn: async () => {
       if (!profile?.id) return []
 
-      console.log('Fetching chat rooms for user:', profile.role, 'Unit:', profile.unit_id)
+      console.log('Fetching chat rooms for user role:', profile.role)
 
       const { data, error } = await supabase
         .from('chat_rooms')
@@ -110,7 +110,7 @@ export function useChatRooms() {
         throw error
       }
 
-      console.log('Chat rooms fetched:', data?.length || 0, 'rooms')
+      console.log('Chat rooms fetched successfully:', data?.length || 0, 'rooms')
       return (data as ChatRoom[]) || []
     },
     enabled: !!profile?.id,
@@ -149,7 +149,7 @@ export function useChatRooms() {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(channel) 
     }
   }, [profile?.id, queryClient])
 
@@ -285,7 +285,23 @@ export function useCreateChatRoom() {
     }) => {
       if (!profile?.id) throw new Error('User not authenticated')
 
-      console.log('Creating chat room:', params)
+      console.log('Creating chat room with params:', params)
+
+      // Para chats privados, verificar se já existe uma conversa entre os usuários
+      if (params.type === 'private' && params.participantIds?.length === 1) {
+        const { data: existingRoom, error: findError } = await supabase
+          .rpc('find_existing_private_chat', {
+            user1_id: profile.id,
+            user2_id: params.participantIds[0]
+          })
+
+        if (findError) {
+          console.error('Error checking existing private chat:', findError)
+        } else if (existingRoom) {
+          console.log('Found existing private chat:', existingRoom)
+          return existingRoom
+        }
+      }
 
       const roomData = {
         name: params.name,
@@ -306,7 +322,7 @@ export function useCreateChatRoom() {
         throw roomError
       }
 
-      // For private groups and custom groups, add specific participants
+      // Para chats privados, adicionar participantes específicos
       if (params.participantIds && params.participantIds.length > 0) {
         const participantData = params.participantIds.map(userId => ({
           room_id: room.id,
