@@ -23,7 +23,7 @@ import { PendingRequestsModal } from '@/components/PendingRequestsModal'
 import { AssignmentPDFPreviewDialog } from '@/components/AssignmentPDFPreviewDialog'
 import { useAssignmentPDF } from '@/hooks/useAssignmentPDF'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
-import { Search, Plus, FileText, X } from 'lucide-react'
+import { Search, Plus, FileText } from 'lucide-react'
 
 export default function Assignments() {
   // State variables
@@ -143,10 +143,10 @@ export default function Assignments() {
   }
 
   return (
-    <div className="space-y-6 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-6">
       {/* Header and Stats Cards */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Atribuições de Equipamentos</h1>
+        <h1 className="text-3xl font-bold">Atribuições de Equipamentos</h1>
         <div className="flex flex-wrap gap-2">
           <AllAssignmentsModal open={false} onOpenChange={() => {}} />
           <MonthlyReturnsModal open={false} onOpenChange={() => {}} />
@@ -163,14 +163,14 @@ export default function Assignments() {
               placeholder="Buscar por equipamento, usuário ou tombamento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              className="pl-10"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+            <SelectTrigger className="w-48">
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
-            <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+            <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="ativo">Ativo</SelectItem>
               <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -180,30 +180,30 @@ export default function Assignments() {
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700">
+            <Button>
               <Plus className="h-4 w-4 mr-2" />
               Nova Atribuição
             </Button>
           </DialogTrigger>
-          <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="dark:text-white">Criar Nova Atribuição</DialogTitle>
+              <DialogTitle>Criar Nova Atribuição</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="equipment" className="text-right font-medium dark:text-white">
+                <label htmlFor="equipment" className="text-right font-medium">
                   Equipamento
                 </label>
                 <Select
                   value={selectedEquipmentId}
                   onValueChange={setSelectedEquipmentId}
                 >
-                  <SelectTrigger className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Selecione um equipamento" />
                   </SelectTrigger>
-                  <SelectContent className="dark:bg-gray-700 dark:border-gray-600">
+                  <SelectContent>
                     {availableEquipment?.map((equipment) => (
-                      <SelectItem key={equipment.id} value={equipment.id} className="dark:text-white">
+                      <SelectItem key={equipment.id} value={equipment.id}>
                         {equipment.name} ({(equipment as any).tombamento || 'S/T'})
                       </SelectItem>
                     ))}
@@ -211,19 +211,19 @@ export default function Assignments() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="user" className="text-right font-medium dark:text-white">
+                <label htmlFor="user" className="text-right font-medium">
                   Usuário
                 </label>
                 <Select
                   value={selectedUserId}
                   onValueChange={setSelectedUserId}
                 >
-                  <SelectTrigger className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Selecione um usuário" />
                   </SelectTrigger>
-                  <SelectContent className="dark:bg-gray-700 dark:border-gray-600">
+                  <SelectContent>
                     {availableUsers?.map((user) => (
-                      <SelectItem key={user.id} value={user.id} className="dark:text-white">
+                      <SelectItem key={user.id} value={user.id}>
                         {user.name} ({(user as any).unit?.name || 'S/U'})
                       </SelectItem>
                     ))}
@@ -231,22 +231,22 @@ export default function Assignments() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-start gap-4">
-                <label htmlFor="notes" className="text-right font-medium dark:text-white">
+                <label htmlFor="notes" className="text-right font-medium">
                   Observações
                 </label>
                 <Textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="col-span-3"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setIsCreateDialogOpen(false)} className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
+              <Button type="button" variant="secondary" onClick={() => setIsCreateDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" onClick={handleCreateAssignment} disabled={isCreating} className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-700 dark:hover:bg-gray-600">
+              <Button type="submit" onClick={handleCreateAssignment} disabled={isCreating}>
                 {isCreating ? 'Criando...' : 'Criar Atribuição'}
               </Button>
             </div>
@@ -255,42 +255,42 @@ export default function Assignments() {
       </div>
 
       {/* Assignments Table */}
-      <Card className="dark:bg-gray-800 dark:border-gray-700">
+      <Card>
         <CardHeader>
-          <CardTitle className="dark:text-white">Atribuições Ativas</CardTitle>
+          <CardTitle>Atribuições Ativas</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="dark:border-gray-700">
-                  <TableHead className="dark:text-gray-300">Equipamento</TableHead>
-                  <TableHead className="dark:text-gray-300">Usuário</TableHead>
-                  <TableHead className="dark:text-gray-300">Data de Início</TableHead>
-                  <TableHead className="dark:text-gray-300">Status</TableHead>
-                  <TableHead className="dark:text-gray-300">Ações</TableHead>
+                <TableRow>
+                  <TableHead>Equipamento</TableHead>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Data de Início</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAssignments.map((assignment) => (
-                  <TableRow key={assignment.id} className="dark:border-gray-700">
+                  <TableRow key={assignment.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium dark:text-white">{assignment.equipment?.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="font-medium">{assignment.equipment?.name}</div>
+                        <div className="text-sm text-muted-foreground">
                           {(assignment.equipment as any)?.tombamento || 'S/T'}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium dark:text-white">{assignment.user?.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="font-medium">{assignment.user?.name}</div>
+                        <div className="text-sm text-muted-foreground">
                           {(assignment.user as any)?.unit?.name || 'S/U'}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="dark:text-white">
+                    <TableCell>
                       {format(new Date(assignment.start_date), 'dd/MM/yyyy', { locale: ptBR })}
                     </TableCell>
                     <TableCell>
@@ -305,7 +305,6 @@ export default function Assignments() {
                           size="sm"
                           onClick={() => handlePreviewPDF(assignment)}
                           title="Visualizar PDF"
-                          className="dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
                         >
                           <FileText className="h-4 w-4" />
                         </Button>
@@ -315,9 +314,8 @@ export default function Assignments() {
                             size="sm"
                             onClick={() => handleEndAssignment(assignment)}
                             title="Finalizar Atribuição"
-                            className="dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
                           >
-                            <X className="h-4 w-4" />
+                            Finalizar
                           </Button>
                         )}
                       </div>
