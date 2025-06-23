@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -268,7 +267,7 @@ export function useMessages(roomId?: string) {
   return query
 }
 
-// Hook para buscar usuários disponíveis para chat
+// Hook para buscar usuários disponíveis para chat - usando nova função simplificada
 export function useUnitUsers() {
   const { profile } = useAuth()
 
