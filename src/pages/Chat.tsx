@@ -1,111 +1,77 @@
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
-import { CreateChatRoomDialog } from "@/components/CreateChatRoomDialog"
-import { DirectChatDialog } from "@/components/DirectChatDialog"
-import { EditChatRoomDialog } from "@/components/EditChatRoomDialog"
-import { StartChatDialog } from "@/components/StartChatDialog"
-import { ChatAttachmentUpload } from "@/components/ChatAttachmentUpload"
-import { ChatSidebar } from "@/components/ChatSidebar"
-import { ChatRoomHeader } from "@/components/ChatRoomHeader"
-import { ChatMessage } from "@/components/ChatMessage"
-import { MessageCircle, Send, Smile } from "lucide-react"
-import { useChatRooms, useChatMessages, useSendMessage, useChatParticipants } from '@/hooks/useChat'
+import { NewChatModal } from "@/components/NewChatModal"
+import { ConversationList } from "@/components/ConversationList"
+import { MessageBubble } from "@/components/MessageBubble"
+import { ChatInput } from "@/components/ChatInput"
+import { MessageCircle, MoreVertical, Trash2 } from "lucide-react"
+import { useConversations, useMessages, useDeleteConversation, type Conversation } from '@/hooks/useConversations'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 
 export default function Chat() {
-  const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false)
-  const [isDirectChatOpen, setIsDirectChatOpen] = useState(false)
-  const [isEditRoomOpen, setIsEditRoomOpen] = useState(false)
-  const [selectedRoom, setSelectedRoom] = useState<any>(null)
-  const [newMessage, setNewMessage] = useState("")
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { profile, signOut } = useAuth()
   const { toast } = useToast()
-  const { data: rooms = [], isLoading: isLoadingRooms } = useChatRooms()
-  const { data: messages = [] } = useChatMessages(selectedRoom?.id)
-  const { data: participants = [] } = useChatParticipants(selectedRoom?.id)
-  const sendMessage = useSendMessage()
+  const { data: conversations = [], isLoading: isLoadingConversations } = useConversations()
+  const { data: messages = [] } = useMessages(selectedConversation?.id)
+  const deleteConversation = useDeleteConversation()
+
+  // Auto-scroll para última mensagem
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
 
   // Selecionar primeira conversa automaticamente quando carrega
   useEffect(() => {
-    if (!selectedRoom && rooms.length > 0) {
-      setSelectedRoom(rooms[0])
+    if (!selectedConversation && conversations.length > 0) {
+      setSelectedConversation(conversations[0])
     }
-  }, [rooms, selectedRoom])
+  }, [conversations, selectedConversation])
 
-  const handleRoomSelect = (room: any) => {
-    console.log('Selecting room:', room.name, room.id)
-    setSelectedRoom(room)
+  const handleConversationCreated = (conversationId: string) => {
+    const conversation = conversations.find(c => c.id === conversationId)
+    if (conversation) {
+      setSelectedConversation(conversation)
+    }
   }
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMessage.trim() && !selectedFile) return
-    if (!selectedRoom || !profile) return
+  const handleDeleteConversation = async () => {
+    if (!selectedConversation) return
 
     try {
-      console.log('Sending message to room:', selectedRoom.id)
-      
-      const messageData: any = {
-        roomId: selectedRoom.id,
-        content: newMessage.trim() || '',
-      }
-
-      if (selectedFile) {
-        messageData.attachmentFile = selectedFile
-      }
-
-      await sendMessage.mutateAsync(messageData)
-      setNewMessage('')
-      setSelectedFile(null)
-      
-      console.log('Message sent successfully')
+      await deleteConversation.mutateAsync(selectedConversation.id)
+      setSelectedConversation(null)
+      toast({
+        title: "Sucesso",
+        description: "Conversa excluída com sucesso."
+      })
     } catch (error) {
-      console.error('Error sending message:', error)
       toast({
         title: "Erro",
-        description: "Erro ao enviar mensagem. Tente novamente.",
-        variant: "destructive",
+        description: "Não foi possível excluir a conversa.",
+        variant: "destructive"
       })
     }
   }
 
-  const handleCreateRoom = (roomId: string) => {
-    setIsCreateRoomOpen(false)
-    const newRoom = rooms.find(r => r.id === roomId)
-    if (newRoom) {
-      setSelectedRoom(newRoom)
-    }
+  const getOtherParticipant = (conversation: Conversation) => {
+    if (!conversation.participants) return null
+    return conversation.participants.find(p => p.user_id !== profile?.id)?.profiles
   }
 
-  const handleDirectChat = (roomId: string) => {
-    setIsDirectChatOpen(false)
-    const room = rooms.find(r => r.id === roomId)
-    if (room) {
-      setSelectedRoom(room)
-    }
-  }
+  const canDeleteConversation = selectedConversation?.created_by === profile?.id
 
-  const handleChatCreated = (roomId: string) => {
-    const room = rooms.find(r => r.id === roomId)
-    if (room) {
-      setSelectedRoom(room)
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage(e as any)
-    }
-  }
-
-  if (isLoadingRooms) {
+  if (isLoadingConversations) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center space-y-4">
@@ -119,25 +85,78 @@ export default function Chat() {
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <ChatSidebar
-        rooms={rooms}
-        selectedRoom={selectedRoom}
-        onRoomSelect={handleRoomSelect}
-        onCreateRoom={() => setIsCreateRoomOpen(true)}
-        onDirectChat={() => setIsDirectChatOpen(true)}
-        onSignOut={signOut}
-      />
+      <div className="w-80 border-r border-border flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Conversas</h2>
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              Sair
+            </Button>
+          </div>
+          <NewChatModal onConversationCreated={handleConversationCreated} />
+        </div>
+
+        {/* Lista de conversas */}
+        <ConversationList
+          selectedConversation={selectedConversation}
+          onConversationSelect={setSelectedConversation}
+        />
+      </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {selectedRoom ? (
+        {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <ChatRoomHeader
-              room={selectedRoom}
-              participantCount={participants.length}
-              onEditRoom={() => setIsEditRoomOpen(true)}
-            />
+            <div className="p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={getOtherParticipant(selectedConversation)?.avatar_url || undefined} />
+                    <AvatarFallback>
+                      {getOtherParticipant(selectedConversation)?.name?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">
+                        {getOtherParticipant(selectedConversation)?.name || 'Usuário Desconhecido'}
+                      </h3>
+                      {getOtherParticipant(selectedConversation)?.role === 'admin' && (
+                        <Badge variant="destructive" className="text-xs">
+                          Admin
+                        </Badge>
+                      )}
+                      {getOtherParticipant(selectedConversation)?.role === 'technician' && (
+                        <Badge variant="secondary" className="text-xs">
+                          Técnico
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedConversation.participants?.length || 0} participantes
+                    </p>
+                  </div>
+                </div>
+
+                {canDeleteConversation && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleDeleteConversation} className="text-destructive">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir conversa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            </div>
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
@@ -150,49 +169,19 @@ export default function Chat() {
                   </div>
                 ) : (
                   messages.map((message) => (
-                    <ChatMessage
+                    <MessageBubble
                       key={message.id}
                       message={message}
                       isOwn={message.sender_id === profile?.id}
                     />
                   ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-                <ChatAttachmentUpload
-                  onFileSelect={setSelectedFile}
-                  selectedFile={selectedFile}
-                />
-                <div className="flex-1">
-                  <Input
-                    type="text"
-                    placeholder="Digite sua mensagem..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="min-h-[48px] resize-none"
-                    disabled={sendMessage.isPending}
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  disabled={(!newMessage.trim() && !selectedFile) || sendMessage.isPending}
-                  className="h-12 px-4"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
-              
-              {selectedFile && (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Anexo selecionado: {selectedFile.name}
-                </div>
-              )}
-            </div>
+            <ChatInput conversationId={selectedConversation.id} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -200,16 +189,11 @@ export default function Chat() {
               <MessageCircle className="h-24 w-24 mx-auto mb-6 opacity-30" />
               <h3 className="text-xl font-medium mb-2">Bem-vindo ao Chat Interno</h3>
               <p className="text-sm mb-6 leading-relaxed">
-                {profile?.role === 'admin' ? 
-                  'Como administrador, você pode conversar com qualquer usuário e criar grupos.' :
-                  profile?.role === 'technician' ?
-                  'Você pode conversar com administradores e usuários das unidades que atende.' :
-                  'Você pode conversar com administradores, técnicos e usuários da sua unidade.'
-                }
+                Converse com usuários da sua unidade. Inicie uma nova conversa ou selecione uma conversa existente.
               </p>
               <div className="space-y-3">
-                <StartChatDialog onChatCreated={handleChatCreated} />
-                {rooms.length > 0 && (
+                <NewChatModal onConversationCreated={handleConversationCreated} />
+                {conversations.length > 0 && (
                   <p className="text-xs text-muted-foreground">
                     Ou selecione uma conversa na barra lateral
                   </p>
@@ -219,24 +203,6 @@ export default function Chat() {
           </div>
         )}
       </div>
-
-      {/* Dialogs */}
-      <CreateChatRoomDialog onRoomCreated={handleCreateRoom} />
-
-      <DirectChatDialog
-        open={isDirectChatOpen}
-        onOpenChange={setIsDirectChatOpen}
-        targetUserId={null}
-        onRoomCreated={handleDirectChat}
-      />
-
-      {selectedRoom && (
-        <EditChatRoomDialog
-          room={selectedRoom}
-          isOpen={isEditRoomOpen}
-          onOpenChange={setIsEditRoomOpen}
-        />
-      )}
     </div>
   )
 }
