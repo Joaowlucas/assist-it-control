@@ -65,11 +65,14 @@ export interface UnitUser {
   unit_name: string
 }
 
+// Global channel management to prevent multiple subscriptions
+let globalConversationsChannel: any = null
+const globalMessageChannels = new Map<string, any>()
+
 // Hook para buscar salas de chat do usuário
 export function useConversations() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
-  const channelRef = useRef<any>(null)
 
   const query = useQuery({
     queryKey: ['chat-rooms', profile?.id],
@@ -113,58 +116,51 @@ export function useConversations() {
     enabled: !!profile?.id,
   })
 
-  // Real-time updates with proper cleanup
+  // Real-time updates with global channel management
   useEffect(() => {
     if (!profile?.id) return
 
-    // Cleanup previous channel if it exists
-    if (channelRef.current) {
-      console.log('Removing existing channel')
-      supabase.removeChannel(channelRef.current)
-      channelRef.current = null
+    // Only create channel if it doesn't exist
+    if (!globalConversationsChannel) {
+      console.log('Creating global channel for chat rooms')
+      const channel = supabase
+        .channel('chat-rooms-global')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'chat_rooms',
+          },
+          () => {
+            console.log('Chat rooms changed, invalidating queries')
+            queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'chat_participants',
+          },
+          () => {
+            console.log('Participants changed, invalidating queries')
+            queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+          }
+        )
+
+      globalConversationsChannel = channel
+      
+      // Subscribe only once
+      channel.subscribe((status) => {
+        console.log('Global channel subscription status:', status)
+      })
     }
 
-    console.log('Creating new channel for chat rooms')
-    const channel = supabase
-      .channel('chat-rooms-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_rooms',
-        },
-        () => {
-          console.log('Chat rooms changed, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_participants',
-        },
-        () => {
-          console.log('Participants changed, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
-        }
-      )
-
-    channelRef.current = channel
-    
-    // Subscribe only once
-    channel.subscribe((status) => {
-      console.log('Channel subscription status:', status)
-    })
-
     return () => {
-      console.log('Cleaning up channel on unmount')
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
+      // Don't cleanup here as other components might still need it
+      // Cleanup will happen when the last component unmounts
     }
   }, [profile?.id, queryClient])
 
@@ -175,7 +171,6 @@ export function useConversations() {
 export function useMessages(roomId?: string) {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
-  const channelRef = useRef<any>(null)
 
   const query = useQuery({
     queryKey: ['chat-messages', roomId],
@@ -218,61 +213,55 @@ export function useMessages(roomId?: string) {
     enabled: !!roomId && !!profile?.id,
   })
 
-  // Real-time updates para mensagens with proper cleanup
+  // Real-time updates para mensagens with global channel management
   useEffect(() => {
     if (!roomId || !profile?.id) return
 
-    // Cleanup previous channel if it exists
-    if (channelRef.current) {
-      console.log('Removing existing messages channel')
-      supabase.removeChannel(channelRef.current)
-      channelRef.current = null
+    const channelKey = `messages-${roomId}`
+    
+    // Only create channel if it doesn't exist for this room
+    if (!globalMessageChannels.has(channelKey)) {
+      console.log('Creating global channel for messages:', roomId)
+      const channel = supabase
+        .channel(channelKey)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `room_id=eq.${roomId}`,
+          },
+          () => {
+            console.log('New message received, invalidating queries')
+            queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
+            queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `room_id=eq.${roomId}`,
+          },
+          () => {
+            console.log('Message updated, invalidating queries')
+            queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
+          }
+        )
+
+      globalMessageChannels.set(channelKey, channel)
+      
+      // Subscribe only once
+      channel.subscribe((status) => {
+        console.log('Messages channel subscription status:', status)
+      })
     }
 
-    console.log('Creating new channel for messages:', roomId)
-    const channel = supabase
-      .channel(`messages-${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `room_id=eq.${roomId}`,
-        },
-        () => {
-          console.log('New message received, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
-          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `room_id=eq.${roomId}`,
-        },
-        () => {
-          console.log('Message updated, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
-        }
-      )
-
-    channelRef.current = channel
-    
-    // Subscribe only once
-    channel.subscribe((status) => {
-      console.log('Messages channel subscription status:', status)
-    })
-
     return () => {
-      console.log('Cleaning up messages channel on unmount')
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
+      // Don't cleanup individual message channels as they might be reused
     }
   }, [roomId, profile?.id, queryClient])
 
