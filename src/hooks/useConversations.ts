@@ -113,16 +113,19 @@ export function useConversations() {
     enabled: !!profile?.id,
   })
 
-  // Real-time updates
+  // Real-time updates with proper cleanup
   useEffect(() => {
     if (!profile?.id) return
 
-    // Cleanup previous channel
+    // Cleanup previous channel if it exists
     if (channelRef.current) {
+      console.log('Removing existing channel')
       supabase.removeChannel(channelRef.current)
+      channelRef.current = null
     }
 
-    channelRef.current = supabase
+    console.log('Creating new channel for chat rooms')
+    const channel = supabase
       .channel('chat-rooms-changes')
       .on(
         'postgres_changes',
@@ -148,11 +151,19 @@ export function useConversations() {
           queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
-      .subscribe()
+
+    channelRef.current = channel
+    
+    // Subscribe only once
+    channel.subscribe((status) => {
+      console.log('Channel subscription status:', status)
+    })
 
     return () => {
+      console.log('Cleaning up channel on unmount')
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
+        channelRef.current = null
       }
     }
   }, [profile?.id, queryClient])
@@ -207,16 +218,19 @@ export function useMessages(roomId?: string) {
     enabled: !!roomId && !!profile?.id,
   })
 
-  // Real-time updates para mensagens
+  // Real-time updates para mensagens with proper cleanup
   useEffect(() => {
     if (!roomId || !profile?.id) return
 
-    // Cleanup previous channel
+    // Cleanup previous channel if it exists
     if (channelRef.current) {
+      console.log('Removing existing messages channel')
       supabase.removeChannel(channelRef.current)
+      channelRef.current = null
     }
 
-    channelRef.current = supabase
+    console.log('Creating new channel for messages:', roomId)
+    const channel = supabase
       .channel(`messages-${roomId}`)
       .on(
         'postgres_changes',
@@ -245,11 +259,19 @@ export function useMessages(roomId?: string) {
           queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
         }
       )
-      .subscribe()
+
+    channelRef.current = channel
+    
+    // Subscribe only once
+    channel.subscribe((status) => {
+      console.log('Messages channel subscription status:', status)
+    })
 
     return () => {
+      console.log('Cleaning up messages channel on unmount')
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
+        channelRef.current = null
       }
     }
   }, [roomId, profile?.id, queryClient])

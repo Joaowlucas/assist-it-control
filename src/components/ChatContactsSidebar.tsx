@@ -6,8 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Search, User, Settings, Shield, MessageCircle } from 'lucide-react'
-import { useAvailableChatUsers } from '@/hooks/useAvailableChatUsers'
-import { useCreateChatRoom } from '@/hooks/useChat'
+import { useUnitUsers, useCreateConversation } from '@/hooks/useConversations'
 import { useAuth } from '@/hooks/useAuth'
 
 interface ChatContactsSidebarProps {
@@ -19,8 +18,8 @@ interface ChatContactsSidebarProps {
 export function ChatContactsSidebar({ open, onOpenChange, onDirectChat }: ChatContactsSidebarProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const { profile } = useAuth()
-  const { data: availableUsers = [], isLoading } = useAvailableChatUsers()
-  const createChatRoom = useCreateChatRoom()
+  const { data: availableUsers = [], isLoading } = useUnitUsers()
+  const createConversation = useCreateConversation()
 
   const filteredUsers = availableUsers.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -61,10 +60,9 @@ export function ChatContactsSidebar({ open, onOpenChange, onDirectChat }: ChatCo
 
   const handleStartChat = async (userId: string, userName: string) => {
     try {
-      const roomId = await createChatRoom.mutateAsync({
+      const roomId = await createConversation.mutateAsync({
         name: `${profile?.name} • ${userName}`,
-        type: 'private',
-        participantIds: [userId],
+        participantId: userId,
       })
       
       onOpenChange(false)
@@ -149,7 +147,7 @@ export function ChatContactsSidebar({ open, onOpenChange, onDirectChat }: ChatCo
                   <Button
                     size="sm"
                     onClick={() => handleStartChat(user.id, user.name)}
-                    disabled={createChatRoom.isPending}
+                    disabled={createConversation.isPending}
                     className="shrink-0"
                   >
                     <MessageCircle className="h-4 w-4 mr-1" />
