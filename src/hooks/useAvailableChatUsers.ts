@@ -24,7 +24,7 @@ export function useAvailableChatUsers() {
       console.log('Fetching available users for chat using new safe function')
 
       // Usar a nova função SECURITY DEFINER sem parâmetros
-      const { data, error } = await supabase.rpc('get_chat_available_users')
+      const { data, error } = await supabase.rpc('get_available_chat_users')
 
       if (error) {
         console.error('Error fetching available users:', error)

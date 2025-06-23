@@ -290,7 +290,7 @@ export function useCreateChatRoom() {
       // Para chats privados, verificar se já existe uma conversa entre os usuários
       if (params.type === 'private' && params.participantIds?.length === 1) {
         const { data: existingRoom, error: findError } = await supabase
-          .rpc('find_existing_private_chat', {
+          .rpc('find_private_chat_room', {
             user1_id: profile.id,
             user2_id: params.participantIds[0]
           })
