@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -24,57 +25,6 @@ import { useAssignmentPDF } from '@/hooks/useAssignmentPDF'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
 import { Search, Plus, FileText } from 'lucide-react'
 
-// Update the Assignment interface to match the actual database structure
-interface Assignment {
-  id: string
-  user_id: string
-  equipment_id: string
-  assigned_by: string
-  start_date: string
-  end_date: string | null
-  status: 'ativo' | 'finalizado'
-  notes: string | null
-  created_at: string
-  updated_at: string
-  equipment?: {
-    name: string
-    type: string
-    brand: string
-    model: string
-    unit_id: string
-  }
-  user?: {
-    name: string
-    email: string
-  }
-  assigned_by_user?: {
-    name: string
-    email: string
-  }
-}
-
-interface MonthlyReturn {
-  id: string
-  user_id: string
-  equipment_id: string
-  assigned_by: string
-  start_date: string
-  end_date: string | null
-  status: 'ativo' | 'finalizado'
-  notes: string | null
-  equipment?: {
-    name: string
-    type: string
-    brand: string
-    model: string
-    unit_id: string
-  }
-  user?: {
-    name: string
-    email: string
-  }
-}
-
 export default function Assignments() {
   // State variables
   const [searchTerm, setSearchTerm] = useState('')
@@ -84,18 +34,12 @@ export default function Assignments() {
   const [selectedUserId, setSelectedUserId] = useState('')
   const [notes, setNotes] = useState('')
   const [pdfPreviewDialog, setPdfPreviewDialog] = useState<{open: boolean, assignment: any}>({open: false, assignment: null})
-  const [showActiveModal, setShowActiveModal] = useState(false)
-  const [showAllModal, setShowAllModal] = useState(false)
-  const [showReturnsModal, setShowReturnsModal] = useState(false)
-  const [activeAssignments, setActiveAssignments] = useState<Assignment[]>([])
-  const [allAssignments, setAllAssignments] = useState<Assignment[]>([])
-  const [monthlyReturnsData, setMonthlyReturnsData] = useState<MonthlyReturn[]>([])
 
   const { toast } = useToast()
   const { profile } = useAuth()
   const { data: assignments, isLoading } = useAssignments()
   const { data: availableEquipment } = useAvailableEquipment()
-  const { users: availableUsers } = useAvailableUsers()
+  const { data: availableUsers } = useAvailableUsers()
   const { mutate: createAssignment, isPending: isCreating } = useCreateAssignment()
   const { mutate: endAssignment } = useEndAssignment()
   const { previewAssignmentPDF } = useAssignmentPDF()
@@ -108,7 +52,8 @@ export default function Assignments() {
     return assignments.filter(assignment => {
       const matchesSearch = 
         assignment.equipment?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase())
+        assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (assignment.equipment as any)?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter
       
@@ -189,14 +134,6 @@ export default function Assignments() {
     })
   }
 
-  const handleShowActive = () => {
-    if (assignments) {
-      const active = assignments.filter(a => a.status === 'ativo') as Assignment[]
-      setActiveAssignments(active)
-      setShowActiveModal(true)
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -223,7 +160,7 @@ export default function Assignments() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Buscar por equipamento, usuário..."
+              placeholder="Buscar por equipamento, usuário ou tombamento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -267,7 +204,7 @@ export default function Assignments() {
                   <SelectContent>
                     {availableEquipment?.map((equipment) => (
                       <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.name}
+                        {equipment.name} ({(equipment as any).tombamento || 'S/T'})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -287,7 +224,7 @@ export default function Assignments() {
                   <SelectContent>
                     {availableUsers?.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.name}
+                        {user.name} ({(user as any).unit?.name || 'S/U'})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -341,7 +278,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {assignment.equipment?.type}
+                          {(assignment.equipment as any)?.tombamento || 'S/T'}
                         </div>
                       </div>
                     </TableCell>
@@ -349,7 +286,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.user?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {assignment.user?.email}
+                          {(assignment.user as any)?.unit?.name || 'S/U'}
                         </div>
                       </div>
                     </TableCell>
@@ -401,228 +338,6 @@ export default function Assignments() {
         equipmentName={pdfPreviewDialog.assignment?.equipment?.name || ''}
         userName={pdfPreviewDialog.assignment?.user?.name || ''}
       />
-
-      {/* Active Assignments Modal */}
-      <Dialog open={showActiveModal} onOpenChange={setShowActiveModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Atribuições Ativas</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Data de Início</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activeAssignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.equipment?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.equipment?.type}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.user?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.user?.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(assignment.start_date), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={assignment.status === 'ativo' ? 'default' : 'secondary'}>
-                        {assignment.status === 'ativo' ? 'Ativo' : 'Finalizado'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePreviewPDF(assignment)}
-                          title="Visualizar PDF"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        {assignment.status === 'ativo' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEndAssignment(assignment)}
-                            title="Finalizar Atribuição"
-                          >
-                            Finalizar
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* All Assignments Modal */}
-      <Dialog open={showAllModal} onOpenChange={setShowAllModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Todas as Atribuições</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Data de Início</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allAssignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.equipment?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.equipment?.type}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{assignment.user?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.user?.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(assignment.start_date), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={assignment.status === 'ativo' ? 'default' : 'secondary'}>
-                        {assignment.status === 'ativo' ? 'Ativo' : 'Finalizado'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePreviewPDF(assignment)}
-                          title="Visualizar PDF"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        {assignment.status === 'ativo' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEndAssignment(assignment)}
-                            title="Finalizar Atribuição"
-                          >
-                            Finalizar
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Monthly Returns Modal */}
-      <Dialog open={showReturnsModal} onOpenChange={setShowReturnsModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Retornos Mensais</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Data de Início</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlyReturnsData.map((returnData) => (
-                  <TableRow key={returnData.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{returnData.equipment?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {returnData.equipment?.type}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{returnData.user?.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {returnData.user?.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(returnData.start_date), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={returnData.status === 'ativo' ? 'default' : 'secondary'}>
-                        {returnData.status === 'ativo' ? 'Ativo' : 'Finalizado'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePreviewPDF(returnData)}
-                          title="Visualizar PDF"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        {returnData.status === 'ativo' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEndAssignment(returnData)}
-                            title="Finalizar Atribuição"
-                          >
-                            Finalizar
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
