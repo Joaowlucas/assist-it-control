@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -25,10 +24,12 @@ import { useAssignmentPDF } from '@/hooks/useAssignmentPDF'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
 import { Search, Plus, FileText } from 'lucide-react'
 
+// Update the Assignment interface to match the actual database structure
 interface Assignment {
   id: string
   user_id: string
   equipment_id: string
+  assigned_by: string
   start_date: string
   end_date: string | null
   status: 'ativo' | 'finalizado'
@@ -36,16 +37,19 @@ interface Assignment {
   created_at: string
   updated_at: string
   equipment?: {
-    id: string
     name: string
-    tombamento?: string
+    type: string
+    brand: string
+    model: string
+    unit_id: string
   }
   user?: {
-    id: string
     name: string
-    unit?: {
-      name: string
-    }
+    email: string
+  }
+  assigned_by_user?: {
+    name: string
+    email: string
   }
 }
 
@@ -53,21 +57,21 @@ interface MonthlyReturn {
   id: string
   user_id: string
   equipment_id: string
+  assigned_by: string
   start_date: string
   end_date: string | null
   status: 'ativo' | 'finalizado'
   notes: string | null
   equipment?: {
-    id: string
     name: string
-    tombamento?: string
+    type: string
+    brand: string
+    model: string
+    unit_id: string
   }
   user?: {
-    id: string
     name: string
-    unit?: {
-      name: string
-    }
+    email: string
   }
 }
 
@@ -104,8 +108,7 @@ export default function Assignments() {
     return assignments.filter(assignment => {
       const matchesSearch = 
         assignment.equipment?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (assignment.equipment as any)?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase())
+        assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter
       
@@ -188,7 +191,7 @@ export default function Assignments() {
 
   const handleShowActive = () => {
     if (assignments) {
-      const active = assignments.filter(a => a.status === 'ativo')
+      const active = assignments.filter(a => a.status === 'ativo') as Assignment[]
       setActiveAssignments(active)
       setShowActiveModal(true)
     }
@@ -220,7 +223,7 @@ export default function Assignments() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Buscar por equipamento, usuário ou tombamento..."
+              placeholder="Buscar por equipamento, usuário..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -264,7 +267,7 @@ export default function Assignments() {
                   <SelectContent>
                     {availableEquipment?.map((equipment) => (
                       <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.name} ({(equipment as any).tombamento || 'S/T'})
+                        {equipment.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -284,7 +287,7 @@ export default function Assignments() {
                   <SelectContent>
                     {availableUsers?.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({(user as any)?.unit?.name || 'S/U'})
+                        {user.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -338,7 +341,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.equipment as any)?.tombamento || 'S/T'}
+                          {assignment.equipment?.type}
                         </div>
                       </div>
                     </TableCell>
@@ -346,7 +349,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.user?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.user as any)?.unit?.name || 'S/U'}
+                          {assignment.user?.email}
                         </div>
                       </div>
                     </TableCell>
@@ -423,7 +426,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.equipment as any)?.tombamento || 'S/T'}
+                          {assignment.equipment?.type}
                         </div>
                       </div>
                     </TableCell>
@@ -431,7 +434,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.user?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.user as any)?.unit?.name || 'S/U'}
+                          {assignment.user?.email}
                         </div>
                       </div>
                     </TableCell>
@@ -497,7 +500,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.equipment as any)?.tombamento || 'S/T'}
+                          {assignment.equipment?.type}
                         </div>
                       </div>
                     </TableCell>
@@ -505,7 +508,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{assignment.user?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.user as any)?.unit?.name || 'S/U'}
+                          {assignment.user?.email}
                         </div>
                       </div>
                     </TableCell>
@@ -571,7 +574,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{returnData.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(returnData.equipment as any)?.tombamento || 'S/T'}
+                          {returnData.equipment?.type}
                         </div>
                       </div>
                     </TableCell>
@@ -579,7 +582,7 @@ export default function Assignments() {
                       <div>
                         <div className="font-medium">{returnData.user?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(returnData.user as any)?.unit?.name || 'S/U'}
+                          {returnData.user?.email}
                         </div>
                       </div>
                     </TableCell>

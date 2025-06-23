@@ -12,6 +12,7 @@ import { useAssignments } from "@/hooks/useAssignments"
 import { useAvailableUsers } from "@/hooks/useAvailableUsers"
 import { useAvailableEquipment } from "@/hooks/useAvailableEquipment"
 import { useCreateAssignment } from "@/hooks/useCreateAssignment"
+import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/hooks/use-toast"
 
 interface Assignment {
@@ -53,6 +54,7 @@ export function AssignmentManagementSection() {
   const [notes, setNotes] = useState('')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
+  const { profile } = useAuth()
   const { data: assignments, isLoading: assignmentsLoading } = useAssignments()
   const { users, loading: usersLoading } = useAvailableUsers()
   const { data: equipment, isLoading: equipmentLoading } = useAvailableEquipment()
@@ -68,10 +70,20 @@ export function AssignmentManagementSection() {
       return
     }
 
+    if (!profile?.id) {
+      toast({
+        title: "Erro",
+        description: "Usuário não identificado",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       createAssignment({
         user_id: selectedUser,
         equipment_id: selectedEquipment,
+        assigned_by: profile.id,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
         notes
