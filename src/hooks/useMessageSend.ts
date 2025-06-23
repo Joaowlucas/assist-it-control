@@ -1,7 +1,8 @@
 
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from './useAuth'
+import { toast } from '@/hooks/use-toast'
 
 interface SendMessageParams {
   conversationId: string
@@ -9,31 +10,37 @@ interface SendMessageParams {
   attachments?: Array<{
     file_name: string
     file_url: string
-    attachment_type: string
+    attachment_type: 'image' | 'video' | 'document' | 'audio'
     file_size: number
   }>
-  replyToId?: string
 }
 
 export function useMessageSend() {
+  const [loading, setLoading] = useState(false)
   const { profile } = useAuth()
-  const queryClient = useQueryClient()
 
-  const mutation = useMutation({
-    mutationFn: async (params: SendMessageParams) => {
-      if (!profile?.id) throw new Error('User not authenticated')
+  const sendMessage = async ({ conversationId, content, attachments = [] }: SendMessageParams) => {
+    if (!profile?.id) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive"
+      })
+      return
+    }
 
-      const { conversationId, content, attachments, replyToId } = params
+    try {
+      setLoading(true)
 
       // Insert message
-      const { data: message, error: messageError } = await supabase
+      const { data: messageData, error: messageError } = await supabase
         .from('chat_messages')
         .insert({
           conversation_id: conversationId,
           sender_id: profile.id,
           content,
-          message_type: attachments && attachments.length > 0 ? 'attachment' : 'text',
-          reply_to_id: replyToId
+          message_type: attachments.length > 0 ? 'mixed' : 'text',
+          status: 'sent'
         })
         .select()
         .single()
@@ -41,39 +48,41 @@ export function useMessageSend() {
       if (messageError) throw messageError
 
       // Insert attachments if any
-      if (attachments && attachments.length > 0) {
-        const attachmentRecords = attachments.map(att => ({
-          message_id: message.id,
-          file_name: att.file_name,
-          file_url: att.file_url,
-          attachment_type: att.attachment_type,
-          file_size: att.file_size
+      if (attachments.length > 0 && messageData) {
+        const attachmentInserts = attachments.map(attachment => ({
+          message_id: messageData.id,
+          file_name: attachment.file_name,
+          file_url: attachment.file_url,
+          attachment_type: attachment.attachment_type,
+          file_size: attachment.file_size
         }))
 
         const { error: attachmentError } = await supabase
           .from('message_attachments')
-          .insert(attachmentRecords)
+          .insert(attachmentInserts)
 
         if (attachmentError) throw attachmentError
       }
 
-      // Update conversation timestamp
+      // Update conversation updated_at
       await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId)
 
-      return message
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.conversationId] })
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      return messageData
+    } catch (error) {
+      console.error('Error sending message:', error)
+      toast({
+        title: "Erro ao enviar mensagem",
+        description: "Tente novamente.",
+        variant: "destructive"
+      })
+      throw error
+    } finally {
+      setLoading(false)
     }
-  })
-
-  return {
-    sendMessage: mutation.mutate,
-    loading: mutation.isPending
   }
+
+  return { sendMessage, loading }
 }

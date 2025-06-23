@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Paperclip, Image, Smile } from "lucide-react"
+import { Send, Paperclip, Smile } from "lucide-react"
 import { useDropzone } from 'react-dropzone'
 import { AttachmentPreview } from "./AttachmentPreview"
 import { EmojiPicker } from "./EmojiPicker"
@@ -21,6 +21,7 @@ export function MessageInput({ conversationId, onStartTyping, onStopTyping }: Me
   const [attachments, setAttachments] = useState<File[]>([])
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
   
   const { sendMessage, loading } = useMessageSend()
@@ -86,7 +87,7 @@ export function MessageInput({ conversationId, onStartTyping, onStopTyping }: Me
       let uploadedAttachments: Array<{
         file_name: string
         file_url: string
-        attachment_type: string
+        attachment_type: 'image' | 'video' | 'document' | 'audio'
         file_size: number
       }> = []
 
@@ -127,7 +128,7 @@ export function MessageInput({ conversationId, onStartTyping, onStopTyping }: Me
     }
   }
 
-  const getAttachmentType = (mimeType: string): string => {
+  const getAttachmentType = (mimeType: string): 'image' | 'video' | 'document' | 'audio' => {
     if (mimeType.startsWith('image/')) return 'image'
     if (mimeType.startsWith('video/')) return 'video'
     if (mimeType.startsWith('audio/')) return 'audio'
@@ -154,9 +155,13 @@ export function MessageInput({ conversationId, onStartTyping, onStopTyping }: Me
     setShowEmojiPicker(false)
   }
 
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click()
+  }
+
   return (
     <div {...getRootProps()} className="p-4 space-y-3">
-      <input {...getInputProps()} />
+      <input {...getInputProps()} ref={fileInputRef} />
       
       {isDragActive && (
         <div className="absolute inset-0 bg-primary/20 border-2 border-dashed border-primary rounded-lg flex items-center justify-center z-10">
@@ -206,10 +211,9 @@ export function MessageInput({ conversationId, onStartTyping, onStopTyping }: Me
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => document.querySelector('input[type="file"]')?.click()}
+              onClick={handleFileButtonClick}
               className="h-6 w-6 p-0"
             >
-              <input {...getInputProps()} />
               <Paperclip className="h-4 w-4" />
             </Button>
           </div>
