@@ -112,27 +112,31 @@ export function useConversations() {
     enabled: !!profile?.id
   })
 
-  // Setup realtime subscription
+  // Setup realtime subscription with unique channel name
   useEffect(() => {
     if (!profile?.id) return
 
+    const channelName = `conversations-${profile.id}-${Date.now()}`
     const channel = supabase
-      .channel('conversations-changes')
+      .channel(channelName)
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'conversations' },
         () => {
+          console.log('Conversations changed, refetching...')
           refetch()
         }
       )
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'chat_messages' },
         () => {
+          console.log('Messages changed, refetching conversations...')
           refetch()
         }
       )
       .subscribe()
 
     return () => {
+      console.log('Cleaning up conversations channel:', channelName)
       supabase.removeChannel(channel)
     }
   }, [profile?.id, refetch])

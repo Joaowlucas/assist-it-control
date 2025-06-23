@@ -61,11 +61,6 @@ export function useChatMessages(conversationId: string) {
             attachment_type,
             thumbnail_url
           ),
-          reply_to:chat_messages!chat_messages_reply_to_id_fkey (
-            id,
-            content,
-            profiles!chat_messages_sender_id_fkey (name)
-          ),
           message_reads (
             user_id,
             read_at,
@@ -97,11 +92,6 @@ export function useChatMessages(conversationId: string) {
           name: msg.profiles.name,
           avatar_url: msg.profiles.avatar_url
         },
-        reply_to: msg.reply_to ? {
-          id: msg.reply_to.id,
-          content: msg.reply_to.content,
-          sender_name: msg.reply_to.profiles?.name || 'Usuário'
-        } : undefined,
         read_by: msg.message_reads.map((read: any) => ({
           user_id: read.user_id,
           read_at: read.read_at,
@@ -141,12 +131,13 @@ export function useChatMessages(conversationId: string) {
     return () => clearTimeout(timeoutId)
   }, [messages, conversationId, profile?.id])
 
-  // Setup realtime subscription
+  // Setup realtime subscription with unique channel name
   useEffect(() => {
     if (!conversationId) return
 
+    const channelName = `messages-${conversationId}-${Date.now()}`
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(channelName)
       .on('postgres_changes',
         { 
           event: 'INSERT', 
@@ -155,6 +146,7 @@ export function useChatMessages(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`
         },
         () => {
+          console.log('New message received, refetching...')
           refetch()
         }
       )
@@ -166,12 +158,14 @@ export function useChatMessages(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`
         },
         () => {
+          console.log('Message updated, refetching...')
           refetch()
         }
       )
       .subscribe()
 
     return () => {
+      console.log('Cleaning up messages channel:', channelName)
       supabase.removeChannel(channel)
     }
   }, [conversationId, refetch])

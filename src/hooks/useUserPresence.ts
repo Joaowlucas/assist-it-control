@@ -64,15 +64,17 @@ export function useUserPresence() {
     }
   }, [profile?.id])
 
-  // Subscribe to presence changes
+  // Subscribe to presence changes with unique channel name
   useEffect(() => {
     if (!profile?.unit_id) return
 
+    const channelName = `user-presence-${profile.unit_id}-${Date.now()}`
     const channel = supabase
-      .channel('user-presence')
+      .channel(channelName)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'user_presence' },
         async () => {
+          console.log('Presence changed, fetching updated data...')
           // Fetch updated presence data
           const { data } = await supabase
             .from('user_presence')
@@ -102,6 +104,7 @@ export function useUserPresence() {
       .subscribe()
 
     return () => {
+      console.log('Cleaning up presence channel:', channelName)
       supabase.removeChannel(channel)
     }
   }, [profile?.unit_id])
