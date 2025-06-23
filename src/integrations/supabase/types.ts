@@ -70,159 +70,6 @@ export type Database = {
           },
         ]
       }
-      chat_messages: {
-        Row: {
-          attachment_name: string | null
-          attachment_size: number | null
-          attachment_type: string | null
-          attachment_url: string | null
-          content: string
-          created_at: string
-          edited_at: string | null
-          id: string
-          is_deleted: boolean | null
-          room_id: string
-          sender_id: string
-          updated_at: string
-        }
-        Insert: {
-          attachment_name?: string | null
-          attachment_size?: number | null
-          attachment_type?: string | null
-          attachment_url?: string | null
-          content: string
-          created_at?: string
-          edited_at?: string | null
-          id?: string
-          is_deleted?: boolean | null
-          room_id: string
-          sender_id: string
-          updated_at?: string
-        }
-        Update: {
-          attachment_name?: string | null
-          attachment_size?: number | null
-          attachment_type?: string | null
-          attachment_url?: string | null
-          content?: string
-          created_at?: string
-          edited_at?: string | null
-          id?: string
-          is_deleted?: boolean | null
-          room_id?: string
-          sender_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_participants: {
-        Row: {
-          id: string
-          joined_at: string
-          last_read_at: string | null
-          room_id: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          joined_at?: string
-          last_read_at?: string | null
-          room_id: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          joined_at?: string
-          last_read_at?: string | null
-          room_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_participants_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_rooms: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          image_url: string | null
-          is_active: boolean
-          name: string
-          selected_units: string[] | null
-          type: Database["public"]["Enums"]["chat_type"] | null
-          unit_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          name: string
-          selected_units?: string[] | null
-          type?: Database["public"]["Enums"]["chat_type"] | null
-          unit_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          name?: string
-          selected_units?: string[] | null
-          type?: Database["public"]["Enums"]["chat_type"] | null
-          unit_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_rooms_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_rooms_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       equipment: {
         Row: {
           brand: string | null
@@ -1225,97 +1072,9 @@ export type Database = {
         }
         Returns: undefined
       }
-      can_access_chat_room_v2: {
-        Args: { room_id: string }
-        Returns: boolean
-      }
-      can_delete_chat_room: {
-        Args: { room_id: string; user_id: string }
-        Returns: boolean
-      }
-      can_manage_room: {
-        Args: { room_id: string }
-        Returns: boolean
-      }
-      can_user_access_room: {
-        Args: { room_id: string }
-        Returns: boolean
-      }
-      find_existing_private_chat: {
-        Args: { user1_id: string; user2_id: string }
-        Returns: string
-      }
       generate_tombamento: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      get_available_chat_users: {
-        Args: { requesting_user_id: string }
-        Returns: {
-          id: string
-          name: string
-          email: string
-          role: Database["public"]["Enums"]["user_role"]
-          unit_id: string
-          avatar_url: string
-          unit_name: string
-        }[]
-      }
-      get_available_chat_users_final: {
-        Args: { requesting_user_id: string }
-        Returns: {
-          id: string
-          name: string
-          email: string
-          role: Database["public"]["Enums"]["user_role"]
-          unit_id: string
-          avatar_url: string
-          unit_name: string
-        }[]
-      }
-      get_available_chat_users_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          name: string
-          email: string
-          role: string
-          unit_id: string
-          avatar_url: string
-          unit_name: string
-        }[]
-      }
-      get_chat_available_users: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          name: string
-          email: string
-          role: string
-          unit_id: string
-          avatar_url: string
-          unit_name: string
-        }[]
-      }
-      get_current_user_info: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          user_id: string
-          user_role: string
-          user_unit_id: string
-        }[]
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          user_id: string
-          user_role: string
-          user_unit_id: string
-        }[]
       }
       get_notification_recipients: {
         Args: { notification_type: string; entity_data?: Json }
@@ -1330,12 +1089,6 @@ export type Database = {
         Returns: {
           unit_id: string
           unit_name: string
-        }[]
-      }
-      get_user_chat_rooms: {
-        Args: { user_id: string }
-        Returns: {
-          room_id: string
         }[]
       }
       get_user_role: {
@@ -1354,10 +1107,6 @@ export type Database = {
         Args: { tutorial_id: string }
         Returns: undefined
       }
-      is_participant: {
-        Args: { room_id: string }
-        Returns: boolean
-      }
       reject_equipment_request: {
         Args: { request_id: string; admin_comments?: string }
         Returns: undefined
@@ -1366,14 +1115,9 @@ export type Database = {
         Args: { technician_id: string; unit_id: string }
         Returns: boolean
       }
-      user_can_access_chat_room: {
-        Args: { room_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       assignment_status: "ativo" | "finalizado"
-      chat_type: "private" | "unit" | "group"
       equipment_status: "disponivel" | "em_uso" | "manutencao" | "descartado"
       ticket_category: "hardware" | "software" | "rede" | "acesso" | "outros"
       ticket_priority: "baixa" | "media" | "alta" | "critica"
@@ -1495,7 +1239,6 @@ export const Constants = {
   public: {
     Enums: {
       assignment_status: ["ativo", "finalizado"],
-      chat_type: ["private", "unit", "group"],
       equipment_status: ["disponivel", "em_uso", "manutencao", "descartado"],
       ticket_category: ["hardware", "software", "rede", "acesso", "outros"],
       ticket_priority: ["baixa", "media", "alta", "critica"],

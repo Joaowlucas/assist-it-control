@@ -1,122 +1,85 @@
 
-import { ThemeProvider } from "@/components/theme-provider"
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { Toaster } from "@/components/ui/toaster"
+import { SidebarProvider } from "@/components/ui/sidebar"
+import { AuthProvider } from "@/contexts/AuthContext"
 import Login from "@/pages/Login"
 import Dashboard from "@/pages/Dashboard"
 import Tickets from "@/pages/Tickets"
 import Equipment from "@/pages/Equipment"
 import Assignments from "@/pages/Assignments"
 import Settings from "@/pages/Settings"
-import Chat from "@/pages/Chat"
-import Announcements from "@/pages/Announcements"
 import UserDashboard from "@/pages/UserDashboard"
 import UserTickets from "@/pages/UserTickets"
 import UserAssignments from "@/pages/UserAssignments"
-import NotFound from "@/pages/NotFound"
-import { AuthGuard } from "@/guards/AuthGuard"
-import { AdminGuard } from "@/guards/AdminGuard"
+import Announcements from "@/pages/Announcements"
 import { AdminLayout } from "@/components/AdminLayout"
 import { UserLayout } from "@/components/UserLayout"
-import { ChatWithRoleLayout } from "@/components/ChatWithRoleLayout"
-import { Toaster } from "@/components/ui/toaster"
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { AuthProvider } from '@/hooks/useAuth'
+import { useAuth } from "@/hooks/useAuth"
+import { Landing } from "@/pages/Landing"
 
 const queryClient = new QueryClient()
+
+function AppRoutes() {
+  const { user, profile, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/auth" element={<Login />} />
+        <Route path="*" element={<Login />} />
+      </Routes>
+    )
+  }
+
+  if (profile?.role === 'user') {
+    return (
+      <SidebarProvider>
+        <Routes>
+          <Route path="/" element={<UserLayout><UserDashboard /></UserLayout>} />
+          <Route path="/user-dashboard" element={<UserLayout><UserDashboard /></UserLayout>} />
+          <Route path="/user-tickets" element={<UserLayout><UserTickets /></UserLayout>} />
+          <Route path="/user-assignments" element={<UserLayout><UserAssignments /></UserLayout>} />
+          <Route path="/announcements" element={<UserLayout><Announcements /></UserLayout>} />
+          <Route path="*" element={<UserLayout><UserDashboard /></UserLayout>} />
+        </Routes>
+      </SidebarProvider>
+    )
+  }
+
+  return (
+    <SidebarProvider>
+      <Routes>
+        <Route path="/" element={<AdminLayout><Dashboard /></AdminLayout>} />
+        <Route path="/tickets" element={<AdminLayout><Tickets /></AdminLayout>} />
+        <Route path="/equipment" element={<AdminLayout><Equipment /></AdminLayout>} />
+        <Route path="/assignments" element={<AdminLayout><Assignments /></AdminLayout>} />
+        <Route path="/announcements" element={<AdminLayout><Announcements /></AdminLayout>} />
+        <Route path="/settings" element={<AdminLayout><Settings /></AdminLayout>} />
+        <Route path="*" element={<AdminLayout><Dashboard /></AdminLayout>} />
+      </Routes>
+    </SidebarProvider>
+  )
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+        <Router>
+          <AppRoutes />
           <Toaster />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={
-                <AuthGuard requiredRole="admin_tech">
-                  <AdminLayout>
-                    <Dashboard />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
-              <Route path="/tickets" element={
-                <AuthGuard requiredRole="admin_tech">
-                  <AdminLayout>
-                    <Tickets />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
-              <Route path="/equipment" element={
-                <AuthGuard requiredRole="admin_tech">
-                  <AdminLayout>
-                    <Equipment />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
-              <Route path="/assignments" element={
-                <AuthGuard requiredRole="admin_tech">
-                  <AdminLayout>
-                    <Assignments />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
-              <Route path="/announcements" element={
-                <AuthGuard>
-                  <AdminLayout>
-                    <Announcements />
-                  </AdminLayout>
-                </AuthGuard>
-              } />
-              <Route path="/settings" element={
-                <AuthGuard>
-                  <AdminGuard>
-                    <AdminLayout>
-                      <Settings />
-                    </AdminLayout>
-                  </AdminGuard>
-                </AuthGuard>
-              } />
-              <Route path="/chat" element={
-                <AuthGuard>
-                  <ChatWithRoleLayout />
-                </AuthGuard>
-              } />
-              
-              {/* User Routes */}
-              <Route path="/user-dashboard" element={
-                <AuthGuard requiredRole="user">
-                  <UserLayout>
-                    <UserDashboard />
-                  </UserLayout>
-                </AuthGuard>
-              } />
-              <Route path="/user-tickets" element={
-                <AuthGuard requiredRole="user">
-                  <UserLayout>
-                    <UserTickets />
-                  </UserLayout>
-                </AuthGuard>
-              } />
-              <Route path="/user-assignments" element={
-                <AuthGuard requiredRole="user">
-                  <UserLayout>
-                    <UserAssignments />
-                  </UserLayout>
-                </AuthGuard>
-              } />
-              <Route path="/user-announcements" element={
-                <AuthGuard requiredRole="user">
-                  <UserLayout>
-                    <Announcements />
-                  </UserLayout>
-                </AuthGuard>
-              } />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </ThemeProvider>
+        </Router>
       </AuthProvider>
     </QueryClientProvider>
   )
