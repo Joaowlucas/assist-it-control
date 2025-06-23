@@ -25,11 +25,6 @@ interface Message {
     name: string
     avatar_url?: string
   }
-  reply_to?: {
-    id: string
-    content: string
-    sender_name: string
-  }
   read_by?: Array<{
     user_id: string
     read_at: string
@@ -131,11 +126,16 @@ export function useChatMessages(conversationId: string) {
     return () => clearTimeout(timeoutId)
   }, [messages, conversationId, profile?.id])
 
-  // Setup realtime subscription with unique channel name
+  // Setup realtime subscription with unique channel name and proper cleanup
   useEffect(() => {
     if (!conversationId) return
 
-    const channelName = `messages-${conversationId}-${Date.now()}`
+    // Use crypto.randomUUID() for truly unique channel names
+    const channelId = crypto.randomUUID()
+    const channelName = `messages-${conversationId}-${channelId}`
+    
+    console.log('Creating messages channel:', channelName)
+    
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes',
@@ -162,7 +162,15 @@ export function useChatMessages(conversationId: string) {
           refetch()
         }
       )
-      .subscribe()
+
+    // Subscribe with error handling
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Successfully subscribed to messages channel:', channelName)
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Error subscribing to messages channel:', channelName)
+      }
+    })
 
     return () => {
       console.log('Cleaning up messages channel:', channelName)

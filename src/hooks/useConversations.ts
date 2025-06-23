@@ -112,11 +112,16 @@ export function useConversations() {
     enabled: !!profile?.id
   })
 
-  // Setup realtime subscription with unique channel name
+  // Setup realtime subscription with unique channel name and proper cleanup
   useEffect(() => {
     if (!profile?.id) return
 
-    const channelName = `conversations-${profile.id}-${Date.now()}`
+    // Use crypto.randomUUID() for truly unique channel names
+    const channelId = crypto.randomUUID()
+    const channelName = `conversations-${profile.id}-${channelId}`
+    
+    console.log('Creating conversations channel:', channelName)
+    
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes', 
@@ -133,7 +138,15 @@ export function useConversations() {
           refetch()
         }
       )
-      .subscribe()
+
+    // Subscribe with error handling
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Successfully subscribed to conversations channel:', channelName)
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Error subscribing to conversations channel:', channelName)
+      }
+    })
 
     return () => {
       console.log('Cleaning up conversations channel:', channelName)

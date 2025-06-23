@@ -64,11 +64,16 @@ export function useUserPresence() {
     }
   }, [profile?.id])
 
-  // Subscribe to presence changes with unique channel name
+  // Subscribe to presence changes with unique channel name and proper cleanup
   useEffect(() => {
     if (!profile?.unit_id) return
 
-    const channelName = `user-presence-${profile.unit_id}-${Date.now()}`
+    // Use crypto.randomUUID() for truly unique channel names
+    const channelId = crypto.randomUUID()
+    const channelName = `user-presence-${profile.unit_id}-${channelId}`
+    
+    console.log('Creating presence channel:', channelName)
+    
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes',
@@ -91,17 +96,25 @@ export function useUserPresence() {
 
           if (data) {
             setPresenceUsers(data.map((p: any) => ({
-              id: p.profiles.id,
-              name: p.profiles.name,
-              avatar_url: p.profiles.avatar_url,
+              id: p.profiles?.id,
+              name: p.profiles?.name,
+              avatar_url: p.profiles?.avatar_url,
               status: p.status,
               last_seen: p.last_seen,
               is_typing_in: p.is_typing_in
-            })))
+            })).filter(user => user.id)) // Filter out null profiles
           }
         }
       )
-      .subscribe()
+
+    // Subscribe with error handling
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Successfully subscribed to presence channel:', channelName)
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Error subscribing to presence channel:', channelName)
+      }
+    })
 
     return () => {
       console.log('Cleaning up presence channel:', channelName)
