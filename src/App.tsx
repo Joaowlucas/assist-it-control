@@ -8,6 +8,7 @@ import Equipment from "@/pages/Equipment"
 import Assignments from "@/pages/Assignments"
 import Settings from "@/pages/Settings"
 import Chat from "@/pages/Chat"
+import Announcements from "@/pages/Announcements"
 import UserDashboard from "@/pages/UserDashboard"
 import UserTickets from "@/pages/UserTickets"
 import UserAssignments from "@/pages/UserAssignments"
@@ -60,6 +61,13 @@ function App() {
                   </AdminLayout>
                 </AuthGuard>
               } />
+              <Route path="/announcements" element={
+                <AuthGuard>
+                  <AdminLayout>
+                    <Announcements />
+                  </AdminLayout>
+                </AuthGuard>
+              } />
               <Route path="/settings" element={
                 <AuthGuard>
                   <AdminGuard>
@@ -94,6 +102,13 @@ function App() {
                 <AuthGuard requiredRole="user">
                   <UserLayout>
                     <UserAssignments />
+                  </UserLayout>
+                </AuthGuard>
+              } />
+              <Route path="/user-announcements" element={
+                <AuthGuard requiredRole="user">
+                  <UserLayout>
+                    <Announcements />
                   </UserLayout>
                 </AuthGuard>
               } />
