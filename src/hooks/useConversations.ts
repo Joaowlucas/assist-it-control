@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 export interface Conversation {
   id: string
@@ -24,7 +24,7 @@ export interface Conversation {
 export interface ConversationParticipant {
   id: string
   user_id: string
-  conversation_id: string
+  room_id: string
   joined_at: string
   profiles: {
     id: string
@@ -36,7 +36,7 @@ export interface ConversationParticipant {
 
 export interface Message {
   id: string
-  conversation_id: string
+  room_id: string
   sender_id: string
   content: string
   created_at: string
@@ -65,43 +65,50 @@ export interface UnitUser {
   unit_name: string
 }
 
-// Hook para buscar conversas do usuário
+// Hook para buscar salas de chat do usuário
 export function useConversations() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const channelRef = useRef<any>(null)
 
   const query = useQuery({
-    queryKey: ['conversations', profile?.id],
+    queryKey: ['chat-rooms', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return []
 
-      console.log('Fetching conversations for user:', profile.id)
+      console.log('Fetching chat rooms for user:', profile.id)
 
       const { data, error } = await supabase
-        .from('conversations')
+        .from('chat_rooms')
         .select(`
           id,
           name,
           created_by,
           created_at,
           updated_at,
-          last_message_at,
-          participants:conversation_participants(
+          type,
+          unit_id,
+          image_url,
+          participants:chat_participants(
             id,
             user_id,
             joined_at,
             profiles(id, name, avatar_url, role)
           )
         `)
-        .order('last_message_at', { ascending: false })
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching conversations:', error)
+        console.error('Error fetching chat rooms:', error)
         throw error
       }
 
-      console.log('Conversations fetched:', data?.length || 0)
-      return (data as Conversation[]) || []
+      console.log('Chat rooms fetched:', data?.length || 0)
+      return data?.map(room => ({
+        ...room,
+        last_message_at: room.updated_at
+      })) || []
     },
     enabled: !!profile?.id,
   })
@@ -110,18 +117,23 @@ export function useConversations() {
   useEffect(() => {
     if (!profile?.id) return
 
-    const channel = supabase
-      .channel('conversations-changes')
+    // Cleanup previous channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    channelRef.current = supabase
+      .channel('chat-rooms-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'conversations',
+          table: 'chat_rooms',
         },
         () => {
-          console.log('Conversations changed, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['conversations'] })
+          console.log('Chat rooms changed, invalidating queries')
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
       .on(
@@ -129,40 +141,43 @@ export function useConversations() {
         {
           event: '*',
           schema: 'public',
-          table: 'conversation_participants',
+          table: 'chat_participants',
         },
         () => {
           console.log('Participants changed, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['conversations'] })
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
     }
   }, [profile?.id, queryClient])
 
   return query
 }
 
-// Hook para buscar mensagens de uma conversa
-export function useMessages(conversationId?: string) {
+// Hook para buscar mensagens de uma sala
+export function useMessages(roomId?: string) {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const channelRef = useRef<any>(null)
 
   const query = useQuery({
-    queryKey: ['messages', conversationId],
+    queryKey: ['chat-messages', roomId],
     queryFn: async () => {
-      if (!conversationId) return []
+      if (!roomId) return []
 
-      console.log('Fetching messages for conversation:', conversationId)
+      console.log('Fetching messages for room:', roomId)
 
       const { data, error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .select(`
           id,
-          conversation_id,
+          room_id,
           sender_id,
           content,
           created_at,
@@ -175,7 +190,7 @@ export function useMessages(conversationId?: string) {
           attachment_size,
           profiles(id, name, avatar_url, role)
         `)
-        .eq('conversation_id', conversationId)
+        .eq('room_id', roomId)
         .order('created_at', { ascending: true })
 
       if (error) {
@@ -184,29 +199,37 @@ export function useMessages(conversationId?: string) {
       }
 
       console.log('Messages fetched:', data?.length || 0)
-      return (data as Message[]) || []
+      return data?.map(msg => ({
+        ...msg,
+        conversation_id: msg.room_id
+      })) || []
     },
-    enabled: !!conversationId && !!profile?.id,
+    enabled: !!roomId && !!profile?.id,
   })
 
   // Real-time updates para mensagens
   useEffect(() => {
-    if (!conversationId || !profile?.id) return
+    if (!roomId || !profile?.id) return
 
-    const channel = supabase
-      .channel(`messages-${conversationId}`)
+    // Cleanup previous channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    channelRef.current = supabase
+      .channel(`messages-${roomId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
+          table: 'chat_messages',
+          filter: `room_id=eq.${roomId}`,
         },
         () => {
           console.log('New message received, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['messages', conversationId] })
-          queryClient.invalidateQueries({ queryKey: ['conversations'] })
+          queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
         }
       )
       .on(
@@ -214,44 +237,46 @@ export function useMessages(conversationId?: string) {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
+          table: 'chat_messages',
+          filter: `room_id=eq.${roomId}`,
         },
         () => {
           console.log('Message updated, invalidating queries')
-          queryClient.invalidateQueries({ queryKey: ['messages', conversationId] })
+          queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] })
         }
       )
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
     }
-  }, [conversationId, profile?.id, queryClient])
+  }, [roomId, profile?.id, queryClient])
 
   return query
 }
 
-// Hook para buscar usuários da mesma unidade
+// Hook para buscar usuários disponíveis para chat
 export function useUnitUsers() {
   const { profile } = useAuth()
 
   return useQuery({
-    queryKey: ['unit-users', profile?.id],
+    queryKey: ['available-chat-users', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return []
 
-      console.log('Fetching unit users')
+      console.log('Fetching available chat users')
 
-      const { data, error } = await supabase.rpc('get_unit_users')
+      const { data, error } = await supabase.rpc('get_chat_available_users')
 
       if (error) {
-        console.error('Error fetching unit users:', error)
+        console.error('Error fetching available users:', error)
         throw error
       }
 
-      console.log('Unit users fetched:', data?.length || 0)
-      return (data as UnitUser[]) || []
+      console.log('Available users fetched:', data?.length || 0)
+      return data || []
     },
     enabled: !!profile?.id,
   })
@@ -269,42 +294,43 @@ export function useCreateConversation() {
     }) => {
       if (!profile?.id) throw new Error('User not authenticated')
 
-      console.log('Creating conversation:', params)
+      console.log('Creating private chat room:', params)
 
-      // Verificar se já existe conversa entre os dois usuários
-      const { data: existingConversation } = await supabase.rpc('find_existing_conversation', {
+      // Verificar se já existe uma sala privada entre os dois usuários
+      const { data: existingRoom } = await supabase.rpc('find_existing_private_chat', {
         user1_id: profile.id,
         user2_id: params.participantId
       })
 
-      if (existingConversation) {
-        console.log('Found existing conversation:', existingConversation)
-        return existingConversation
+      if (existingRoom) {
+        console.log('Found existing private chat:', existingRoom)
+        return existingRoom
       }
 
-      // Criar nova conversa
-      const { data: conversation, error: conversationError } = await supabase
-        .from('conversations')
+      // Criar nova sala privada
+      const { data: room, error: roomError } = await supabase
+        .from('chat_rooms')
         .insert([{
           name: params.name,
+          type: 'private',
           created_by: profile.id,
         }])
         .select('id')
         .single()
 
-      if (conversationError) {
-        console.error('Error creating conversation:', conversationError)
-        throw conversationError
+      if (roomError) {
+        console.error('Error creating chat room:', roomError)
+        throw roomError
       }
 
       // Adicionar participantes
       const participantData = [
-        { conversation_id: conversation.id, user_id: profile.id },
-        { conversation_id: conversation.id, user_id: params.participantId }
+        { room_id: room.id, user_id: profile.id },
+        { room_id: room.id, user_id: params.participantId }
       ]
 
       const { error: participantError } = await supabase
-        .from('conversation_participants')
+        .from('chat_participants')
         .insert(participantData)
 
       if (participantError) {
@@ -312,11 +338,11 @@ export function useCreateConversation() {
         throw participantError
       }
 
-      console.log('Conversation created successfully:', conversation.id)
-      return conversation.id
+      console.log('Private chat created successfully:', room.id)
+      return room.id
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
     },
   })
 }
@@ -334,7 +360,7 @@ export function useSendMessage() {
     }) => {
       if (!profile?.id) throw new Error('User not authenticated')
 
-      console.log('Sending message to conversation:', params.conversationId)
+      console.log('Sending message to room:', params.conversationId)
 
       let attachmentUrl, attachmentName, attachmentType, attachmentSize
 
@@ -363,7 +389,7 @@ export function useSendMessage() {
       }
 
       const messageData = {
-        conversation_id: params.conversationId,
+        room_id: params.conversationId,
         sender_id: profile.id,
         content: params.content || '',
         attachment_url: attachmentUrl || null,
@@ -373,7 +399,7 @@ export function useSendMessage() {
       }
 
       const { data, error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .insert([messageData])
         .select()
         .single()
@@ -387,8 +413,8 @@ export function useSendMessage() {
       return data
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['messages', variables.conversationId] })
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.conversationId] })
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
     },
   })
 }
@@ -400,7 +426,7 @@ export function useEditMessage() {
   return useMutation({
     mutationFn: async (params: { messageId: string; content: string }) => {
       const { data, error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .update({
           content: params.content,
           edited_at: new Date().toISOString(),
@@ -418,7 +444,7 @@ export function useEditMessage() {
       return data
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['messages', data.conversation_id] })
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
     },
   })
 }
@@ -430,7 +456,7 @@ export function useDeleteMessage() {
   return useMutation({
     mutationFn: async (messageId: string) => {
       const { data, error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .update({
           is_deleted: true,
           updated_at: new Date().toISOString(),
@@ -447,7 +473,7 @@ export function useDeleteMessage() {
       return data
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['messages', data.conversation_id] })
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.room_id] })
     },
   })
 }
@@ -458,22 +484,22 @@ export function useDeleteConversation() {
 
   return useMutation({
     mutationFn: async (conversationId: string) => {
-      console.log('Deleting conversation:', conversationId)
+      console.log('Deleting chat room:', conversationId)
 
       const { error } = await supabase
-        .from('conversations')
-        .delete()
+        .from('chat_rooms')
+        .update({ is_active: false })
         .eq('id', conversationId)
 
       if (error) {
-        console.error('Error deleting conversation:', error)
+        console.error('Error deleting chat room:', error)
         throw error
       }
 
-      console.log('Conversation deleted successfully')
+      console.log('Chat room deleted successfully')
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
     },
   })
 }

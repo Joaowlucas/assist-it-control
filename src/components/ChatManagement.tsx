@@ -7,57 +7,26 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Pencil, Trash2, MessageCircle, Search, Users, Building2 } from 'lucide-react'
-import { useChatRooms, useDeleteChatRoom } from '@/hooks/useChat'
-import { useUnits } from '@/hooks/useUnits'
+import { useConversations, useDeleteConversation } from '@/hooks/useConversations'
 import { useAuth } from '@/hooks/useAuth'
-import { EditChatRoomDialog } from '@/components/EditChatRoomDialog'
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog'
-import { CreateChatRoomDialog } from '@/components/CreateChatRoomDialog'
+import { NewChatModal } from '@/components/NewChatModal'
 
 export function ChatManagement() {
   const { profile } = useAuth()
-  const { data: chatRooms = [], isLoading } = useChatRooms()
-  const { data: units = [] } = useUnits()
-  const deleteChatRoom = useDeleteChatRoom()
+  const { data: chatRooms = [], isLoading } = useConversations()
+  const deleteConversation = useDeleteConversation()
   
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [selectedRoom, setSelectedRoom] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean
-    roomId: string | null
-    roomName: string
-  }>({
-    open: false,
-    roomId: null,
-    roomName: ''
-  })
 
   const filteredRooms = chatRooms.filter(room =>
     room.name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleEditRoom = (room: any) => {
-    setSelectedRoom(room)
-    setEditDialogOpen(true)
-  }
-
-  const handleDeleteRoom = (roomId: string, roomName: string) => {
-    setDeleteDialog({
-      open: true,
-      roomId,
-      roomName
-    })
-  }
-
-  const confirmDelete = async () => {
-    if (deleteDialog.roomId) {
-      try {
-        await deleteChatRoom.mutateAsync(deleteDialog.roomId)
-        setDeleteDialog({ open: false, roomId: null, roomName: '' })
-      } catch (error) {
-        console.error('Error deleting chat room:', error)
-      }
+  const handleDeleteRoom = async (roomId: string) => {
+    try {
+      await deleteConversation.mutateAsync(roomId)
+    } catch (error) {
+      console.error('Error deleting chat room:', error)
     }
   }
 
@@ -65,42 +34,21 @@ export function ChatManagement() {
     return profile?.role === 'admin' || room.created_by === profile?.id
   }
 
-  const getRoomType = (room: any) => {
-    if (room.unit_id) {
-      const unit = units.find(u => u.id === room.unit_id)
-      return unit ? unit.name : 'Unidade específica'
-    }
-    return 'Geral'
-  }
-
-  const getRoomTypeColor = (room: any) => {
-    if (room.unit_id) {
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-    }
-    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-  }
-
   const stats = [
     {
-      title: "Total de Salas",
+      title: "Total de Conversas",
       value: chatRooms.length,
       icon: MessageCircle,
       color: "text-blue-500"
     },
     {
-      title: "Salas Gerais",
-      value: chatRooms.filter(r => !r.unit_id).length,
+      title: "Conversas Privadas",
+      value: chatRooms.filter(r => r.type === 'private').length,
       icon: Users,
       color: "text-green-500"
     },
     {
-      title: "Salas por Unidade",
-      value: chatRooms.filter(r => r.unit_id).length,
-      icon: Building2,
-      color: "text-orange-500"
-    },
-    {
-      title: "Minhas Salas",
+      title: "Minhas Conversas",
       value: chatRooms.filter(r => r.created_by === profile?.id).length,
       icon: MessageCircle,
       color: "text-purple-500"
@@ -108,13 +56,13 @@ export function ChatManagement() {
   ]
 
   if (isLoading) {
-    return <div className="flex justify-center p-4">Carregando salas de chat...</div>
+    return <div className="flex justify-center p-4">Carregando conversas...</div>
   }
 
   return (
     <>
       {/* Cards de Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon
           return (
@@ -143,12 +91,12 @@ export function ChatManagement() {
               Gerenciamento de Chat
             </CardTitle>
             <CardDescription>
-              Gerencie salas de chat e conversas do sistema
+              Gerencie conversas do sistema
             </CardDescription>
           </div>
           <div className="flex gap-2">
             {profile?.role === 'admin' && (
-              <CreateChatRoomDialog />
+              <NewChatModal />
             )}
           </div>
         </CardHeader>
@@ -157,7 +105,7 @@ export function ChatManagement() {
           <div className="flex items-center space-x-2 mb-4">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar salas..."
+              placeholder="Buscar conversas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
@@ -167,7 +115,7 @@ export function ChatManagement() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sala</TableHead>
+                <TableHead>Conversa</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Criador</TableHead>
                 <TableHead>Participantes</TableHead>
@@ -180,7 +128,6 @@ export function ChatManagement() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={room.image_url || undefined} />
                         <AvatarFallback>
                           <MessageCircle className="h-5 w-5" />
                         </AvatarFallback>
@@ -194,14 +141,14 @@ export function ChatManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getRoomTypeColor(room)}>
-                      {room.unit_id ? <Building2 className="h-3 w-3 mr-1" /> : <Users className="h-3 w-3 mr-1" />}
-                      {getRoomType(room)}
+                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      <MessageCircle className="h-3 w-3 mr-1" />
+                      Privada
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {room.profiles?.name || 'Desconhecido'}
+                      Usuário
                     </div>
                   </TableCell>
                   <TableCell>
@@ -212,24 +159,14 @@ export function ChatManagement() {
                   <TableCell>
                     <div className="flex gap-2">
                       {canManageRoom(room) && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditRoom(room)}
-                            title="Editar sala"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteRoom(room.id, room.name)}
-                            title="Excluir sala"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteRoom(room.id)}
+                          title="Excluir conversa"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </div>
                   </TableCell>
@@ -241,25 +178,11 @@ export function ChatManagement() {
           {filteredRooms.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>{searchTerm ? 'Nenhuma sala encontrada para a busca' : 'Nenhuma sala encontrada'}</p>
+              <p>{searchTerm ? 'Nenhuma conversa encontrada para a busca' : 'Nenhuma conversa encontrada'}</p>
             </div>
           )}
         </CardContent>
       </Card>
-
-      <EditChatRoomDialog
-        isOpen={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        room={selectedRoom}
-      />
-
-      <ConfirmDeleteDialog
-        open={deleteDialog.open}
-        title="Confirmar Exclusão"
-        description={`Tem certeza que deseja excluir a sala "${deleteDialog.roomName}"? Esta ação não pode ser desfeita.`}
-        onConfirm={confirmDelete}
-        onOpenChange={(open) => setDeleteDialog({ open: false, roomId: null, roomName: '' })}
-      />
     </>
   )
 }

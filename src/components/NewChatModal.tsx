@@ -137,7 +137,7 @@ export function NewChatModal({ onConversationCreated }: NewChatModalProps) {
                   {searchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário disponível'}
                 </p>
                 <div className="text-sm space-y-1">
-                  <p>Você pode conversar com usuários da sua unidade.</p>
+                  <p>Você pode conversar com usuários disponíveis.</p>
                 </div>
               </div>
             ) : (

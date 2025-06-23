@@ -4,10 +4,30 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { MessageCircle } from 'lucide-react'
-import { useConversations, type Conversation } from '@/hooks/useConversations'
+import { useConversations } from '@/hooks/useConversations'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+
+interface Conversation {
+  id: string
+  name: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  last_message_at: string
+  type?: string
+  participants?: Array<{
+    id: string
+    user_id: string
+    profiles: {
+      id: string
+      name: string
+      avatar_url?: string
+      role: string
+    }
+  }>
+}
 
 interface ConversationListProps {
   selectedConversation?: Conversation
@@ -112,16 +132,9 @@ export function ConversationList({ selectedConversation, onConversationSelect }:
                   </span>
                 </div>
                 
-                {conversation.last_message ? (
-                  <p className="text-sm text-muted-foreground truncate">
-                    {conversation.last_message.sender_id === profile?.id ? 'Você: ' : ''}
-                    {conversation.last_message.content || 'Anexo'}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">
-                    Conversa iniciada
-                  </p>
-                )}
+                <p className="text-sm text-muted-foreground italic">
+                  Conversa iniciada
+                </p>
               </div>
             </div>
           )

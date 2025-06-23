@@ -7,10 +7,30 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { MoreHorizontal, Edit, Trash2, Download, Check, X } from 'lucide-react'
-import { type Message } from '@/hooks/useConversations'
 import { useEditMessage, useDeleteMessage } from '@/hooks/useConversations'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
+
+interface Message {
+  id: string
+  room_id: string
+  sender_id: string
+  content: string
+  created_at: string
+  updated_at: string
+  edited_at?: string
+  is_deleted: boolean
+  attachment_url?: string
+  attachment_name?: string
+  attachment_type?: string
+  attachment_size?: number
+  profiles: {
+    id: string
+    name: string
+    avatar_url?: string
+    role: string
+  }
+}
 
 interface MessageBubbleProps {
   message: Message
@@ -74,7 +94,7 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
 
   if (message.is_deleted) {
     return (
-      <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div className={`flex ${isOwn ? 'justify-end'     : 'justify-start'} mb-4`}>
         <div className={`max-w-[70%] rounded-lg p-3 ${
           isOwn ? 'bg-muted text-muted-foreground' : 'bg-muted text-muted-foreground'
         }`}>

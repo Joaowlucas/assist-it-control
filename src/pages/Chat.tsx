@@ -9,10 +9,29 @@ import { ConversationList } from "@/components/ConversationList"
 import { MessageBubble } from "@/components/MessageBubble"
 import { ChatInput } from "@/components/ChatInput"
 import { MessageCircle, MoreVertical, Trash2 } from "lucide-react"
-import { useConversations, useMessages, useDeleteConversation, type Conversation } from '@/hooks/useConversations'
+import { useConversations, useMessages, useDeleteConversation } from '@/hooks/useConversations'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+
+interface Conversation {
+  id: string
+  name: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  last_message_at: string
+  participants?: Array<{
+    id: string
+    user_id: string
+    profiles: {
+      id: string
+      name: string
+      avatar_url?: string
+      role: string
+    }
+  }>
+}
 
 export default function Chat() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
@@ -189,7 +208,7 @@ export default function Chat() {
               <MessageCircle className="h-24 w-24 mx-auto mb-6 opacity-30" />
               <h3 className="text-xl font-medium mb-2">Bem-vindo ao Chat Interno</h3>
               <p className="text-sm mb-6 leading-relaxed">
-                Converse com usuários da sua unidade. Inicie uma nova conversa ou selecione uma conversa existente.
+                Converse com usuários disponíveis. Inicie uma nova conversa ou selecione uma conversa existente.
               </p>
               <div className="space-y-3">
                 <NewChatModal onConversationCreated={handleConversationCreated} />

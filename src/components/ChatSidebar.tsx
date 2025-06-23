@@ -17,12 +17,24 @@ import {
   Filter,
   Plus
 } from 'lucide-react'
-import { ChatRoom } from '@/hooks/useChat'
-import { StartChatDialog } from '@/components/StartChatDialog'
-import { CreateChatRoomDialog } from '@/components/CreateChatRoomDialog'
+import { NewChatModal } from '@/components/NewChatModal'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+
+interface ChatRoom {
+  id: string
+  name: string
+  type: string
+  created_at: string
+  participants?: Array<{
+    user_id: string
+    profiles: {
+      name: string
+      avatar_url?: string
+    }
+  }>
+}
 
 interface ChatSidebarProps {
   rooms: ChatRoom[]
@@ -97,14 +109,6 @@ export function ChatSidebar({
     return rooms.filter(room => room.type === filter).length
   }
 
-  const formatLastMessageTime = (date: string) => {
-    try {
-      return format(new Date(date), 'HH:mm', { locale: ptBR })
-    } catch {
-      return ''
-    }
-  }
-
   return (
     <div className="w-80 bg-background border-r border-border flex flex-col h-full">
       {/* Header */}
@@ -145,46 +149,11 @@ export function ChatSidebar({
           />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <StartChatDialog onChatCreated={(roomId) => {
-            const room = rooms.find(r => r.id === roomId)
-            if (room) onRoomSelect(room)
-          }} />
-          {profile?.role === 'admin' && (
-            <CreateChatRoomDialog onRoomCreated={(roomId) => {
-              const room = rooms.find(r => r.id === roomId)
-              if (room) onRoomSelect(room)
-            }} />
-          )}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-2 mb-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Filtros</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { key: 'all' as FilterType, label: 'Todas', icon: MessageCircle },
-            { key: 'private' as FilterType, label: 'Privadas', icon: MessageCircle },
-            { key: 'unit' as FilterType, label: 'Unidades', icon: Building2 },
-            { key: 'group' as FilterType, label: 'Grupos', icon: Users }
-          ].map(({ key, label, icon: Icon }) => (
-            <Button
-              key={key}
-              variant={activeFilter === key ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveFilter(key)}
-              className="text-xs"
-            >
-              <Icon className="h-3 w-3 mr-1" />
-              {label} ({getFilterCount(key)})
-            </Button>
-          ))}
-        </div>
+        {/* Action Button */}
+        <NewChatModal onConversationCreated={(roomId) => {
+          const room = rooms.find(r => r.id === roomId)
+          if (room) onRoomSelect(room)
+        }} />
       </div>
 
       {/* Chat List */}
@@ -213,7 +182,6 @@ export function ChatSidebar({
                   onClick={() => onRoomSelect(room)}
                 >
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={room.image_url || undefined} />
                     <AvatarFallback className="bg-muted">
                       {getRoomIcon(room)}
                     </AvatarFallback>
@@ -222,11 +190,6 @@ export function ChatSidebar({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-medium truncate">{room.name}</h3>
-                      {room.last_message && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatLastMessageTime(room.last_message.created_at)}
-                        </span>
-                      )}
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -239,15 +202,6 @@ export function ChatSidebar({
                         </Badge>
                       </div>
                     </div>
-
-                    {room.last_message && (
-                      <p className="text-sm text-muted-foreground truncate mt-1">
-                        <span className="font-medium">
-                          {room.last_message.profiles.name}:
-                        </span>{' '}
-                        {room.last_message.content || 'Anexo'}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
