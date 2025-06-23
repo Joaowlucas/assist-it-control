@@ -1,133 +1,127 @@
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useEquipment, useCreateEquipment, useUpdateEquipment, useDeleteEquipment } from "@/hooks/useEquipment"
-import { useUnits } from "@/hooks/useUnits"
-import { useTechnicianUnits } from "@/hooks/useTechnicianUnits"
-import { useAuth } from "@/hooks/useAuth"
-import { useEquipmentPhotos } from "@/hooks/useEquipmentPhotos"
-import { useSystemSettings } from "@/hooks/useSystemSettings"
-import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery"
-import { EquipmentPDFPreviewDialog } from "@/components/EquipmentPDFPreviewDialog"
-import { ImageUpload } from "@/components/ImageUpload"
-import { Plus, Search, Eye, Edit, Trash2, Camera, FileText, Package, MapPin, Calendar, Shield, Wrench } from "lucide-react"
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-import { EQUIPMENT_TYPES } from "@/constants/equipmentTypes"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { toast } from "sonner"
-import { supabase } from "@/integrations/supabase/client"
-
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useEquipment, useCreateEquipment, useUpdateEquipment, useDeleteEquipment } from "@/hooks/useEquipment";
+import { useUnits } from "@/hooks/useUnits";
+import { useTechnicianUnits } from "@/hooks/useTechnicianUnits";
+import { useAuth } from "@/hooks/useAuth";
+import { useEquipmentPhotos } from "@/hooks/useEquipmentPhotos";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { EquipmentPhotoGallery } from "@/components/EquipmentPhotoGallery";
+import { EquipmentPDFPreviewDialog } from "@/components/EquipmentPDFPreviewDialog";
+import { ImageUpload } from "@/components/ImageUpload";
+import { Plus, Search, Eye, Edit, Trash2, Camera, FileText, Package, MapPin, Calendar, Shield, Wrench } from "lucide-react";
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { EQUIPMENT_TYPES } from "@/constants/equipmentTypes";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 export default function Equipment() {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isPhotoGalleryOpen, setIsPhotoGalleryOpen] = useState(false)
-  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false)
-  const [selectedEquipment, setSelectedEquipment] = useState<any>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedImages, setSelectedImages] = useState<File[]>([])
-  const [editImages, setEditImages] = useState<File[]>([])
-
-  const { profile } = useAuth()
-  const { data: equipment = [], isLoading } = useEquipment()
-  const { data: allUnits = [] } = useUnits()
-  const { data: technicianUnits = [] } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined)
-  const { data: systemSettings } = useSystemSettings()
-  const { data: equipmentPhotos = [] } = useEquipmentPhotos(selectedEquipment?.id)
-  const createEquipment = useCreateEquipment()
-  const updateEquipment = useUpdateEquipment()
-  const deleteEquipment = useDeleteEquipment()
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPhotoGalleryOpen, setIsPhotoGalleryOpen] = useState(false);
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [editImages, setEditImages] = useState<File[]>([]);
+  const {
+    profile
+  } = useAuth();
+  const {
+    data: equipment = [],
+    isLoading
+  } = useEquipment();
+  const {
+    data: allUnits = []
+  } = useUnits();
+  const {
+    data: technicianUnits = []
+  } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined);
+  const {
+    data: systemSettings
+  } = useSystemSettings();
+  const {
+    data: equipmentPhotos = []
+  } = useEquipmentPhotos(selectedEquipment?.id);
+  const createEquipment = useCreateEquipment();
+  const updateEquipment = useUpdateEquipment();
+  const deleteEquipment = useDeleteEquipment();
 
   // Filtrar unidades baseado no role
-  const availableUnits = profile?.role === 'technician' 
-    ? allUnits.filter(unit => technicianUnits.some(tu => tu.unit_id === unit.id))
-    : allUnits
-
-  const filteredEquipment = equipment.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.tombamento?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
+  const availableUnits = profile?.role === 'technician' ? allUnits.filter(unit => technicianUnits.some(tu => tu.unit_id === unit.id)) : allUnits;
+  const filteredEquipment = equipment.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.brand?.toLowerCase().includes(searchTerm.toLowerCase()) || item.model?.toLowerCase().includes(searchTerm.toLowerCase()) || item.tombamento?.toLowerCase().includes(searchTerm.toLowerCase()));
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'disponivel':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'em_uso':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'manutencao':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'inativo':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
-  }
-
+  };
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'disponivel':
-        return 'Disponível'
+        return 'Disponível';
       case 'em_uso':
-        return 'Em Uso'
+        return 'Em Uso';
       case 'manutencao':
-        return 'Manutenção'
+        return 'Manutenção';
       case 'inativo':
-        return 'Inativo'
+        return 'Inativo';
       default:
-        return status
+        return status;
     }
-  }
-
+  };
   const uploadEquipmentPhotos = async (equipmentId: string, images: File[]) => {
-    if (images.length === 0) return
-
+    if (images.length === 0) return;
     for (let i = 0; i < images.length; i++) {
-      const file = images[i]
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${equipmentId}_${Date.now()}_${i}.${fileExt}`
-      const filePath = `equipment-photos/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('equipment-photos')
-        .upload(filePath, file)
-
+      const file = images[i];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${equipmentId}_${Date.now()}_${i}.${fileExt}`;
+      const filePath = `equipment-photos/${fileName}`;
+      const {
+        error: uploadError
+      } = await supabase.storage.from('equipment-photos').upload(filePath, file);
       if (uploadError) {
-        console.error('Error uploading photo:', uploadError)
-        continue
+        console.error('Error uploading photo:', uploadError);
+        continue;
       }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('equipment-photos')
-        .getPublicUrl(filePath)
-
-      const { error: insertError } = await supabase
-        .from('equipment_photos')
-        .insert({
-          equipment_id: equipmentId,
-          photo_url: publicUrl,
-          is_primary: i === 0,
-          uploaded_by: profile?.id
-        })
-
+      const {
+        data: {
+          publicUrl
+        }
+      } = supabase.storage.from('equipment-photos').getPublicUrl(filePath);
+      const {
+        error: insertError
+      } = await supabase.from('equipment_photos').insert({
+        equipment_id: equipmentId,
+        photo_url: publicUrl,
+        is_primary: i === 0,
+        uploaded_by: profile?.id
+      });
       if (insertError) {
-        console.error('Error inserting photo record:', insertError)
+        console.error('Error inserting photo record:', insertError);
       }
     }
-  }
-
+  };
   const handleCreateEquipment = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
-    
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
     try {
       const equipmentData = {
         name: formData.get('name') as string,
@@ -141,30 +135,25 @@ export default function Equipment() {
         unit_id: formData.get('unit_id') as string,
         purchase_date: formData.get('purchase_date') as string || null,
         warranty_end_date: formData.get('warranty_end_date') as string || null,
-        status: 'disponivel' as const,
-      }
+        status: 'disponivel' as const
+      };
+      const result = await createEquipment.mutateAsync(equipmentData);
 
-      const result = await createEquipment.mutateAsync(equipmentData)
-      
       // Upload das fotos após criar o equipamento
       if (selectedImages.length > 0 && result?.id) {
-        await uploadEquipmentPhotos(result.id, selectedImages)
+        await uploadEquipmentPhotos(result.id, selectedImages);
       }
-
-      setIsCreateDialogOpen(false)
-      setSelectedImages([])
-      toast.success("Equipamento criado com sucesso!")
+      setIsCreateDialogOpen(false);
+      setSelectedImages([]);
+      toast.success("Equipamento criado com sucesso!");
     } catch (error: any) {
-      toast.error(error.message || "Erro ao criar equipamento")
+      toast.error(error.message || "Erro ao criar equipamento");
     }
-  }
-
+  };
   const handleUpdateEquipment = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedEquipment) return
-
-    const formData = new FormData(e.target as HTMLFormElement)
-    
+    e.preventDefault();
+    if (!selectedEquipment) return;
+    const formData = new FormData(e.target as HTMLFormElement);
     try {
       const equipmentData = {
         id: selectedEquipment.id,
@@ -179,83 +168,70 @@ export default function Equipment() {
         unit_id: formData.get('unit_id') as string,
         purchase_date: formData.get('purchase_date') as string || null,
         warranty_end_date: formData.get('warranty_end_date') as string || null,
-        status: formData.get('status') as any,
-      }
+        status: formData.get('status') as any
+      };
+      await updateEquipment.mutateAsync(equipmentData);
 
-      await updateEquipment.mutateAsync(equipmentData)
-      
       // Upload das fotos adicionais após atualizar o equipamento
       if (editImages.length > 0) {
-        await uploadEquipmentPhotos(selectedEquipment.id, editImages)
+        await uploadEquipmentPhotos(selectedEquipment.id, editImages);
       }
-
-      setIsEditDialogOpen(false)
-      setEditImages([])
-      toast.success("Equipamento atualizado com sucesso!")
+      setIsEditDialogOpen(false);
+      setEditImages([]);
+      toast.success("Equipamento atualizado com sucesso!");
     } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar equipamento")
+      toast.error(error.message || "Erro ao atualizar equipamento");
     }
-  }
-
+  };
   const openPhotoGallery = (equipment: any) => {
-    setSelectedEquipment(equipment)
-    setIsPhotoGalleryOpen(true)
-  }
-
+    setSelectedEquipment(equipment);
+    setIsPhotoGalleryOpen(true);
+  };
   const openPdfPreview = (equipment: any) => {
-    setSelectedEquipment(equipment)
-    setIsPdfPreviewOpen(true)
-  }
-
+    setSelectedEquipment(equipment);
+    setIsPdfPreviewOpen(true);
+  };
   const openEditDialog = (equipment: any) => {
-    setSelectedEquipment(equipment)
-    setEditImages([])
-    setIsEditDialogOpen(true)
-  }
-
+    setSelectedEquipment(equipment);
+    setEditImages([]);
+    setIsEditDialogOpen(true);
+  };
   const handleDeleteEquipment = async (equipmentId: string) => {
     try {
-      await deleteEquipment.mutateAsync(equipmentId)
-      toast.success("Equipamento excluído com sucesso!")
+      await deleteEquipment.mutateAsync(equipmentId);
+      toast.success("Equipamento excluído com sucesso!");
     } catch (error: any) {
-      toast.error(error.message || "Erro ao excluir equipamento")
+      toast.error(error.message || "Erro ao excluir equipamento");
     }
-  }
+  };
 
   // Estatísticas dos equipamentos
-  const stats = [
-    {
-      title: "Total",
-      value: equipment.length,
-      icon: Package,
-      color: "text-blue-500",
-      bgColor: "bg-blue-50 dark:bg-blue-950"
-    },
-    {
-      title: "Disponíveis",
-      value: equipment.filter(e => e.status === 'disponivel').length,
-      icon: Shield,
-      color: "text-green-500",
-      bgColor: "bg-green-50 dark:bg-green-950"
-    },
-    {
-      title: "Em Uso",
-      value: equipment.filter(e => e.status === 'em_uso').length,
-      icon: Wrench,
-      color: "text-blue-500",
-      bgColor: "bg-blue-50 dark:bg-blue-950"
-    },
-    {
-      title: "Manutenção",
-      value: equipment.filter(e => e.status === 'manutencao').length,
-      icon: Wrench,
-      color: "text-yellow-500",
-      bgColor: "bg-yellow-50 dark:bg-yellow-950"
-    }
-  ]
-
-  return (
-    <div className="space-y-4 md:space-y-6 p-3 md:p-6">
+  const stats = [{
+    title: "Total",
+    value: equipment.length,
+    icon: Package,
+    color: "text-blue-500",
+    bgColor: "bg-blue-50 dark:bg-blue-950"
+  }, {
+    title: "Disponíveis",
+    value: equipment.filter(e => e.status === 'disponivel').length,
+    icon: Shield,
+    color: "text-green-500",
+    bgColor: "bg-green-50 dark:bg-green-950"
+  }, {
+    title: "Em Uso",
+    value: equipment.filter(e => e.status === 'em_uso').length,
+    icon: Wrench,
+    color: "text-blue-500",
+    bgColor: "bg-blue-50 dark:bg-blue-950"
+  }, {
+    title: "Manutenção",
+    value: equipment.filter(e => e.status === 'manutencao').length,
+    icon: Wrench,
+    color: "text-yellow-500",
+    bgColor: "bg-yellow-50 dark:bg-yellow-950"
+  }];
+  return <div className="space-y-4 md:space-y-6 p-3 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Equipamentos</h2>
@@ -266,7 +242,7 @@ export default function Equipment() {
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-zinc-600 hover:bg-zinc-500">
               <Plus className="mr-2 h-4 w-4" />
               Novo Equipamento
             </Button>
@@ -298,11 +274,9 @@ export default function Equipment() {
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {EQUIPMENT_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
+                      {EQUIPMENT_TYPES.map(type => <SelectItem key={type} value={type}>
                           {type}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -313,11 +287,9 @@ export default function Equipment() {
                       <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableUnits.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id}>
+                      {availableUnits.map(unit => <SelectItem key={unit.id} value={unit.id}>
                           {unit.name}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -360,12 +332,7 @@ export default function Equipment() {
                 </div>
               </div>
 
-              <ImageUpload
-                images={selectedImages}
-                onImagesChange={setSelectedImages}
-                maxImages={5}
-                maxSize={5 * 1024 * 1024}
-              />
+              <ImageUpload images={selectedImages} onImagesChange={setSelectedImages} maxImages={5} maxSize={5 * 1024 * 1024} />
 
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -382,8 +349,7 @@ export default function Equipment() {
 
       {/* Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        {stats.map((stat, index) => (
-          <Card key={index}>
+        {stats.map((stat, index) => <Card key={index}>
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -397,8 +363,7 @@ export default function Equipment() {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        ))}
+          </Card>)}
       </div>
 
       {/* Filtros */}
@@ -406,12 +371,7 @@ export default function Equipment() {
         <CardHeader className="pb-3">
           <div className="flex items-center space-x-2">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar equipamentos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
+            <Input placeholder="Buscar equipamentos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-sm" />
           </div>
         </CardHeader>
       </Card>
@@ -441,8 +401,7 @@ export default function Equipment() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEquipment.map((item) => (
-                  <TableRow key={item.id}>
+                {filteredEquipment.map(item => <TableRow key={item.id}>
                     <TableCell className="font-medium">
                       {item.tombamento}
                     </TableCell>
@@ -465,25 +424,13 @@ export default function Equipment() {
                     <TableCell>{item.location || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openPhotoGallery(item)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => openPhotoGallery(item)}>
                           <Camera className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openPdfPreview(item)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => openPdfPreview(item)}>
                           <FileText className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(item)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
@@ -502,10 +449,7 @@ export default function Equipment() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDeleteEquipment(item.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
+                              <AlertDialogAction onClick={() => handleDeleteEquipment(item.id)} className="bg-red-600 hover:bg-red-700">
                                 Excluir
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -513,16 +457,14 @@ export default function Equipment() {
                         </AlertDialog>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
+                  </TableRow>)}
               </TableBody>
             </Table>
           </div>
 
           {/* Cards para mobile */}
           <div className="lg:hidden space-y-4 p-4">
-            {filteredEquipment.map((item) => (
-              <Card key={item.id} className="border">
+            {filteredEquipment.map(item => <Card key={item.id} className="border">
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
@@ -550,33 +492,19 @@ export default function Equipment() {
                       </div>
                     </div>
                     
-                    {item.location && (
-                      <div className="text-sm">
+                    {item.location && <div className="text-sm">
                         <span className="text-muted-foreground">Localização:</span>
                         <div className="font-medium">{item.location}</div>
-                      </div>
-                    )}
+                      </div>}
                     
                     <div className="flex justify-end gap-1 pt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openPhotoGallery(item)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => openPhotoGallery(item)}>
                         <Camera className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openPdfPreview(item)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => openPdfPreview(item)}>
                         <FileText className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(item)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
@@ -595,10 +523,7 @@ export default function Equipment() {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleDeleteEquipment(item.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
+                            <AlertDialogAction onClick={() => handleDeleteEquipment(item.id)} className="bg-red-600 hover:bg-red-700">
                               Excluir
                             </AlertDialogAction>
                           </AlertDialogFooter>
@@ -607,41 +532,27 @@ export default function Equipment() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
 
-          {filteredEquipment.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+          {filteredEquipment.length === 0 && <div className="text-center py-8 text-muted-foreground">
               Nenhum equipamento encontrado
-            </div>
-          )}
+            </div>}
         </CardContent>
       </Card>
 
       {/* Diálogos */}
-      {selectedEquipment && (
-        <>
+      {selectedEquipment && <>
           <Dialog open={isPhotoGalleryOpen} onOpenChange={setIsPhotoGalleryOpen}>
             <DialogContent className="max-w-4xl">
               <DialogHeader>
                 <DialogTitle>Fotos do Equipamento</DialogTitle>
               </DialogHeader>
-              <EquipmentPhotoGallery
-                equipmentId={selectedEquipment.id}
-                canEdit={true}
-              />
+              <EquipmentPhotoGallery equipmentId={selectedEquipment.id} canEdit={true} />
             </DialogContent>
           </Dialog>
 
-          <EquipmentPDFPreviewDialog
-            equipment={selectedEquipment}
-            photos={equipmentPhotos}
-            systemSettings={systemSettings}
-            tombamento={selectedEquipment.tombamento || ''}
-            open={isPdfPreviewOpen}
-            onOpenChange={setIsPdfPreviewOpen}
-          />
+          <EquipmentPDFPreviewDialog equipment={selectedEquipment} photos={equipmentPhotos} systemSettings={systemSettings} tombamento={selectedEquipment.tombamento || ''} open={isPdfPreviewOpen} onOpenChange={setIsPdfPreviewOpen} />
 
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogContent className="sm:max-w-[600px] mx-4 max-h-[90vh] overflow-y-auto">
@@ -671,11 +582,9 @@ export default function Equipment() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {EQUIPMENT_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
+                        {EQUIPMENT_TYPES.map(type => <SelectItem key={type} value={type}>
                             {type}
-                          </SelectItem>
-                        ))}
+                          </SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -686,11 +595,9 @@ export default function Equipment() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableUnits.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.id}>
+                        {availableUnits.map(unit => <SelectItem key={unit.id} value={unit.id}>
                             {unit.name}
-                          </SelectItem>
-                        ))}
+                          </SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -725,21 +632,11 @@ export default function Equipment() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="edit-purchase_date">Data de Compra</Label>
-                    <Input 
-                      id="edit-purchase_date" 
-                      name="purchase_date" 
-                      type="date" 
-                      defaultValue={selectedEquipment.purchase_date || ''} 
-                    />
+                    <Input id="edit-purchase_date" name="purchase_date" type="date" defaultValue={selectedEquipment.purchase_date || ''} />
                   </div>
                   <div>
                     <Label htmlFor="edit-warranty_end_date">Fim da Garantia</Label>
-                    <Input 
-                      id="edit-warranty_end_date" 
-                      name="warranty_end_date" 
-                      type="date" 
-                      defaultValue={selectedEquipment.warranty_end_date || ''} 
-                    />
+                    <Input id="edit-warranty_end_date" name="warranty_end_date" type="date" defaultValue={selectedEquipment.warranty_end_date || ''} />
                   </div>
                   <div>
                     <Label htmlFor="edit-status">Status</Label>
@@ -757,12 +654,7 @@ export default function Equipment() {
                   </div>
                 </div>
 
-                <ImageUpload
-                  images={editImages}
-                  onImagesChange={setEditImages}
-                  maxImages={5}
-                  maxSize={5 * 1024 * 1024}
-                />
+                <ImageUpload images={editImages} onImagesChange={setEditImages} maxImages={5} maxSize={5 * 1024 * 1024} />
 
                 <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
@@ -775,8 +667,6 @@ export default function Equipment() {
               </form>
             </DialogContent>
           </Dialog>
-        </>
-      )}
-    </div>
-  )
+        </>}
+    </div>;
 }
