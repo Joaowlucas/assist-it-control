@@ -1,5 +1,4 @@
-
-import { Home, Ticket, Wrench, Settings, User, Building2, Megaphone } from "lucide-react"
+import { Home, Ticket, Wrench, Settings, User, Building2, Megaphone, MessageCircle } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +30,11 @@ const userItems = [
     icon: Wrench,
   },
   {
+    title: "Conversas",
+    url: "/conversations",
+    icon: MessageCircle,
+  },
+  {
     title: "Comunicados",
     url: "/announcements",
     icon: Megaphone,
@@ -57,6 +61,11 @@ const adminItems = [
     title: "Atribuições",
     url: "/assignments",
     icon: Building2,
+  },
+  {
+    title: "Conversas",
+    url: "/conversations",
+    icon: MessageCircle,
   },
   {
     title: "Comunicados",

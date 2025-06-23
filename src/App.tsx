@@ -15,6 +15,7 @@ import UserDashboard from "@/pages/UserDashboard"
 import UserTickets from "@/pages/UserTickets"
 import UserAssignments from "@/pages/UserAssignments"
 import Announcements from "@/pages/Announcements"
+import Conversations from "@/pages/Conversations"
 import { AdminLayout } from "@/components/AdminLayout"
 import { UserLayout } from "@/components/UserLayout"
 import { useAuth } from "@/hooks/useAuth"
@@ -51,6 +52,7 @@ function AppRoutes() {
           <Route path="/user-dashboard" element={<UserLayout><UserDashboard /></UserLayout>} />
           <Route path="/user-tickets" element={<UserLayout><UserTickets /></UserLayout>} />
           <Route path="/user-assignments" element={<UserLayout><UserAssignments /></UserLayout>} />
+          <Route path="/conversations" element={<UserLayout><Conversations /></UserLayout>} />
           <Route path="/announcements" element={<UserLayout><Announcements /></UserLayout>} />
           <Route path="*" element={<UserLayout><UserDashboard /></UserLayout>} />
         </Routes>
@@ -65,6 +67,7 @@ function AppRoutes() {
         <Route path="/tickets" element={<AdminLayout><Tickets /></AdminLayout>} />
         <Route path="/equipment" element={<AdminLayout><Equipment /></AdminLayout>} />
         <Route path="/assignments" element={<AdminLayout><Assignments /></AdminLayout>} />
+        <Route path="/conversations" element={<AdminLayout><Conversations /></AdminLayout>} />
         <Route path="/announcements" element={<AdminLayout><Announcements /></AdminLayout>} />
         <Route path="/settings" element={<AdminLayout><Settings /></AdminLayout>} />
         <Route path="*" element={<AdminLayout><Dashboard /></AdminLayout>} />
