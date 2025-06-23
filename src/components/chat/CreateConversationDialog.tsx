@@ -29,6 +29,14 @@ export function CreateConversationDialog({ open, onOpenChange }: CreateConversat
   const { createConversation, loading } = useCreateConversation()
 
   const handleSubmit = async () => {
+    console.log('Creating conversation with:', {
+      type,
+      name,
+      selectedUsers,
+      profileUnitId: profile?.unit_id
+    })
+
+    // Validações
     if (type === 'direct' && selectedUsers.length !== 1) {
       toast({
         title: "Erro",
@@ -47,28 +55,33 @@ export function CreateConversationDialog({ open, onOpenChange }: CreateConversat
       return
     }
 
+    if (!profile?.unit_id) {
+      toast({
+        title: "Erro",
+        description: "Usuário não possui unidade definida.",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
+      console.log('Calling createConversation...')
+      
       await createConversation({
         type,
         name: type === 'group' ? name : undefined,
         description: type === 'group' ? description : undefined,
         participantIds: selectedUsers,
-        unitId: profile?.unit_id
+        unitId: profile.unit_id
       })
 
+      console.log('Conversation created, closing dialog...')
       onOpenChange(false)
       resetForm()
       
-      toast({
-        title: "Sucesso",
-        description: `${type === 'group' ? 'Grupo' : 'Conversa'} criado com sucesso!`
-      })
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a conversa.",
-        variant: "destructive"
-      })
+      console.error('Failed to create conversation:', error)
+      // O toast de erro já é mostrado pelo hook useCreateConversation
     }
   }
 
@@ -80,6 +93,8 @@ export function CreateConversationDialog({ open, onOpenChange }: CreateConversat
   }
 
   const toggleUser = (userId: string) => {
+    console.log('Toggling user:', userId, 'Current selection:', selectedUsers)
+    
     if (type === 'direct') {
       setSelectedUsers([userId])
     } else {
@@ -90,6 +105,20 @@ export function CreateConversationDialog({ open, onOpenChange }: CreateConversat
       )
     }
   }
+
+  // Filtrar usuários da mesma unidade (exceto admins que podem ver todos)
+  const availableUsers = users.filter(user => {
+    // Não mostrar o próprio usuário
+    if (user.id === profile?.id) return false
+    
+    // Admin pode conversar com qualquer um
+    if (profile?.role === 'admin') return true
+    
+    // Usuários comuns só podem conversar com pessoas da mesma unidade
+    return user.unit_id === profile?.unit_id
+  })
+
+  console.log('Available users:', availableUsers)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,8 +177,12 @@ export function CreateConversationDialog({ open, onOpenChange }: CreateConversat
             <div className="max-h-48 overflow-y-auto space-y-2 mt-2">
               {loadingUsers ? (
                 <div className="text-center py-4">Carregando usuários...</div>
+              ) : availableUsers.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  Nenhum usuário disponível para conversa
+                </div>
               ) : (
-                users.map((user) => (
+                availableUsers.map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center space-x-3 p-2 rounded hover:bg-accent cursor-pointer"

@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from './useAuth'
+import { toast } from '@/hooks/use-toast'
 
 interface CreateConversationParams {
   type: 'direct' | 'group'
@@ -17,34 +18,60 @@ export function useCreateConversation() {
 
   const mutation = useMutation({
     mutationFn: async (params: CreateConversationParams) => {
-      if (!profile?.id) throw new Error('User not authenticated')
+      if (!profile?.id) {
+        console.error('User not authenticated')
+        throw new Error('User not authenticated')
+      }
 
       const { type, name, description, participantIds, unitId } = params
+      
+      console.log('Creating conversation with params:', {
+        type,
+        name,
+        participantIds,
+        unitId,
+        currentUserId: profile.id
+      })
 
-      // Check if direct conversation already exists
+      // Para conversas diretas, verificar se já existe uma conversa entre os dois usuários
       if (type === 'direct' && participantIds.length === 1) {
-        const { data: existing } = await supabase
+        console.log('Checking for existing direct conversation...')
+        
+        const { data: existingConversations, error: searchError } = await supabase
           .from('conversations')
           .select(`
             id,
-            conversation_participants!inner (user_id)
+            conversation_participants!inner (
+              user_id
+            )
           `)
           .eq('type', 'direct')
           .eq('unit_id', unitId)
+          .eq('is_active', true)
 
-        const existingConv = existing?.find(conv => {
-          const userIds = conv.conversation_participants.map(p => p.user_id)
-          return userIds.length === 2 && 
-                 userIds.includes(profile.id) && 
-                 userIds.includes(participantIds[0])
-        })
-
-        if (existingConv) {
-          return existingConv
+        if (searchError) {
+          console.error('Error searching for existing conversations:', searchError)
+        } else if (existingConversations) {
+          console.log('Found existing conversations:', existingConversations)
+          
+          // Verificar se existe uma conversa com exatamente os mesmos participantes
+          for (const conv of existingConversations) {
+            const userIds = conv.conversation_participants.map((p: any) => p.user_id)
+            const expectedUserIds = [profile.id, participantIds[0]].sort()
+            const actualUserIds = userIds.sort()
+            
+            if (expectedUserIds.length === actualUserIds.length &&
+                expectedUserIds.every((id, index) => id === actualUserIds[index])) {
+              console.log('Found existing direct conversation:', conv.id)
+              return { id: conv.id }
+            }
+          }
         }
       }
 
-      // Create conversation
+      console.log('Creating new conversation...')
+
+      // Criar a conversa
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .insert({
@@ -57,11 +84,20 @@ export function useCreateConversation() {
         .select()
         .single()
 
-      if (convError) throw convError
+      if (convError) {
+        console.error('Error creating conversation:', convError)
+        throw convError
+      }
 
-      // Add participants
+      console.log('Conversation created:', conversation)
+
+      // Preparar participantes: incluir o criador e os participantes selecionados
       const participants = [
-        { conversation_id: conversation.id, user_id: profile.id, role: 'admin' },
+        { 
+          conversation_id: conversation.id, 
+          user_id: profile.id, 
+          role: 'admin' 
+        },
         ...participantIds.map(userId => ({
           conversation_id: conversation.id,
           user_id: userId,
@@ -69,16 +105,45 @@ export function useCreateConversation() {
         }))
       ]
 
+      console.log('Adding participants:', participants)
+
+      // Adicionar participantes
       const { error: participantsError } = await supabase
         .from('conversation_participants')
         .insert(participants)
 
-      if (participantsError) throw participantsError
+      if (participantsError) {
+        console.error('Error adding participants:', participantsError)
+        
+        // Se falhar ao adicionar participantes, remover a conversa criada
+        await supabase
+          .from('conversations')
+          .delete()
+          .eq('id', conversation.id)
+        
+        throw participantsError
+      }
 
+      console.log('Conversation created successfully:', conversation)
       return conversation
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Conversation creation mutation successful:', data)
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      
+      toast({
+        title: "Sucesso",
+        description: "Conversa criada com sucesso!"
+      })
+    },
+    onError: (error) => {
+      console.error('Conversation creation failed:', error)
+      
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a conversa. Tente novamente.",
+        variant: "destructive"
+      })
     }
   })
 

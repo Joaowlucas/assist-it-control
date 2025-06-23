@@ -21,6 +21,7 @@ export function useMessageSend() {
 
   const sendMessage = async ({ conversationId, content, attachments = [] }: SendMessageParams) => {
     if (!profile?.id) {
+      console.error('User not authenticated')
       toast({
         title: "Erro",
         description: "Usuário não autenticado",
@@ -29,10 +30,29 @@ export function useMessageSend() {
       return
     }
 
+    console.log('Sending message:', {
+      conversationId,
+      content,
+      attachments,
+      senderId: profile.id
+    })
+
     try {
       setLoading(true)
 
-      // Insert message
+      // Verificar se o usuário tem acesso à conversa
+      const { data: hasAccess } = await supabase
+        .rpc('can_access_conversation', {
+          conversation_id: conversationId,
+          user_id: profile.id
+        })
+
+      if (!hasAccess) {
+        console.error('User does not have access to this conversation')
+        throw new Error('Acesso negado à conversa')
+      }
+
+      // Inserir mensagem
       const { data: messageData, error: messageError } = await supabase
         .from('chat_messages')
         .insert({
@@ -45,9 +65,14 @@ export function useMessageSend() {
         .select()
         .single()
 
-      if (messageError) throw messageError
+      if (messageError) {
+        console.error('Error inserting message:', messageError)
+        throw messageError
+      }
 
-      // Insert attachments if any
+      console.log('Message inserted:', messageData)
+
+      // Inserir anexos se houver
       if (attachments.length > 0 && messageData) {
         const attachmentInserts = attachments.map(attachment => ({
           message_id: messageData.id,
@@ -57,19 +82,30 @@ export function useMessageSend() {
           file_size: attachment.file_size
         }))
 
+        console.log('Inserting attachments:', attachmentInserts)
+
         const { error: attachmentError } = await supabase
           .from('message_attachments')
           .insert(attachmentInserts)
 
-        if (attachmentError) throw attachmentError
+        if (attachmentError) {
+          console.error('Error inserting attachments:', attachmentError)
+          throw attachmentError
+        }
       }
 
-      // Update conversation updated_at
-      await supabase
+      // Atualizar timestamp da conversa
+      const { error: updateError } = await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId)
 
+      if (updateError) {
+        console.error('Error updating conversation timestamp:', updateError)
+        // Não falhar por causa disso, apenas logar
+      }
+
+      console.log('Message sent successfully')
       return messageData
     } catch (error) {
       console.error('Error sending message:', error)

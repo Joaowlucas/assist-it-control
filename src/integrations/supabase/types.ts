@@ -1435,7 +1435,7 @@ export type Database = {
         Returns: undefined
       }
       can_access_conversation: {
-        Args: { conv_id: string; user_id: string }
+        Args: { conversation_id: string; user_id: string }
         Returns: boolean
       }
       generate_tombamento: {
