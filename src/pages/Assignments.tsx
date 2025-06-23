@@ -153,7 +153,7 @@ export default function Assignments() {
   return <div className="space-y-6">
       {/* Header and Stats Cards */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Atribuições de Equipamentos</h1>
+        <h1 className="text-3xl font-bold text-slate-800">Atribuições de Equipamentos</h1>
         <div className="flex flex-wrap gap-2">
           <AllAssignmentsModal open={false} onOpenChange={() => {}} />
           <MonthlyReturnsModal open={false} onOpenChange={() => {}} />
@@ -291,7 +291,7 @@ export default function Assignments() {
                         <Button variant="outline" size="sm" onClick={() => handlePreviewPDF(assignment)} title="Visualizar PDF">
                           <FileText className="h-4 w-4" />
                         </Button>
-                        {assignment.status === 'ativo' && <Button variant="outline" size="sm" onClick={() => handleEndAssignment(assignment)} title="Finalizar Atribuição">
+                        {assignment.status === 'ativo' && <Button variant="outline" size="sm" onClick={() => handleEndAssignment(assignment)} title="Finalizar Atribuição" className="bg-red-400 hover:bg-red-300 text-gray-50">
                             Finalizar
                           </Button>}
                       </div>
