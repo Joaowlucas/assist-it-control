@@ -31,7 +31,7 @@ export function usePostComments(postId: string) {
         .from('post_comments')
         .select(`
           *,
-          profiles(name, avatar_url)
+          profiles!fk_post_comments_user_id(name, avatar_url)
         `)
         .eq('post_id', postId)
         .order('created_at', { ascending: true })

@@ -604,7 +604,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_post_comments_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_post_comments_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       post_likes: {
         Row: {
@@ -625,7 +640,22 @@ export type Database = {
           post_id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_post_likes_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_post_likes_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       predefined_texts: {
         Row: {
