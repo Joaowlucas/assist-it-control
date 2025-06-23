@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -24,6 +25,52 @@ import { useAssignmentPDF } from '@/hooks/useAssignmentPDF'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
 import { Search, Plus, FileText } from 'lucide-react'
 
+interface Assignment {
+  id: string
+  user_id: string
+  equipment_id: string
+  start_date: string
+  end_date: string | null
+  status: 'ativo' | 'finalizado'
+  notes: string | null
+  created_at: string
+  updated_at: string
+  equipment?: {
+    id: string
+    name: string
+    tombamento?: string
+  }
+  user?: {
+    id: string
+    name: string
+    unit?: {
+      name: string
+    }
+  }
+}
+
+interface MonthlyReturn {
+  id: string
+  user_id: string
+  equipment_id: string
+  start_date: string
+  end_date: string | null
+  status: 'ativo' | 'finalizado'
+  notes: string | null
+  equipment?: {
+    id: string
+    name: string
+    tombamento?: string
+  }
+  user?: {
+    id: string
+    name: string
+    unit?: {
+      name: string
+    }
+  }
+}
+
 export default function Assignments() {
   // State variables
   const [searchTerm, setSearchTerm] = useState('')
@@ -42,9 +89,9 @@ export default function Assignments() {
 
   const { toast } = useToast()
   const { profile } = useAuth()
-  const { assignments, isLoading } = useAssignments()
+  const { data: assignments, isLoading } = useAssignments()
   const { data: availableEquipment } = useAvailableEquipment()
-  const { data: availableUsers } = useAvailableUsers()
+  const { users: availableUsers } = useAvailableUsers()
   const { mutate: createAssignment, isPending: isCreating } = useCreateAssignment()
   const { mutate: endAssignment } = useEndAssignment()
   const { previewAssignmentPDF } = useAssignmentPDF()
@@ -140,9 +187,11 @@ export default function Assignments() {
   }
 
   const handleShowActive = () => {
-    const active = assignments.filter(a => a.status === 'active')
-    setActiveAssignments(active)
-    setShowActiveModal(true)
+    if (assignments) {
+      const active = assignments.filter(a => a.status === 'ativo')
+      setActiveAssignments(active)
+      setShowActiveModal(true)
+    }
   }
 
   if (isLoading) {

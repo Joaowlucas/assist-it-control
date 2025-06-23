@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -52,10 +53,10 @@ export function AssignmentManagementSection() {
   const [notes, setNotes] = useState('')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
-  const { assignments, loading: assignmentsLoading } = useAssignments()
+  const { data: assignments, isLoading: assignmentsLoading } = useAssignments()
   const { users, loading: usersLoading } = useAvailableUsers()
-  const { equipment, loading: equipmentLoading } = useAvailableEquipment()
-  const { createAssignment, loading: createLoading } = useCreateAssignment()
+  const { data: equipment, isLoading: equipmentLoading } = useAvailableEquipment()
+  const { mutate: createAssignment, isPending: createLoading } = useCreateAssignment()
 
   const handleCreateAssignment = async () => {
     if (!selectedUser || !selectedEquipment || !startDate || !endDate) {
@@ -68,7 +69,7 @@ export function AssignmentManagementSection() {
     }
 
     try {
-      await createAssignment({
+      createAssignment({
         user_id: selectedUser,
         equipment_id: selectedEquipment,
         start_date: startDate.toISOString(),
@@ -111,7 +112,7 @@ export function AssignmentManagementSection() {
                 <SelectValue placeholder="Selecione um usuário" />
               </SelectTrigger>
               <SelectContent>
-                {users.map((user) => (
+                {users?.map((user) => (
                   <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -124,7 +125,7 @@ export function AssignmentManagementSection() {
                 <SelectValue placeholder="Selecione um equipamento" />
               </SelectTrigger>
               <SelectContent>
-                {equipment.map((eq) => (
+                {equipment?.map((eq) => (
                   <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
                 ))}
               </SelectContent>
