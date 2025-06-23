@@ -1,4 +1,5 @@
-import React from 'react'
+
+import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useQuery } from "@tanstack/react-query"
@@ -6,15 +7,35 @@ import { supabase } from "@/integrations/supabase/client"
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from '@/hooks/use-toast'
 import { PostComments } from '@/components/PostComments'
+import { ImageModal } from '@/components/ImageModal'
+
+interface PostProfile {
+  name: string
+  avatar_url?: string
+}
+
+interface Post {
+  id: string
+  title: string
+  content: string
+  created_at: string
+  author_id: string
+  poll_options?: string[]
+  poll_votes?: Record<string, string[]>
+  media_url?: string
+  profiles: PostProfile
+}
 
 async function getLandingPagePosts() {
   const { data, error } = await supabase
     .from('landing_page_posts')
-    .select('*')
+    .select(`
+      *,
+      profiles(name, avatar_url)
+    `)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -22,7 +43,7 @@ async function getLandingPagePosts() {
     throw error
   }
 
-  return data
+  return data as Post[]
 }
 
 export default function Announcements() {
@@ -31,13 +52,17 @@ export default function Announcements() {
     queryFn: getLandingPagePosts,
   })
   const { profile } = useAuth()
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
   const handleVote = async (postId: string, option: string) => {
     if (!profile) return
 
     try {
-      const currentVotes = posts.find(p => p.id === postId)?.poll_votes as Record<string, string[]> || {}
-      const currentOptions = posts.find(p => p.id === postId)?.poll_options as string[] || []
+      const post = posts.find(p => p.id === postId)
+      if (!post) return
+
+      const currentVotes = post.poll_votes || {}
+      const currentOptions = post.poll_options || []
       
       // Remove user from all options first
       const updatedVotes: Record<string, string[]> = {}
@@ -102,13 +127,24 @@ export default function Announcements() {
             <CardContent>
               <p className="text-gray-700 dark:text-gray-300">{post.content}</p>
 
+              {post.media_url && (
+                <div className="mt-4">
+                  <img
+                    src={post.media_url}
+                    alt="Post image"
+                    className="max-w-full h-auto rounded cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setSelectedImage(post.media_url!)}
+                  />
+                </div>
+              )}
+
               {post.poll_options && post.poll_options.length > 0 && (
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-2">Enquete</h3>
                   <ul className="space-y-2">
                     {post.poll_options.map((option) => {
-                      const voteCount = (post.poll_votes as Record<string, string[]>)?.[option]?.length || 0
-                      const userHasVoted = !!((post.poll_votes as Record<string, string[]>)?.[option]?.includes(profile?.id || ''))
+                      const voteCount = post.poll_votes?.[option]?.length || 0
+                      const userHasVoted = post.poll_votes?.[option]?.includes(profile?.id || '') || false
 
                       return (
                         <li key={option} className="flex items-center justify-between">
@@ -136,6 +172,15 @@ export default function Announcements() {
           </Card>
         ))}
       </div>
+
+      {selectedImage && (
+        <ImageModal
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+          imageUrl={selectedImage}
+          imageTitle="Post Image"
+        />
+      )}
     </div>
   )
 }
