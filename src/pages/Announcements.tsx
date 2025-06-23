@@ -106,26 +106,26 @@ export default function Announcements() {
       <div className="space-y-6">
         {posts.map((post) => (
           <Card key={post.id}>
-            <CardHeader className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src={post.profiles?.avatar_url || undefined} />
-                <AvatarFallback>{post.profiles?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle>{post.title}</CardTitle>
-                <CardDescription>
-                  <div className="text-muted-foreground text-sm">
+            <CardHeader>
+              <div className="flex items-start space-x-4">
+                <Avatar>
+                  <AvatarImage src={post.profiles?.avatar_url || undefined} />
+                  <AvatarFallback>{post.profiles?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <CardTitle className="text-left">{post.title}</CardTitle>
+                  <CardDescription className="text-left">
                     <span>{post.profiles?.name}</span>
                     <span className="mx-1">•</span>
                     <span>
                       {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
                     </span>
-                  </div>
-                </CardDescription>
+                  </CardDescription>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 dark:text-gray-300">{post.content}</p>
+              <p className="text-gray-700 dark:text-gray-300 text-left">{post.content}</p>
 
               {post.media_url && (
                 <div className="mt-4">
@@ -140,7 +140,7 @@ export default function Announcements() {
 
               {post.poll_options && post.poll_options.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="text-lg font-semibold mb-2">Enquete</h3>
+                  <h3 className="text-lg font-semibold mb-2 text-left">Enquete</h3>
                   <ul className="space-y-2">
                     {post.poll_options.map((option) => {
                       const voteCount = post.poll_votes?.[option]?.length || 0
@@ -148,7 +148,7 @@ export default function Announcements() {
 
                       return (
                         <li key={option} className="flex items-center justify-between">
-                          <label className="flex-1">{option}</label>
+                          <label className="flex-1 text-left">{option}</label>
                           <div>
                             <span className="mr-2">{voteCount} votos</span>
                             <Button 
