@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -289,17 +290,21 @@ export function useCreateChatRoom() {
 
       // Para chats privados, verificar se já existe uma conversa entre os usuários
       if (params.type === 'private' && params.participantIds?.length === 1) {
-        const { data: existingRoom, error: findError } = await supabase
-          .rpc('find_private_chat_room', {
-            user1_id: profile.id,
-            user2_id: params.participantIds[0]
-          })
+        try {
+          const { data: existingRoom, error: findError } = await supabase
+            .rpc('find_private_chat_room', {
+              user1_id: profile.id,
+              user2_id: params.participantIds[0]
+            })
 
-        if (findError) {
-          console.error('Error checking existing private chat:', findError)
-        } else if (existingRoom) {
-          console.log('Found existing private chat:', existingRoom)
-          return existingRoom
+          if (findError) {
+            console.log('Function not found, creating new room directly:', findError)
+          } else if (existingRoom) {
+            console.log('Found existing private chat:', existingRoom)
+            return existingRoom
+          }
+        } catch (error) {
+          console.log('Error checking existing chat, proceeding with creation:', error)
         }
       }
 

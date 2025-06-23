@@ -83,7 +83,9 @@ export function StartChatDialog({ onChatCreated }: StartChatDialogProps) {
       
       setOpen(false)
       setSearchTerm('')
-      onChatCreated?.(roomId)
+      if (typeof roomId === 'string') {
+        onChatCreated?.(roomId)
+      }
     } catch (error) {
       console.error('Error starting chat:', error)
       toast({

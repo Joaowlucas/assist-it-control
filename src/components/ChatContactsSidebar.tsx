@@ -69,7 +69,9 @@ export function ChatContactsSidebar({ open, onOpenChange, onDirectChat }: ChatCo
       
       onOpenChange(false)
       setSearchTerm('')
-      onDirectChat?.(roomId)
+      if (typeof roomId === 'string') {
+        onDirectChat?.(roomId)
+      }
     } catch (error) {
       console.error('Error starting chat:', error)
     }
