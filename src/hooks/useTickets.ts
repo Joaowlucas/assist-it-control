@@ -1,219 +1,141 @@
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
-import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
-import { useToast } from '@/hooks/use-toast'
-import { useAuth } from '@/hooks/useAuth'
-import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
-
-type Ticket = Tables<'tickets'>
-type TicketInsert = TablesInsert<'tickets'>
-type TicketUpdate = TablesUpdate<'tickets'>
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useTechnicianUnits } from '@/hooks/useTechnicianUnits';
+import { toast } from 'sonner';
 
 export function useTickets() {
-  const { profile } = useAuth()
-  const { data: technicianUnits = [] } = useTechnicianUnits(profile?.id)
+  const { profile } = useAuth();
+  const { data: technicianUnits } = useTechnicianUnits(profile?.role === 'technician' ? profile.id : undefined);
 
   return useQuery({
-    queryKey: ['tickets', profile?.id, profile?.role],
+    queryKey: ['tickets', profile?.id, profile?.role, technicianUnits],
     queryFn: async () => {
-      console.log('Fetching tickets for user:', profile?.role, profile?.id)
+      console.log('Fetching tickets...');
       
+      if (!profile) {
+        throw new Error('User profile not loaded');
+      }
+
       let query = supabase
         .from('tickets')
         .select(`
           *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units!tickets_unit_id_fkey(name),
-          attachments:ticket_attachments(
-            *,
-            uploader:profiles(name, email)
-          )
-        `)
+          requester:profiles!tickets_requester_id_fkey(id, name, email, phone),
+          assignee:profiles!tickets_assignee_id_fkey(id, name, email),
+          unit:units(id, name)
+        `);
 
-      // Filtrar por unidades baseado no role
-      if (profile?.role === 'technician') {
-        const unitIds = technicianUnits.map(tu => tu.unit_id)
-        
-        if (unitIds.length > 0) {
-          query = query.in('unit_id', unitIds)
-        } else {
-          // Se técnico não tem unidades atribuídas, não mostrar nada
-          return []
-        }
+      // Apply filters based on user role
+      if (profile.role === 'user') {
+        // Users can only see their own tickets
+        query = query.eq('requester_id', profile.id);
+      } else if (profile.role === 'technician' && technicianUnits && technicianUnits.length > 0) {
+        // Technicians can see tickets from their assigned units
+        const allowedUnitIds = technicianUnits.map(tu => tu.unit_id);
+        query = query.in('unit_id', allowedUnitIds);
       }
-      // Admin vê todos os chamados (sem filtro)
-      
-      const { data, error } = await query.order('created_at', { ascending: false })
-      
-      if (error) {
-        console.error('Error fetching tickets:', error)
-        throw error
-      }
-      
-      // Adicionar URLs públicas aos anexos
-      const ticketsWithUrls = data?.map(ticket => ({
-        ...ticket,
-        attachments: ticket.attachments?.map(attachment => {
-          const { data: urlData } = supabase.storage
-            .from('ticket-attachments')
-            .getPublicUrl(attachment.file_path)
-          
-          return {
-            ...attachment,
-            public_url: urlData.publicUrl
-          }
-        }) || []
-      })) || []
-      
-      console.log('Tickets fetched:', ticketsWithUrls.length, 'tickets for role:', profile?.role)
-      return ticketsWithUrls
-    },
-    enabled: !!profile?.id,
-  })
-}
+      // Admins can see all tickets (no additional filter)
 
-export function useTicket(id: string) {
-  return useQuery({
-    queryKey: ['ticket', id],
-    queryFn: async () => {
-      console.log('Fetching ticket:', id)
-      
-      const { data, error } = await supabase
-        .from('tickets')
-        .select(`
-          *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units!tickets_unit_id_fkey(name),
-          comments:ticket_comments(
-            *,
-            user:profiles(name, email)
-          ),
-          attachments:ticket_attachments(
-            *,
-            uploader:profiles(name, email)
-          )
-        `)
-        .eq('id', id)
-        .single()
-      
+      const { data, error } = await query.order('created_at', { ascending: false });
+
       if (error) {
-        console.error('Error fetching ticket:', error)
-        throw error
+        console.error('Error fetching tickets:', error);
+        throw error;
       }
-      
-      // Adicionar URLs públicas aos anexos
-      const ticketWithUrls = {
-        ...data,
-        attachments: data.attachments?.map(attachment => {
-          const { data: urlData } = supabase.storage
-            .from('ticket-attachments')
-            .getPublicUrl(attachment.file_path)
-          
-          return {
-            ...attachment,
-            public_url: urlData.publicUrl
-          }
-        }) || []
-      }
-      
-      console.log('Ticket fetched:', ticketWithUrls)
-      return ticketWithUrls
+
+      console.log(`Loaded ${data?.length || 0} tickets`);
+      return data || [];
     },
-    enabled: !!id,
-  })
+    enabled: !!profile,
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
 }
 
 export function useCreateTicket() {
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (ticket: TicketInsert) => {
-      console.log('Creating ticket:', ticket)
-      
+    mutationFn: async (newTicket) => {
       const { data, error } = await supabase
         .from('tickets')
-        .insert(ticket)
-        .select(`
-          *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units!tickets_unit_id_fkey(name)
-        `)
-        .single()
-      
+        .insert([newTicket])
+        .select()
+        .single();
+
       if (error) {
-        console.error('Error creating ticket:', error)
-        throw error
+        console.error('Error creating ticket:', error);
+        throw error;
       }
-      
-      console.log('Ticket created:', data)
-      return data
+
+      return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      toast({
-        title: 'Sucesso',
-        description: `Chamado #${data.ticket_number} criado com sucesso`,
-      })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      toast.success('Ticket criado com sucesso!');
     },
     onError: (error) => {
-      console.error('Error in createTicket mutation:', error)
-      toast({
-        title: 'Erro',
-        description: 'Erro ao criar chamado: ' + error.message,
-        variant: 'destructive',
-      })
+      toast.error(`Erro ao criar ticket: ${error.message}`);
     },
-  })
+  });
 }
 
 export function useUpdateTicket() {
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: TicketUpdate & { id: string }) => {
-      console.log('Updating ticket:', { id, updates })
-      
+    mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('tickets')
         .update(updates)
         .eq('id', id)
-        .select(`
-          *,
-          requester:profiles!tickets_requester_id_fkey(name, email),
-          assignee:profiles!tickets_assignee_id_fkey(name, email),
-          unit:units!tickets_unit_id_fkey(name)
-        `)
-        .single()
-      
+        .select()
+        .single();
+
       if (error) {
-        console.error('Error updating ticket:', error)
-        throw error
+        console.error('Error updating ticket:', error);
+        throw error;
       }
-      
-      console.log('Ticket updated:', data)
-      return data
+
+      return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      queryClient.invalidateQueries({ queryKey: ['ticket', data.id] })
-      toast({
-        title: 'Sucesso',
-        description: 'Chamado atualizado com sucesso',
-      })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      toast.success('Ticket atualizado com sucesso!');
     },
     onError: (error) => {
-      console.error('Error in updateTicket mutation:', error)
-      toast({
-        title: 'Erro',
-        description: 'Erro ao atualizar chamado: ' + error.message,
-        variant: 'destructive',
-      })
+      toast.error(`Erro ao atualizar ticket: ${error.message}`);
     },
-  })
+  });
+}
+
+export function useDeleteTicket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const { data, error } = await supabase
+        .from('tickets')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting ticket:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      toast.success('Ticket excluído com sucesso!');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao excluir ticket: ${error.message}`);
+    },
+  });
 }

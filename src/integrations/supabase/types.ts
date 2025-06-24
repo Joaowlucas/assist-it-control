@@ -70,6 +70,178 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string | null
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          is_deleted: boolean | null
+          mentions: Json | null
+          message_type: string | null
+          reply_to_id: string | null
+          sender_id: string
+          status: Database["public"]["Enums"]["message_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          mentions?: Json | null
+          message_type?: string | null
+          reply_to_id?: string | null
+          sender_id: string
+          status?: Database["public"]["Enums"]["message_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          mentions?: Json | null
+          message_type?: string | null
+          reply_to_id?: string | null
+          sender_id?: string
+          status?: Database["public"]["Enums"]["message_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          id: string
+          is_muted: boolean | null
+          joined_at: string | null
+          left_at: string | null
+          muted_until: string | null
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          is_muted?: boolean | null
+          joined_at?: string | null
+          left_at?: string | null
+          muted_until?: string | null
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          is_muted?: boolean | null
+          joined_at?: string | null
+          left_at?: string | null
+          muted_until?: string | null
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string | null
+          type: Database["public"]["Enums"]["conversation_type"]
+          unit_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          type?: Database["public"]["Enums"]["conversation_type"]
+          unit_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          type?: Database["public"]["Enums"]["conversation_type"]
+          unit_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment: {
         Row: {
           brand: string | null
@@ -332,6 +504,154 @@ export type Database = {
           {
             foreignKeyName: "landing_page_posts_author_id_fkey"
             columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_attachments: {
+        Row: {
+          attachment_type: Database["public"]["Enums"]["attachment_type"]
+          created_at: string | null
+          duration: number | null
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          message_id: string
+          mime_type: string | null
+          thumbnail_url: string | null
+        }
+        Insert: {
+          attachment_type: Database["public"]["Enums"]["attachment_type"]
+          created_at?: string | null
+          duration?: number | null
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          message_id: string
+          mime_type?: string | null
+          thumbnail_url?: string | null
+        }
+        Update: {
+          attachment_type?: Database["public"]["Enums"]["attachment_type"]
+          created_at?: string | null
+          duration?: number | null
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          message_id?: string
+          mime_type?: string | null
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_reads: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moderation_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["moderation_action"]
+          conversation_id: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          message_id: string | null
+          moderator_id: string
+          reason: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["moderation_action"]
+          conversation_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          message_id?: string | null
+          moderator_id: string
+          reason?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["moderation_action"]
+          conversation_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          message_id?: string | null
+          moderator_id?: string
+          reason?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_logs_moderator_id_fkey"
+            columns: ["moderator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_logs_target_user_id_fkey"
+            columns: ["target_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1002,6 +1322,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_presence: {
+        Row: {
+          id: string
+          is_typing_in: string | null
+          last_seen: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_typing_in?: string | null
+          last_seen?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_typing_in?: string | null
+          last_seen?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_presence_is_typing_in_fkey"
+            columns: ["is_typing_in"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_presence_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_notifications: {
         Row: {
           created_at: string | null
@@ -1072,6 +1434,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_access_conversation: {
+        Args: { conversation_id: string; user_id: string }
+        Returns: boolean
+      }
       generate_tombamento: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1118,7 +1484,11 @@ export type Database = {
     }
     Enums: {
       assignment_status: "ativo" | "finalizado"
+      attachment_type: "image" | "video" | "document" | "audio"
+      conversation_type: "direct" | "group"
       equipment_status: "disponivel" | "em_uso" | "manutencao" | "descartado"
+      message_status: "sent" | "delivered" | "read" | "edited" | "deleted"
+      moderation_action: "delete_message" | "mute_user" | "ban_user" | "warning"
       ticket_category: "hardware" | "software" | "rede" | "acesso" | "outros"
       ticket_priority: "baixa" | "media" | "alta" | "critica"
       ticket_status: "aberto" | "em_andamento" | "aguardando" | "fechado"
@@ -1239,7 +1609,11 @@ export const Constants = {
   public: {
     Enums: {
       assignment_status: ["ativo", "finalizado"],
+      attachment_type: ["image", "video", "document", "audio"],
+      conversation_type: ["direct", "group"],
       equipment_status: ["disponivel", "em_uso", "manutencao", "descartado"],
+      message_status: ["sent", "delivered", "read", "edited", "deleted"],
+      moderation_action: ["delete_message", "mute_user", "ban_user", "warning"],
       ticket_category: ["hardware", "software", "rede", "acesso", "outros"],
       ticket_priority: ["baixa", "media", "alta", "critica"],
       ticket_status: ["aberto", "em_andamento", "aguardando", "fechado"],

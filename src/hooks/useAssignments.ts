@@ -27,8 +27,22 @@ export function useAssignments() {
         .from('assignments')
         .select(`
           *,
-          equipment:equipment(name, type, brand, model, unit_id),
-          user:profiles!assignments_user_id_fkey(name, email),
+          equipment:equipment(
+            id,
+            name,
+            type,
+            brand,
+            model,
+            tombamento,
+            unit_id,
+            unit:units(name)
+          ),
+          user:profiles!assignments_user_id_fkey(
+            id,
+            name,
+            email,
+            unit:units(name)
+          ),
           assigned_by_user:profiles!assignments_assigned_by_fkey(name, email)
         `)
 

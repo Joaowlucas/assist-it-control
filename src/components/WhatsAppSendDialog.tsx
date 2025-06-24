@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { useSendWhatsAppMessage } from "@/hooks/useWhatsAppNotifications"
 import { useUpdateProfile } from "@/hooks/useProfiles"
+import { useTicketAttachments } from "@/hooks/useTicketAttachments"
 import { Loader2, MessageSquare } from "lucide-react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 interface Ticket {
   id: string
@@ -28,6 +31,7 @@ interface Ticket {
   }
   created_at: string
   updated_at: string
+  resolved_at?: string | null
 }
 
 interface WhatsAppSendDialogProps {
@@ -39,11 +43,12 @@ interface WhatsAppSendDialogProps {
 export function WhatsAppSendDialog({ open, onOpenChange, ticket }: WhatsAppSendDialogProps) {
   const sendMessage = useSendWhatsAppMessage()
   const updateProfile = useUpdateProfile()
+  const { data: attachments = [] } = useTicketAttachments(ticket.id)
   
   const [phone, setPhone] = useState(ticket.requester.phone || '')
   const [savePhone, setSavePhone] = useState(!ticket.requester.phone)
   
-  // Gerar mensagem automática
+  // Gerar mensagem automática com anexos e horários completos
   const generateMessage = () => {
     const priorityEmoji = {
       'baixa': '🟢',
@@ -59,7 +64,12 @@ export function WhatsAppSendDialog({ open, onOpenChange, ticket }: WhatsAppSendD
       'fechado': '✅'
     }
 
-    return `🎫 *Atualização do Chamado #${ticket.ticket_number}*
+    // Formatação de datas com horário
+    const formatDateTime = (dateString: string) => {
+      return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+    }
+
+    let message = `🎫 *Atualização do Chamado #${ticket.ticket_number}*
 
 📋 *Título:* ${ticket.title}
 
@@ -71,16 +81,34 @@ ${statusEmoji[ticket.status as keyof typeof statusEmoji] || '⚪'} *Status:* ${t
 
 🏷️ *Categoria:* ${ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}
 
-${ticket.assignee ? `👨‍💻 *Técnico:* ${ticket.assignee.name}` : ''}
+${ticket.assignee ? `👨‍💻 *Técnico:* ${ticket.assignee.name}\n` : ''}
+📅 *Criado em:* ${formatDateTime(ticket.created_at)}
+📅 *Atualizado em:* ${formatDateTime(ticket.updated_at)}`
 
-📅 *Criado em:* ${new Date(ticket.created_at).toLocaleDateString('pt-BR')}
-📅 *Atualizado em:* ${new Date(ticket.updated_at).toLocaleDateString('pt-BR')}
+    // Adicionar data de resolução se o chamado estiver fechado
+    if (ticket.resolved_at) {
+      message += `\n✅ *Resolvido em:* ${formatDateTime(ticket.resolved_at)}`
+    }
 
----
-*Sistema de Chamados - ${ticket.requester.name}*`
+    // Adicionar anexos se existirem
+    if (attachments && attachments.length > 0) {
+      message += `\n\n📎 *Anexos (${attachments.length}):`
+      attachments.forEach((attachment, index) => {
+        message += `\n${index + 1}. ${attachment.file_name}`
+      })
+    }
+
+    message += `\n\n---\n*Sistema de Chamados - ${ticket.requester.name}*`
+
+    return message
   }
 
-  const [message, setMessage] = useState(generateMessage())
+  const [message, setMessage] = useState('')
+
+  // Atualizar mensagem quando anexos carregarem
+  useEffect(() => {
+    setMessage(generateMessage())
+  }, [attachments, ticket])
 
   const handleSend = async () => {
     if (!phone.trim()) return
@@ -165,7 +193,7 @@ ${ticket.assignee ? `👨‍💻 *Técnico:* ${ticket.assignee.name}` : ''}
             <Label htmlFor="message">Mensagem</Label>
             <Textarea
               id="message"
-              rows={12}
+              rows={15}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="font-mono text-sm"

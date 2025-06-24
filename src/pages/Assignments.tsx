@@ -23,6 +23,7 @@ import { AssignmentPDFPreviewDialog } from '@/components/AssignmentPDFPreviewDia
 import { useAssignmentPDF } from '@/hooks/useAssignmentPDF';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Search, Plus, FileText } from 'lucide-react';
+
 export default function Assignments() {
   // State variables
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +32,9 @@ export default function Assignments() {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [notes, setNotes] = useState('');
+  const [allAssignmentsModalOpen, setAllAssignmentsModalOpen] = useState(false);
+  const [monthlyReturnsModalOpen, setMonthlyReturnsModalOpen] = useState(false);
+  const [pendingRequestsModalOpen, setPendingRequestsModalOpen] = useState(false);
   const [pdfPreviewDialog, setPdfPreviewDialog] = useState<{
     open: boolean;
     assignment: any;
@@ -38,41 +42,25 @@ export default function Assignments() {
     open: false,
     assignment: null
   });
-  const {
-    toast
-  } = useToast();
-  const {
-    profile
-  } = useAuth();
-  const {
-    data: assignments,
-    isLoading
-  } = useAssignments();
-  const {
-    data: availableEquipment
-  } = useAvailableEquipment();
-  const {
-    data: availableUsers
-  } = useAvailableUsers();
-  const {
-    mutate: createAssignment,
-    isPending: isCreating
-  } = useCreateAssignment();
-  const {
-    mutate: endAssignment
-  } = useEndAssignment();
-  const {
-    previewAssignmentPDF
-  } = useAssignmentPDF();
-  const {
-    data: systemSettings
-  } = useSystemSettings();
+
+  const { toast } = useToast();
+  const { profile } = useAuth();
+  const { data: assignments, isLoading } = useAssignments();
+  const { data: availableEquipment } = useAvailableEquipment();
+  const { data: availableUsers } = useAvailableUsers();
+  const { mutate: createAssignment, isPending: isCreating } = useCreateAssignment();
+  const { mutate: endAssignment } = useEndAssignment();
+  const { previewAssignmentPDF } = useAssignmentPDF();
+  const { data: systemSettings } = useSystemSettings();
 
   // Filtered assignments logic
   const filteredAssignments = useMemo(() => {
     if (!assignments) return [];
     return assignments.filter(assignment => {
-      const matchesSearch = assignment.equipment?.name.toLowerCase().includes(searchTerm.toLowerCase()) || assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) || (assignment.equipment as any)?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        assignment.equipment?.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (assignment.equipment as any)?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -146,18 +134,39 @@ export default function Assignments() {
     });
   };
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64">
+    return (
+      <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       {/* Header and Stats Cards */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold text-slate-800">Atribuições de Equipamentos</h1>
         <div className="flex flex-wrap gap-2">
-          <AllAssignmentsModal open={false} onOpenChange={() => {}} />
-          <MonthlyReturnsModal open={false} onOpenChange={() => {}} />
-          <PendingRequestsModal open={false} onOpenChange={() => {}} />
+          <Button
+            variant="outline"
+            onClick={() => setAllAssignmentsModalOpen(true)}
+            className="bg-white hover:bg-gray-50"
+          >
+            Todas as Atribuições
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setMonthlyReturnsModalOpen(true)}
+            className="bg-white hover:bg-gray-50"
+          >
+            Devoluções Mensais
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setPendingRequestsModalOpen(true)}
+            className="bg-white hover:bg-gray-50"
+          >
+            Solicitações Pendentes
+          </Button>
         </div>
       </div>
 
@@ -254,17 +263,22 @@ export default function Assignments() {
                   <TableHead>Equipamento</TableHead>
                   <TableHead>Usuário</TableHead>
                   <TableHead>Data de Início</TableHead>
+                  <TableHead>Data de Término</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssignments.map(assignment => <TableRow key={assignment.id}>
+                {filteredAssignments.map(assignment => (
+                  <TableRow key={assignment.id}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{assignment.equipment?.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.equipment as any)?.tombamento || 'S/T'}
+                          Tombamento: {(assignment.equipment as any)?.tombamento || 'S/T'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Unidade: {(assignment.equipment as any)?.unit?.name || 'S/U'}
                         </div>
                       </div>
                     </TableCell>
@@ -277,9 +291,13 @@ export default function Assignments() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(assignment.start_date), 'dd/MM/yyyy', {
-                    locale: ptBR
-                  })}
+                      {format(new Date(assignment.start_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    </TableCell>
+                    <TableCell>
+                      {assignment.end_date 
+                        ? format(new Date(assignment.end_date), 'dd/MM/yyyy', { locale: ptBR })
+                        : '-'
+                      }
                     </TableCell>
                     <TableCell>
                       <Badge variant={assignment.status === 'ativo' ? 'default' : 'secondary'}>
@@ -288,25 +306,59 @@ export default function Assignments() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handlePreviewPDF(assignment)} title="Visualizar PDF">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handlePreviewPDF(assignment)}
+                          title="Visualizar PDF"
+                        >
                           <FileText className="h-4 w-4" />
                         </Button>
-                        {assignment.status === 'ativo' && <Button variant="outline" size="sm" onClick={() => handleEndAssignment(assignment)} title="Finalizar Atribuição" className="bg-red-400 hover:bg-red-300 text-gray-50">
+                        {assignment.status === 'ativo' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleEndAssignment(assignment)}
+                            title="Finalizar Atribuição"
+                            className="bg-red-400 hover:bg-red-300 text-gray-50"
+                          >
                             Finalizar
-                          </Button>}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
-                  </TableRow>)}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
+      {/* Modals */}
+      <AllAssignmentsModal 
+        open={allAssignmentsModalOpen} 
+        onOpenChange={setAllAssignmentsModalOpen} 
+      />
+      <MonthlyReturnsModal 
+        open={monthlyReturnsModalOpen} 
+        onOpenChange={setMonthlyReturnsModalOpen} 
+      />
+      <PendingRequestsModal 
+        open={pendingRequestsModalOpen} 
+        onOpenChange={setPendingRequestsModalOpen} 
+      />
+
       {/* PDF Preview Dialog */}
-      <AssignmentPDFPreviewDialog open={pdfPreviewDialog.open} onOpenChange={open => setPdfPreviewDialog({
-      open,
-      assignment: null
-    })} assignment={pdfPreviewDialog.assignment} systemSettings={systemSettings} assignmentId={pdfPreviewDialog.assignment?.id || ''} equipmentName={pdfPreviewDialog.assignment?.equipment?.name || ''} userName={pdfPreviewDialog.assignment?.user?.name || ''} />
-    </div>;
+      <AssignmentPDFPreviewDialog 
+        open={pdfPreviewDialog.open}
+        onOpenChange={(open) => setPdfPreviewDialog({ open, assignment: null })}
+        assignment={pdfPreviewDialog.assignment}
+        systemSettings={systemSettings}
+        assignmentId={pdfPreviewDialog.assignment?.id || ''}
+        equipmentName={pdfPreviewDialog.assignment?.equipment?.name || ''}
+        userName={pdfPreviewDialog.assignment?.user?.name || ''}
+      />
+    </div>
+  );
 }
