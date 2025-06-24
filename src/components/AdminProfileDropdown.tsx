@@ -63,7 +63,7 @@ export function AdminProfileDropdown() {
             <Button variant="ghost" onClick={() => {
             setIsProfileDialogOpen(true);
             setIsPopoverOpen(false);
-          }} className="w-full justify-start hover:bg-slate-100 text-gray-950">
+          }} className="w-full justify-start bg-slate-600 hover:bg-slate-500 text-slate-50">
               <User className="mr-2 h-4 w-4" />
               Editar Perfil
             </Button>
