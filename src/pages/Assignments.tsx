@@ -156,7 +156,7 @@ export default function Assignments() {
   return <div className="space-y-6">
       {/* Header and Stats Cards */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold text-gray-50">Atribuições de Equipamentos</h1>
+        <h1 className="text-3xl font-bold text-slate-700">Atribuições de Equipamentos</h1>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setAllAssignmentsModalOpen(true)} className="bg-white hover:bg-gray-50 text-gray-950">
             Todas as Atribuições
