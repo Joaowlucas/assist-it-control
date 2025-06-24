@@ -67,7 +67,7 @@ export function AdminProfileDropdown() {
               <User className="mr-2 h-4 w-4" />
               Editar Perfil
             </Button>
-            <Button variant="ghost" className="w-full justify-start text-slate-700 hover:bg-slate-100" onClick={handleSettingsClick}>
+            <Button variant="ghost" onClick={handleSettingsClick} className="w-full justify-start bg-slate-700 hover:bg-slate-600 text-gray-50">
               <Settings className="mr-2 h-4 w-4" />
               Configurações
             </Button>
