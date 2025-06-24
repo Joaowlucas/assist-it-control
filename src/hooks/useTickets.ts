@@ -1,8 +1,30 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useTechnicianUnits } from '@/hooks/useTechnicianUnits';
 import { toast } from 'sonner';
+
+interface TicketInsert {
+  title: string;
+  description: string;
+  priority: 'baixa' | 'media' | 'alta' | 'critica';
+  category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros';
+  requester_id: string;
+  unit_id: string;
+  assignee_id?: string;
+}
+
+interface TicketUpdate {
+  id: string;
+  title?: string;
+  description?: string;
+  priority?: 'baixa' | 'media' | 'alta' | 'critica';
+  category?: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros';
+  status?: 'aberto' | 'em_andamento' | 'aguardando' | 'fechado';
+  assignee_id?: string | null;
+  resolved_at?: string | null;
+}
 
 export function useTickets() {
   const { profile } = useAuth();
@@ -60,7 +82,7 @@ export function useCreateTicket() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (newTicket) => {
+    mutationFn: async (newTicket: TicketInsert) => {
       const { data, error } = await supabase
         .from('tickets')
         .insert([newTicket])
@@ -88,7 +110,7 @@ export function useUpdateTicket() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }) => {
+    mutationFn: async ({ id, ...updates }: TicketUpdate) => {
       const { data, error } = await supabase
         .from('tickets')
         .update(updates)
@@ -117,7 +139,7 @@ export function useDeleteTicket() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from('tickets')
         .delete()
