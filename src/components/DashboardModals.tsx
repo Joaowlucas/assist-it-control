@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -6,10 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { useTickets } from "@/hooks/useTickets"
 import { useEquipment } from "@/hooks/useEquipment"
 import { useProfiles } from "@/hooks/useProfiles"
-import { Search, Calendar, Clock, User, Computer } from "lucide-react"
+import { useSystemSettings } from "@/hooks/useSystemSettings"
+import { TicketPDFPreviewDialog } from "@/components/TicketPDFPreviewDialog"
+import { Search, Calendar, Clock, User, Computer, FileText } from "lucide-react"
 
 interface DashboardOpenTicketsModalProps {
   open: boolean
@@ -18,9 +20,12 @@ interface DashboardOpenTicketsModalProps {
 
 export function DashboardOpenTicketsModal({ open, onOpenChange }: DashboardOpenTicketsModalProps) {
   const { data: tickets = [] } = useTickets()
+  const { data: systemSettings } = useSystemSettings()
   const [search, setSearch] = useState("")
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState<any>(null)
 
   const openTickets = tickets.filter(t => t.status !== "fechado")
   
@@ -31,6 +36,11 @@ export function DashboardOpenTicketsModal({ open, onOpenChange }: DashboardOpenT
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter
     return matchesSearch && matchesPriority && matchesStatus
   })
+
+  const handlePreviewPDF = (ticket: any) => {
+    setSelectedTicket(ticket)
+    setPdfPreviewOpen(true)
+  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -66,164 +76,185 @@ export function DashboardOpenTicketsModal({ open, onOpenChange }: DashboardOpenT
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-slate-700">Chamados Abertos ({openTickets.length})</DialogTitle>
-          <DialogDescription className="text-slate-600">
-            Visão detalhada de todos os chamados em aberto no sistema
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-700">Chamados Abertos ({openTickets.length})</DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Visão detalhada de todos os chamados em aberto no sistema
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Estatísticas Rápidas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Por Prioridade</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>Crítica:</span>
-                  <Badge variant="destructive" className="text-xs">{priorityStats.critica}</Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Alta:</span>
-                  <Badge variant="destructive" className="text-xs">{priorityStats.alta}</Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Média:</span>
-                  <Badge variant="default" className="text-xs">{priorityStats.media}</Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Baixa:</span>
-                  <Badge variant="secondary" className="text-xs">{priorityStats.baixa}</Badge>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-6">
+            {/* Estatísticas Rápidas */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Por Prioridade</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Crítica:</span>
+                    <Badge variant="destructive" className="text-xs">{priorityStats.critica}</Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Alta:</span>
+                    <Badge variant="destructive" className="text-xs">{priorityStats.alta}</Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Média:</span>
+                    <Badge variant="default" className="text-xs">{priorityStats.media}</Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Baixa:</span>
+                    <Badge variant="secondary" className="text-xs">{priorityStats.baixa}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Por Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>Aberto:</span>
-                  <Badge variant="destructive" className="text-xs">{statusStats.aberto}</Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Em Andamento:</span>
-                  <Badge variant="default" className="text-xs">{statusStats.em_andamento}</Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Aguardando:</span>
-                  <Badge variant="secondary" className="text-xs">{statusStats.aguardando}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filtros */}
-          <div className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Buscar por título ou descrição..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Por Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Aberto:</span>
+                    <Badge variant="destructive" className="text-xs">{statusStats.aberto}</Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Em Andamento:</span>
+                    <Badge variant="default" className="text-xs">{statusStats.em_andamento}</Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Aguardando:</span>
+                    <Badge variant="secondary" className="text-xs">{statusStats.aguardando}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="critica">Crítica</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="aberto">Aberto</SelectItem>
-                <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                <SelectItem value="aguardando">Aguardando</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Tabela */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead>Solicitante</TableHead>
-                <TableHead>Unidade</TableHead>
-                <TableHead>Prioridade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Criado em</TableHead>
-                <TableHead>Responsável</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-medium">#{ticket.ticket_number}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{ticket.title}</div>
-                      <div className="text-sm text-slate-500">
-                        {ticket.description.length > 40 
-                          ? `${ticket.description.substring(0, 40)}...` 
-                          : ticket.description}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <User className="h-4 w-4 text-slate-400" />
-                      {ticket.requester?.name || 'N/A'}
-                    </div>
-                  </TableCell>
-                  <TableCell>{ticket.unit?.name || 'N/A'}</TableCell>
-                  <TableCell>
-                    <Badge variant={getPriorityColor(ticket.priority) as any}>
-                      {ticket.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(ticket.status) as any}>
-                      {ticket.status.replace('_', ' ')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4 text-slate-400" />
-                      {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
-                    </div>
-                  </TableCell>
-                  <TableCell>{ticket.assignee?.name || 'Não atribuído'}</TableCell>
+            {/* Filtros */}
+            <div className="flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar por título ou descrição..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="critica">Crítica</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="aberto">Aberto</SelectItem>
+                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                  <SelectItem value="aguardando">Aguardando</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Tabela */}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Título</TableHead>
+                  <TableHead>Solicitante</TableHead>
+                  <TableHead>Unidade</TableHead>
+                  <TableHead>Prioridade</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Criado em</TableHead>
+                  <TableHead>Responsável</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredTickets.map((ticket) => (
+                  <TableRow key={ticket.id}>
+                    <TableCell className="font-medium">#{ticket.ticket_number}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{ticket.title}</div>
+                        <div className="text-sm text-slate-500">
+                          {ticket.description.length > 40 
+                            ? `${ticket.description.substring(0, 40)}...` 
+                            : ticket.description}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4 text-slate-400" />
+                        {ticket.requester?.name || 'N/A'}
+                      </div>
+                    </TableCell>
+                    <TableCell>{ticket.unit?.name || 'N/A'}</TableCell>
+                    <TableCell>
+                      <Badge variant={getPriorityColor(ticket.priority) as any}>
+                        {ticket.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusColor(ticket.status) as any}>
+                        {ticket.status.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4 text-slate-400" />
+                        {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
+                      </div>
+                    </TableCell>
+                    <TableCell>{ticket.assignee?.name || 'Não atribuído'}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePreviewPDF(ticket)}
+                        title="Visualizar PDF"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-          {filteredTickets.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
-              Nenhum chamado encontrado com os filtros aplicados
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            {filteredTickets.length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                Nenhum chamado encontrado com os filtros aplicados
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <TicketPDFPreviewDialog
+        open={pdfPreviewOpen}
+        onOpenChange={setPdfPreviewOpen}
+        ticket={selectedTicket}
+        systemSettings={systemSettings}
+        ticketNumber={selectedTicket?.ticket_number?.toString() || ''}
+      />
+    </>
   )
 }
 

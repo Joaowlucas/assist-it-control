@@ -19,15 +19,11 @@ export function useAssignments() {
     queryFn: async () => {
       console.log('Fetching assignments data...')
       
-      // Get unit filter for technicians
-      const shouldFilterByUnits = profile?.role === 'technician' && technicianUnits
-      const allowedUnitIds = shouldFilterByUnits ? technicianUnits.map(tu => tu.unit_id) : []
-
       let query = supabase
         .from('assignments')
         .select(`
           *,
-          equipment:equipment(
+          equipment:equipment!inner(
             id,
             name,
             type,
@@ -35,39 +31,37 @@ export function useAssignments() {
             model,
             tombamento,
             unit_id,
-            unit:units(name)
+            unit:units(id, name)
           ),
           user:profiles!assignments_user_id_fkey(
             id,
             name,
             email,
-            unit:units(name)
+            unit_id,
+            unit:units(id, name)
           ),
-          assigned_by_user:profiles!assignments_assigned_by_fkey(name, email)
+          assigned_by_user:profiles!assignments_assigned_by_fkey(
+            id,
+            name, 
+            email
+          )
         `)
 
       // Apply unit filter for technicians - filter by equipment unit
-      if (shouldFilterByUnits && allowedUnitIds.length > 0) {
-        // We need to filter assignments where the equipment belongs to the technician's units
-        // This requires a subquery approach since we're joining with equipment
-        const { data: allowedEquipmentIds } = await supabase
-          .from('equipment')
-          .select('id')
-          .in('unit_id', allowedUnitIds)
-        
-        if (allowedEquipmentIds && allowedEquipmentIds.length > 0) {
-          const equipmentIds = allowedEquipmentIds.map(eq => eq.id)
-          query = query.in('equipment_id', equipmentIds)
-        } else {
-          // If no equipment found, return empty result
-          return []
-        }
+      if (profile?.role === 'technician' && technicianUnits && technicianUnits.length > 0) {
+        const allowedUnitIds = technicianUnits.map(tu => tu.unit_id)
+        query = query.in('equipment.unit_id', allowedUnitIds)
       }
 
       const { data, error } = await query.order('created_at', { ascending: false })
       
-      if (error) throw error
-      return data
+      if (error) {
+        console.error('Error fetching assignments:', error)
+        throw error
+      }
+
+      console.log('Assignments data loaded:', data?.length || 0, 'records')
+      return data || []
     },
     enabled: !!profile, // Only run when profile is loaded
   })

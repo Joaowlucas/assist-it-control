@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -11,6 +10,7 @@ interface CreateUserData {
   role: 'admin' | 'technician' | 'user'
   unit_id: string | null
   unit_ids?: string[]
+  avatar_url?: string | null
 }
 
 interface UpdateUserData {
@@ -21,6 +21,7 @@ interface UpdateUserData {
   unit_id?: string | null
   unit_ids?: string[]
   status?: string
+  avatar_url?: string | null
 }
 
 export function useCreateUser() {
@@ -134,6 +135,7 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: ['profiles'] })
       queryClient.invalidateQueries({ queryKey: ['technician-units'] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['assignments'] })
       toast({
         title: 'Usuário atualizado!',
         description: `${data.name} foi atualizado com sucesso.`,
