@@ -41,10 +41,10 @@ export function TicketPDFPreviewDialog({
             <span>Pré-visualização do Relatório - Chamado #{ticketNumber}</span>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="default"
                 size="sm"
                 onClick={handlePrint}
-                className="hidden md:flex bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
+                className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
                 title="Imprimir"
               >
                 <Printer className="h-4 w-4 mr-2" />

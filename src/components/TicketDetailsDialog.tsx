@@ -12,12 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { MessageSquare, FileText, Download } from "lucide-react"
+import { MessageSquare, FileText } from "lucide-react"
 
 import { TicketDetails } from "./TicketDetails"
 import { WhatsAppSendDialog } from "./WhatsAppSendDialog"
 import { TicketPDFPreviewDialog } from "./TicketPDFPreviewDialog"
-import { useTicketPDF } from "@/hooks/useTicketPDF"
 import { useSystemSettings } from "@/hooks/useSystemSettings"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -73,25 +72,11 @@ export function TicketDetailsDialog({
   const { profile } = useAuth()
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
-  const { generateTicketPDF, isGenerating } = useTicketPDF()
   const { data: systemSettings } = useSystemSettings()
 
   // Verificar se deve mostrar ações administrativas
   // Técnicos e admins podem gerenciar chamados
   const showAdminActions = !hideAdminActions && (profile?.role === 'admin' || profile?.role === 'technician')
-
-  const handleDownloadPDF = async () => {
-    try {
-      await generateTicketPDF(ticket.id, ticket.ticket_number.toString())
-    } catch (error) {
-      console.error('Error generating PDF:', error)
-      toast({
-        title: "Erro!",
-        description: "Erro ao gerar PDF do chamado.",
-        variant: "destructive",
-      })
-    }
-  }
 
   const handlePreviewPDF = () => {
     setPdfPreviewOpen(true)
@@ -123,16 +108,6 @@ export function TicketDetailsDialog({
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Visualizar PDF</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadPDF}
-                    disabled={isGenerating}
-                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">{isGenerating ? 'Gerando...' : 'Baixar PDF'}</span>
                   </Button>
                 </div>
               )}

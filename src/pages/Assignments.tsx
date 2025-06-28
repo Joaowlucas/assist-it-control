@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,6 +24,7 @@ import { AssignmentPDFPreviewDialog } from '@/components/AssignmentPDFPreviewDia
 import { useAssignmentPDF } from '@/hooks/useAssignmentPDF';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Search, Plus, FileText } from 'lucide-react';
+
 export default function Assignments() {
   // State variables
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,41 +43,25 @@ export default function Assignments() {
     open: false,
     assignment: null
   });
-  const {
-    toast
-  } = useToast();
-  const {
-    profile
-  } = useAuth();
-  const {
-    data: assignments,
-    isLoading
-  } = useAssignments();
-  const {
-    data: availableEquipment
-  } = useAvailableEquipment();
-  const {
-    data: availableUsers
-  } = useAvailableUsers();
-  const {
-    mutate: createAssignment,
-    isPending: isCreating
-  } = useCreateAssignment();
-  const {
-    mutate: endAssignment
-  } = useEndAssignment();
-  const {
-    previewAssignmentPDF
-  } = useAssignmentPDF();
-  const {
-    data: systemSettings
-  } = useSystemSettings();
+  
+  const { toast } = useToast();
+  const { profile } = useAuth();
+  const { data: assignments, isLoading } = useAssignments();
+  const { data: availableEquipment } = useAvailableEquipment();
+  const { data: availableUsers } = useAvailableUsers();
+  const { mutate: createAssignment, isPending: isCreating } = useCreateAssignment();
+  const { mutate: endAssignment } = useEndAssignment();
+  const { previewAssignmentPDF } = useAssignmentPDF();
+  const { data: systemSettings } = useSystemSettings();
 
   // Filtered assignments logic
   const filteredAssignments = useMemo(() => {
     if (!assignments) return [];
     return assignments.filter(assignment => {
-      const matchesSearch = assignment.equipment?.name.toLowerCase().includes(searchTerm.toLowerCase()) || assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) || (assignment.equipment as any)?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        assignment.equipment?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assignment.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (assignment.equipment as any)?.tombamento?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -91,6 +77,7 @@ export default function Assignments() {
       });
       return;
     }
+    
     if (!profile?.id) {
       toast({
         title: 'Erro',
@@ -99,6 +86,7 @@ export default function Assignments() {
       });
       return;
     }
+    
     createAssignment({
       equipment_id: selectedEquipmentId,
       user_id: selectedUserId,
@@ -124,9 +112,14 @@ export default function Assignments() {
       }
     });
   };
+
   const handlePreviewPDF = async (assignment: any) => {
     try {
-      const data = await previewAssignmentPDF(assignment.id, assignment.equipment?.name || 'Equipamento', assignment.user?.name || 'Usuário');
+      const data = await previewAssignmentPDF(
+        assignment.id,
+        assignment.equipment?.name || 'Equipamento',
+        assignment.user?.name || 'Usuário'
+      );
       setPdfPreviewDialog({
         open: true,
         assignment: {
@@ -138,6 +131,7 @@ export default function Assignments() {
       console.error('Erro ao carregar preview:', error);
     }
   };
+
   const handleEndAssignment = (assignment: any) => {
     endAssignment(assignment.id, {
       onSuccess: () => {
@@ -148,23 +142,50 @@ export default function Assignments() {
       }
     });
   };
+
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR });
+    } catch (error) {
+      return '-';
+    }
+  };
+
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64">
+    return (
+      <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       {/* Header and Stats Cards */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold text-slate-700">Atribuições de Equipamentos</h1>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setAllAssignmentsModalOpen(true)} className="bg-white hover:bg-gray-50 text-gray-950">
+          <Button 
+            variant="outline" 
+            onClick={() => setAllAssignmentsModalOpen(true)} 
+            className="bg-white hover:bg-gray-50 text-gray-950"
+          >
             Todas as Atribuições
           </Button>
-          <Button variant="outline" onClick={() => setMonthlyReturnsModalOpen(true)} className="bg-white hover:bg-gray-50 text-gray-900">
+          <Button 
+            variant="outline" 
+            onClick={() => setMonthlyReturnsModalOpen(true)} 
+            className="bg-white hover:bg-gray-50 text-gray-900"
+          >
             Devoluções Mensais
           </Button>
-          <Button variant="outline" onClick={() => setPendingRequestsModalOpen(true)} className="bg-white hover:bg-gray-50 text-gray-900">
+          <Button 
+            variant="outline" 
+            onClick={() => setPendingRequestsModalOpen(true)} 
+            className="bg-white hover:bg-gray-50 text-gray-900"
+          >
             Solicitações Pendentes
           </Button>
         </div>
@@ -175,7 +196,12 @@ export default function Assignments() {
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input placeholder="Buscar por equipamento, usuário ou tombamento..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+            <Input
+              placeholder="Buscar por equipamento, usuário ou tombamento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-48">
@@ -210,9 +236,11 @@ export default function Assignments() {
                     <SelectValue placeholder="Selecione um equipamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableEquipment?.map(equipment => <SelectItem key={equipment.id} value={equipment.id}>
+                    {availableEquipment?.map((equipment) => (
+                      <SelectItem key={equipment.id} value={equipment.id}>
                         {equipment.name} ({(equipment as any).tombamento || 'S/T'})
-                      </SelectItem>)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -225,9 +253,11 @@ export default function Assignments() {
                     <SelectValue placeholder="Selecione um usuário" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableUsers?.map(user => <SelectItem key={user.id} value={user.id}>
+                    {availableUsers?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
                         {user.name} ({(user as any).unit?.name || 'S/U'})
-                      </SelectItem>)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -235,14 +265,27 @@ export default function Assignments() {
                 <label htmlFor="notes" className="text-right font-medium">
                   Observações
                 </label>
-                <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} className="col-span-3" />
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="col-span-3"
+                />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setIsCreateDialogOpen(false)}>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" onClick={handleCreateAssignment} disabled={isCreating}>
+              <Button 
+                type="submit" 
+                onClick={handleCreateAssignment} 
+                disabled={isCreating}
+              >
                 {isCreating ? 'Criando...' : 'Criar Atribuição'}
               </Button>
             </div>
@@ -269,35 +312,32 @@ export default function Assignments() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssignments.map(assignment => <TableRow key={assignment.id}>
+                {filteredAssignments.map((assignment) => (
+                  <TableRow key={assignment.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{assignment.equipment?.name}</div>
+                        <div className="font-medium">{assignment.equipment?.name || 'N/A'}</div>
                         <div className="text-sm text-muted-foreground">
-                          Tombamento: {(assignment.equipment as any)?.tombamento || 'S/T'}
+                          Tombamento: {(assignment.equipment as any)?.tombamento || 'N/A'}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          Unidade: {(assignment.equipment as any)?.unit?.name || 'S/U'}
+                          Unidade: {(assignment.equipment as any)?.unit?.name || 'N/A'}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{assignment.user?.name}</div>
+                        <div className="font-medium">{assignment.user?.name || 'N/A'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {(assignment.user as any)?.unit?.name || 'S/U'}
+                          {(assignment.user as any)?.unit?.name || 'N/A'}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(assignment.start_date), 'dd/MM/yyyy', {
-                    locale: ptBR
-                  })}
+                      {formatDate(assignment.start_date)}
                     </TableCell>
                     <TableCell>
-                      {assignment.end_date ? format(new Date(assignment.end_date), 'dd/MM/yyyy', {
-                    locale: ptBR
-                  }) : '-'}
+                      {formatDate(assignment.end_date)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={assignment.status === 'ativo' ? 'default' : 'secondary'}>
@@ -306,15 +346,29 @@ export default function Assignments() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handlePreviewPDF(assignment)} title="Visualizar PDF">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreviewPDF(assignment)}
+                          title="Visualizar PDF"
+                        >
                           <FileText className="h-4 w-4" />
                         </Button>
-                        {assignment.status === 'ativo' && <Button variant="outline" size="sm" onClick={() => handleEndAssignment(assignment)} title="Finalizar Atribuição" className="bg-red-400 hover:bg-red-300 text-gray-50">
+                        {assignment.status === 'ativo' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEndAssignment(assignment)}
+                            title="Finalizar Atribuição"
+                            className="bg-red-400 hover:bg-red-300 text-gray-50"
+                          >
                             Finalizar
-                          </Button>}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
-                  </TableRow>)}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
@@ -322,14 +376,29 @@ export default function Assignments() {
       </Card>
 
       {/* Modals */}
-      <AllAssignmentsModal open={allAssignmentsModalOpen} onOpenChange={setAllAssignmentsModalOpen} />
-      <MonthlyReturnsModal open={monthlyReturnsModalOpen} onOpenChange={setMonthlyReturnsModalOpen} />
-      <PendingRequestsModal open={pendingRequestsModalOpen} onOpenChange={setPendingRequestsModalOpen} />
+      <AllAssignmentsModal 
+        open={allAssignmentsModalOpen} 
+        onOpenChange={setAllAssignmentsModalOpen} 
+      />
+      <MonthlyReturnsModal 
+        open={monthlyReturnsModalOpen} 
+        onOpenChange={setMonthlyReturnsModalOpen} 
+      />
+      <PendingRequestsModal 
+        open={pendingRequestsModalOpen} 
+        onOpenChange={setPendingRequestsModalOpen} 
+      />
 
       {/* PDF Preview Dialog */}
-      <AssignmentPDFPreviewDialog open={pdfPreviewDialog.open} onOpenChange={open => setPdfPreviewDialog({
-      open,
-      assignment: null
-    })} assignment={pdfPreviewDialog.assignment} systemSettings={systemSettings} assignmentId={pdfPreviewDialog.assignment?.id || ''} equipmentName={pdfPreviewDialog.assignment?.equipment?.name || ''} userName={pdfPreviewDialog.assignment?.user?.name || ''} />
-    </div>;
+      <AssignmentPDFPreviewDialog
+        open={pdfPreviewDialog.open}
+        onOpenChange={(open) => setPdfPreviewDialog({ open, assignment: null })}
+        assignment={pdfPreviewDialog.assignment}
+        systemSettings={systemSettings}
+        assignmentId={pdfPreviewDialog.assignment?.id || ''}
+        equipmentName={pdfPreviewDialog.assignment?.equipment?.name || ''}
+        userName={pdfPreviewDialog.assignment?.user?.name || ''}
+      />
+    </div>
+  );
 }
