@@ -23,6 +23,8 @@ interface Profile {
   created_at: string
   avatar_url?: string
   unit_id?: string
+  phone?: string
+  updated_at?: string
   unit?: {
     name: string
   }

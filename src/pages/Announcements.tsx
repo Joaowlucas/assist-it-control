@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { toast } from '@/hooks/use-toast'
 import { PostComments } from '@/components/PostComments'
 import { ImageModal } from '@/components/ImageModal'
-import { AnnouncementForm } from '@/components/AnnouncementForm'
+import { AnnouncementForm, AnnouncementFormData } from '@/components/AnnouncementForm'
 import { Plus } from 'lucide-react'
 
 interface PostProfile {
@@ -56,6 +56,7 @@ export default function Announcements() {
   const { profile } = useAuth()
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
 
   const canCreateAnnouncement = profile?.role === 'admin' || profile?.role === 'technician'
 
@@ -105,9 +106,41 @@ export default function Announcements() {
     }
   }
 
-  const handleAnnouncementCreated = () => {
-    setShowAnnouncementForm(false)
-    refetch()
+  const handleAnnouncementSubmit = async (data: AnnouncementFormData) => {
+    if (!profile) return
+
+    setIsCreating(true)
+    try {
+      const { error } = await supabase
+        .from('landing_page_posts')
+        .insert({
+          title: data.title,
+          content: data.content,
+          type: data.type,
+          is_featured: data.is_featured,
+          media_url: data.media_url,
+          poll_options: data.poll_options,
+          author_id: profile.id,
+        })
+
+      if (error) throw error
+
+      setShowAnnouncementForm(false)
+      await refetch()
+      toast({
+        title: "Comunicado criado!",
+        description: "O comunicado foi publicado com sucesso.",
+      })
+    } catch (error) {
+      console.error('Error creating announcement:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o comunicado.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   return (
@@ -121,20 +154,6 @@ export default function Announcements() {
           </Button>
         )}
       </div>
-
-      {showAnnouncementForm && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Criar Novo Comunicado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AnnouncementForm 
-              onSuccess={handleAnnouncementCreated}
-              onCancel={() => setShowAnnouncementForm(false)}
-            />
-          </CardContent>
-        </Card>
-      )}
 
       <div className="space-y-6">
         {posts.map((post) => (
@@ -214,6 +233,13 @@ export default function Announcements() {
           imageTitle="Post Image"
         />
       )}
+
+      <AnnouncementForm
+        open={showAnnouncementForm}
+        onOpenChange={setShowAnnouncementForm}
+        onSubmit={handleAnnouncementSubmit}
+        loading={isCreating}
+      />
     </div>
   )
 }
