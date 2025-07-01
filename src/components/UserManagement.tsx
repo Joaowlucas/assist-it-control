@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
@@ -21,10 +20,10 @@ interface Profile {
   role: 'admin' | 'technician' | 'user'
   status: string
   created_at: string
-  avatar_url?: string
-  unit_id?: string
-  phone?: string
-  updated_at?: string
+  avatar_url: string
+  unit_id: string
+  phone: string
+  updated_at: string
   unit?: {
     name: string
   }
@@ -48,7 +47,15 @@ export function UserManagement() {
         .order('name')
 
       if (error) throw error
-      return data as Profile[]
+      
+      // Ensure all required fields have default values
+      return (data || []).map(profile => ({
+        ...profile,
+        avatar_url: profile.avatar_url || '',
+        phone: profile.phone || '',
+        updated_at: profile.updated_at || profile.created_at,
+        unit_id: profile.unit_id || ''
+      })) as Profile[]
     }
   })
 
