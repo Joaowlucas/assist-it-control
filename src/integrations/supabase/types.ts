@@ -453,6 +453,8 @@ export type Database = {
       }
       landing_page_posts: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           author_id: string
           content: string
           created_at: string
@@ -462,13 +464,18 @@ export type Database = {
           media_url: string | null
           poll_options: Json | null
           poll_votes: Json | null
+          rejection_reason: string | null
           scheduled_for: string | null
+          status: string | null
           title: string
           type: string
+          unit_ids: Json | null
           updated_at: string
           view_count: number | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           author_id: string
           content: string
           created_at?: string
@@ -478,13 +485,18 @@ export type Database = {
           media_url?: string | null
           poll_options?: Json | null
           poll_votes?: Json | null
+          rejection_reason?: string | null
           scheduled_for?: string | null
+          status?: string | null
           title: string
           type?: string
+          unit_ids?: Json | null
           updated_at?: string
           view_count?: number | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           author_id?: string
           content?: string
           created_at?: string
@@ -494,13 +506,23 @@ export type Database = {
           media_url?: string | null
           poll_options?: Json | null
           poll_votes?: Json | null
+          rejection_reason?: string | null
           scheduled_for?: string | null
+          status?: string | null
           title?: string
           type?: string
+          unit_ids?: Json | null
           updated_at?: string
           view_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "landing_page_posts_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "landing_page_posts_author_id_fkey"
             columns: ["author_id"]
@@ -1479,6 +1501,14 @@ export type Database = {
       }
       technician_has_unit_access: {
         Args: { technician_id: string; unit_id: string }
+        Returns: boolean
+      }
+      user_can_approve_posts: {
+        Args: { user_role: string; user_id: string; post_unit_ids: Json }
+        Returns: boolean
+      }
+      user_can_view_post: {
+        Args: { post_unit_ids: Json; user_unit_id: string; user_role: string }
         Returns: boolean
       }
     }
