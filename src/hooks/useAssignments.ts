@@ -22,8 +22,17 @@ export function useAssignments() {
       let query = supabase
         .from('assignments')
         .select(`
-          *,
-          equipment:equipment!inner(
+          id,
+          user_id,
+          equipment_id,
+          assigned_by,
+          start_date,
+          end_date,
+          status,
+          notes,
+          created_at,
+          updated_at,
+          equipment!inner(
             id,
             name,
             type,
@@ -50,6 +59,7 @@ export function useAssignments() {
       // Apply unit filter for technicians - filter by equipment unit
       if (profile?.role === 'technician' && technicianUnits && technicianUnits.length > 0) {
         const allowedUnitIds = technicianUnits.map(tu => tu.unit_id)
+        console.log('Filtering assignments by technician units:', allowedUnitIds)
         query = query.in('equipment.unit_id', allowedUnitIds)
       }
 
@@ -61,6 +71,7 @@ export function useAssignments() {
       }
 
       console.log('Assignments data loaded:', data?.length || 0, 'records')
+      console.log('Sample assignment data:', data?.[0])
       return data || []
     },
     enabled: !!profile, // Only run when profile is loaded

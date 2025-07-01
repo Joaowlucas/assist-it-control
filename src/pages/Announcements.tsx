@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { toast } from '@/hooks/use-toast'
 import { PostComments } from '@/components/PostComments'
 import { ImageModal } from '@/components/ImageModal'
+import { AnnouncementForm } from '@/components/AnnouncementForm'
+import { Plus } from 'lucide-react'
 
 interface PostProfile {
   name: string
@@ -53,6 +55,9 @@ export default function Announcements() {
   })
   const { profile } = useAuth()
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
+
+  const canCreateAnnouncement = profile?.role === 'admin' || profile?.role === 'technician'
 
   const handleVote = async (postId: string, option: string) => {
     if (!profile) return
@@ -100,9 +105,37 @@ export default function Announcements() {
     }
   }
 
+  const handleAnnouncementCreated = () => {
+    setShowAnnouncementForm(false)
+    refetch()
+  }
+
   return (
     <div className="container py-10">
-      <h1 className="text-3xl font-bold mb-6">Comunicados</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Comunicados</h1>
+        {canCreateAnnouncement && (
+          <Button onClick={() => setShowAnnouncementForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Comunicado
+          </Button>
+        )}
+      </div>
+
+      {showAnnouncementForm && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Criar Novo Comunicado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AnnouncementForm 
+              onSuccess={handleAnnouncementCreated}
+              onCancel={() => setShowAnnouncementForm(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-6">
         {posts.map((post) => (
           <Card key={post.id}>

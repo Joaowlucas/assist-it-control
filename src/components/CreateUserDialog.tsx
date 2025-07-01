@@ -31,7 +31,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   
   const createUser = useCreateUser()
   const { data: units = [] } = useUnits()
-  const { uploadImage, isUploading } = useImageUpload()
+  const { uploadImage, uploading } = useImageUpload()
   const { toast } = useToast()
 
   const handleImageSelect = (file: File) => {
@@ -65,8 +65,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
       // Upload da imagem se selecionada
       if (profileImage) {
-        const uploadResult = await uploadImage(profileImage, 'profile-pictures')
-        avatarUrl = uploadResult.url
+        avatarUrl = await uploadImage(profileImage, 'profile-pictures')
       }
 
       await createUser.mutateAsync({
@@ -134,7 +133,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                     }
                     input.click()
                   }}
-                  disabled={isUploading}
+                  disabled={uploading}
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   {profileImage ? 'Alterar' : 'Adicionar'}
@@ -223,8 +222,8 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createUser.isPending || isUploading}>
-              {createUser.isPending || isUploading ? 'Criando...' : 'Criar Usuário'}
+            <Button type="submit" disabled={createUser.isPending || uploading}>
+              {createUser.isPending || uploading ? 'Criando...' : 'Criar Usuário'}
             </Button>
           </div>
         </form>
