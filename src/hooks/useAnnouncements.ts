@@ -31,7 +31,7 @@ export function useAnnouncements() {
         .from('landing_page_posts')
         .select(`
           *,
-          profiles(name, avatar_url)
+          profiles!landing_page_posts_author_id_fkey(name, avatar_url)
         `)
         .eq('is_published', true)
         .order('is_featured', { ascending: false })

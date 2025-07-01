@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
-import { useTechnicianUnits } from '@/hooks/useTechnicianUnits'
 import { useEffect } from 'react'
 
 export interface AnnouncementWithUnits {
@@ -42,7 +41,7 @@ export function useAnnouncementsWithUnits() {
         .from('landing_page_posts')
         .select(`
           *,
-          profiles(name, avatar_url)
+          profiles!landing_page_posts_author_id_fkey(name, avatar_url)
         `)
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false })
@@ -91,7 +90,7 @@ export function usePendingAnnouncements() {
         .from('landing_page_posts')
         .select(`
           *,
-          profiles(name, avatar_url)
+          profiles!landing_page_posts_author_id_fkey(name, avatar_url)
         `)
         .eq('status', 'pending_approval')
         .order('created_at', { ascending: false })

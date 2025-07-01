@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from '@/hooks/use-toast'
+import { supabase } from '@/integrations/supabase/client'
 import { PostComments } from '@/components/PostComments'
 import { ImageModal } from '@/components/ImageModal'
 import { AnnouncementFormWithUnits, AnnouncementFormData } from '@/components/AnnouncementFormWithUnits'
