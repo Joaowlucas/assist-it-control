@@ -50,18 +50,28 @@ export function AnnouncementFormWithUnits({
   const { uploadImage, uploading } = useImageUpload()
 
   useEffect(() => {
-    if (open) {
+    if (open && profile) {
+      // Pré-selecionar unidade do usuário se ele não for admin
+      let defaultUnitIds: string[] = []
+      
+      if (profile.role === 'user' && profile.unit_id) {
+        defaultUnitIds = [profile.unit_id]
+      } else if (profile.role === 'technician' && profile.technician_units) {
+        // Para técnicos, pré-selecionar todas suas unidades
+        defaultUnitIds = profile.technician_units.map(tu => tu.unit_id)
+      }
+      
       setFormData({
         title: '',
         content: '',
         type: 'text',
         is_featured: false,
         poll_options: [],
-        unit_ids: [],
+        unit_ids: defaultUnitIds,
       })
       setSelectedFile(null)
     }
-  }, [open])
+  }, [open, profile])
 
   const handleAddPollOption = () => {
     if (newPollOption.trim() && formData.poll_options && formData.poll_options.length < 10) {

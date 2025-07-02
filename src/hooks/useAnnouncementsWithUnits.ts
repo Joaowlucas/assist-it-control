@@ -39,6 +39,8 @@ export function useAnnouncementsWithUnits() {
     queryFn: async () => {
       if (!profile) return []
 
+      console.log('Fetching announcements for profile:', profile)
+
       let query = supabase
         .from('landing_page_posts')
         .select(`
@@ -46,9 +48,8 @@ export function useAnnouncementsWithUnits() {
           profiles!landing_page_posts_author_id_fkey(name, avatar_url)
         `)
 
-      // A consulta base retorna todos os posts, a RLS irá filtrar automaticamente
-      // Apenas garantir que os posts sejam retornados corretamente
-      // A lógica de filtragem está implementada nas políticas RLS
+      // Filtrar apenas posts publicados para a timeline principal
+      query = query.eq('status', 'published')
 
       query = query
         .order('is_featured', { ascending: false })
@@ -56,7 +57,12 @@ export function useAnnouncementsWithUnits() {
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching announcements:', error)
+        throw error
+      }
+
+      console.log('Fetched announcements:', data)
       return data as AnnouncementWithUnits[]
     },
     enabled: !!profile,
@@ -129,32 +135,53 @@ export function useCreateAnnouncementWithUnits() {
     }) => {
       if (!profile?.id) throw new Error('User not authenticated')
 
+      console.log('Creating announcement with profile:', profile)
+      console.log('Data being sent:', data)
+
       // Determinar status baseado no role
-      let status = 'pending_approval'
+      let status: string
+      let is_published: boolean
+
       if (profile.role === 'admin') {
         status = 'published'
+        is_published = true
       } else if (profile.role === 'technician') {
         status = 'published'
+        is_published = true
+      } else {
+        status = 'pending_approval'
+        is_published = false
       }
+
+      console.log('Determined status:', status, 'is_published:', is_published)
+
+      const insertData = {
+        title: data.title,
+        content: data.content,
+        type: data.type,
+        author_id: profile.id,
+        media_url: data.media_url,
+        poll_options: data.poll_options || [],
+        is_featured: data.is_featured || false,
+        unit_ids: data.unit_ids,
+        status: status,
+        is_published: is_published,
+      }
+
+      console.log('Insert data:', insertData)
 
       const { data: result, error } = await supabase
         .from('landing_page_posts')
-        .insert([{
-          title: data.title,
-          content: data.content,
-          type: data.type,
-          author_id: profile.id,
-          media_url: data.media_url,
-          poll_options: data.poll_options || [],
-          is_featured: data.is_featured || false,
-          unit_ids: data.unit_ids,
-          status: status,
-          is_published: status === 'published',
-        }])
+        .insert([insertData])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error inserting announcement:', error)
+        throw error
+      }
+
+      console.log('Successfully created announcement:', result)
       return result
     },
     onSuccess: (_, variables) => {

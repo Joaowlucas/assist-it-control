@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -76,8 +77,10 @@ export default function Announcements() {
 
   const handleAnnouncementSubmit = async (data: AnnouncementFormData) => {
     try {
+      console.log('Submitting announcement:', data)
       await createAnnouncement.mutateAsync(data)
       setShowAnnouncementForm(false)
+      await refetch() // Forçar atualização da lista
     } catch (error) {
       console.error('Error creating announcement:', error)
     }
@@ -112,7 +115,29 @@ export default function Announcements() {
   }
 
   const publishedPosts = posts.filter(post => post.status === 'published')
-  const myPosts = posts.filter(post => post.author_id === profile?.id)
+  
+  // Para "Meus Posts", precisamos buscar todos os posts do usuário, não apenas os da timeline
+  const { data: myPostsData = [] } = useQuery({
+    queryKey: ['my-announcements', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return []
+      
+      const { data, error } = await supabase
+        .from('landing_page_posts')
+        .select(`
+          *,
+          profiles!landing_page_posts_author_id_fkey(name, avatar_url)
+        `)
+        .eq('author_id', profile.id)
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      return data as any[]
+    },
+    enabled: !!profile?.id,
+  })
+  
+  const myPosts = myPostsData as any[]
 
   return (
     <div className="container py-10">
