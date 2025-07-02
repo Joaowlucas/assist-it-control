@@ -6,6 +6,11 @@ import { Tables } from '@/integrations/supabase/types'
 
 type Profile = Tables<'profiles'> & {
   unit?: { name: string } | null
+  technician_units?: Array<{
+    id: string
+    unit_id: string
+    unit: { name: string }
+  }>
 }
 
 interface AuthContextType {
@@ -39,7 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select(`
           *,
-          unit:units(name)
+          unit:units(name),
+          technician_units(
+            id,
+            unit_id,
+            unit:units(name)
+          )
         `)
         .eq('id', userId)
         .single()

@@ -35,16 +35,26 @@ export function useAnnouncementsWithUnits() {
   const queryClient = useQueryClient()
 
   const query = useQuery({
-    queryKey: ['announcements-with-units', profile?.id],
+    queryKey: ['announcements-with-units', profile?.id, profile?.role, profile?.unit_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!profile) return []
+
+      let query = supabase
         .from('landing_page_posts')
         .select(`
           *,
           profiles!landing_page_posts_author_id_fkey(name, avatar_url)
         `)
+
+      // A consulta base retorna todos os posts, a RLS irá filtrar automaticamente
+      // Apenas garantir que os posts sejam retornados corretamente
+      // A lógica de filtragem está implementada nas políticas RLS
+
+      query = query
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false })
+
+      const { data, error } = await query
 
       if (error) throw error
       return data as AnnouncementWithUnits[]
@@ -207,6 +217,80 @@ export function useApproveAnnouncement() {
       toast({
         title: 'Erro',
         description: 'Erro ao processar aprovação: ' + error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useDeleteAnnouncement() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('landing_page_posts')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements-with-units'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-announcements'] })
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Comunicado excluído com sucesso!',
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao excluir comunicado: ' + error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useUpdateAnnouncement() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (data: { 
+      id: string; 
+      title?: string; 
+      content?: string; 
+      is_featured?: boolean 
+    }) => {
+      const { error } = await supabase
+        .from('landing_page_posts')
+        .update({
+          title: data.title,
+          content: data.content,
+          is_featured: data.is_featured,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', data.id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements-with-units'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-announcements'] })
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Comunicado atualizado com sucesso!',
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar comunicado: ' + error.message,
         variant: 'destructive',
       })
     },

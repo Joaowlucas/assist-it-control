@@ -10,6 +10,7 @@ import { PostComments } from '@/components/PostComments'
 import { ImageModal } from '@/components/ImageModal'
 import { AnnouncementFormWithUnits, AnnouncementFormData } from '@/components/AnnouncementFormWithUnits'
 import { AnnouncementApproval } from '@/components/AnnouncementApproval'
+import { AnnouncementActions } from '@/components/AnnouncementActions'
 import { useAnnouncementsWithUnits, useCreateAnnouncementWithUnits } from '@/hooks/useAnnouncementsWithUnits'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -169,6 +170,7 @@ export default function Announcements() {
                         </span>
                       </CardDescription>
                     </div>
+                    <AnnouncementActions post={post} onUpdate={refetch} />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -243,9 +245,12 @@ export default function Announcements() {
                           <Badge className="bg-yellow-500">Destaque</Badge>
                         )}
                       </div>
-                      <CardDescription>
-                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
-                      </CardDescription>
+                      <div className="flex items-center gap-2">
+                        <CardDescription>
+                          {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
+                        </CardDescription>
+                        <AnnouncementActions post={post} onUpdate={refetch} />
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>

@@ -48,12 +48,34 @@ export function UserProfileSection() {
           </div>
           
           <div>
-            <Label className="text-slate-700">Unidade</Label>
-            <Input 
-              value={profile?.unit?.name || 'Unidade não definida'}
-              disabled
-              className="bg-slate-100 border-slate-300"
-            />
+            <Label className="text-slate-700">
+              {profile?.role === 'technician' ? 'Unidades Atribuídas' : 'Unidade'}
+            </Label>
+            {profile?.role === 'technician' && profile?.technician_units ? (
+              <div className="space-y-2">
+                {profile.technician_units.map((techUnit) => (
+                  <Input 
+                    key={techUnit.id}
+                    value={techUnit.unit.name}
+                    disabled
+                    className="bg-slate-100 border-slate-300"
+                  />
+                ))}
+                {profile.technician_units.length === 0 && (
+                  <Input 
+                    value="Nenhuma unidade atribuída"
+                    disabled
+                    className="bg-slate-100 border-slate-300"
+                  />
+                )}
+              </div>
+            ) : (
+              <Input 
+                value={profile?.unit?.name || 'Unidade não definida'}
+                disabled
+                className="bg-slate-100 border-slate-300"
+              />
+            )}
           </div>
           
           <div>
