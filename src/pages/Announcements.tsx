@@ -12,6 +12,7 @@ import { ImageModal } from '@/components/ImageModal'
 import { AnnouncementFormWithUnits, AnnouncementFormData } from '@/components/AnnouncementFormWithUnits'
 import { AnnouncementApproval } from '@/components/AnnouncementApproval'
 import { AnnouncementActions } from '@/components/AnnouncementActions'
+import { LikeButton } from '@/components/LikeButton'
 import { useAnnouncementsWithUnits, useCreateAnnouncementWithUnits } from '@/hooks/useAnnouncementsWithUnits'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -172,8 +173,12 @@ export default function Announcements() {
               </CardContent>
             </Card>
           ) : (
-            publishedPosts.map((post) => (
-              <Card key={post.id}>
+            publishedPosts.map((post, index) => (
+              <Card 
+                key={post.id} 
+                className="animate-fade-in hover:scale-[1.01] transition-all duration-300 card-modern"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
                 <CardHeader>
                   <div className="flex items-start space-x-4">
                     <Avatar>
@@ -241,6 +246,10 @@ export default function Announcements() {
                     </div>
                   )}
 
+                  <div className="flex items-center gap-4 pt-4 border-t">
+                    <LikeButton postId={post.id} />
+                  </div>
+
                   <PostComments postId={post.id} />
                 </CardContent>
               </Card>
@@ -259,8 +268,12 @@ export default function Announcements() {
                 </CardContent>
               </Card>
             ) : (
-              myPosts.map((post) => (
-                <Card key={post.id}>
+              myPosts.map((post, index) => (
+                <Card 
+                  key={post.id}
+                  className="animate-fade-in hover:scale-[1.01] transition-all duration-300 card-modern"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
@@ -287,6 +300,10 @@ export default function Announcements() {
                         <p className="text-sm text-red-700">{post.rejection_reason}</p>
                       </div>
                     )}
+
+                    <div className="flex items-center gap-4 pt-4 border-t">
+                      <LikeButton postId={post.id} />
+                    </div>
                   </CardContent>
                 </Card>
               ))

@@ -138,6 +138,17 @@
     @apply transition-all duration-300 ease-out hover:translate-y-[-2px] hover:shadow-2xl hover:shadow-black/10;
   }
 
+  /* Announcement card specific animations */
+  .announcement-card {
+    @apply transition-all duration-300 ease-out hover:scale-[1.01] hover:shadow-lg;
+  }
+
+  /* Staggered animation for lists */
+  .stagger-fade-in {
+    @apply animate-fade-in;
+    animation-delay: calc(var(--index) * 100ms);
+  }
+
   /* Glassmorphism cards with transparent hover */
   .glass-card {
     @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-xl rounded-2xl transition-all duration-300;
