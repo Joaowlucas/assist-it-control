@@ -18,17 +18,9 @@ import Announcements from "@/pages/Announcements"
 import { AdminLayout } from "@/components/AdminLayout"
 import { UserLayout } from "@/components/UserLayout"
 import { useAuth } from "@/hooks/useAuth"
+import { Landing } from "@/pages/Landing"
 
-// Production-optimized Query Client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-})
+const queryClient = new QueryClient()
 
 function AppRoutes() {
   const { user, profile, loading } = useAuth()
@@ -44,7 +36,8 @@ function AppRoutes() {
   if (!user) {
     return (
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/auth" element={<Login />} />
         <Route path="*" element={<Login />} />
       </Routes>
     )
