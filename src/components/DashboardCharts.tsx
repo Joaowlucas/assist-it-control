@@ -2,6 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts"
 import { useDashboardCharts } from "@/hooks/useDashboardCharts"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export function DashboardCharts() {
   const { data: chartData, isLoading, error } = useDashboardCharts()
@@ -10,13 +11,13 @@ export function DashboardCharts() {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i}>
             <CardHeader>
-              <div className="h-5 bg-gray-200 rounded w-32 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-48"></div>
+              <Skeleton className="h-5 w-32 mb-2" />
+              <Skeleton className="h-4 w-48" />
             </CardHeader>
             <CardContent>
-              <div className="h-64 bg-gray-200 rounded"></div>
+              <Skeleton className="h-64 w-full" />
             </CardContent>
           </Card>
         ))}
@@ -26,8 +27,8 @@ export function DashboardCharts() {
 
   if (error) {
     return (
-      <div className="text-center text-red-600 p-4">
-        Erro ao carregar gráficos: {error.message}
+      <div className="text-center text-destructive p-4">
+        Erro ao carregar gráficos. Tente novamente.
       </div>
     )
   }
@@ -50,8 +51,8 @@ export function DashboardCharts() {
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="abertos" fill="#3b82f6" name="Abertos" />
-              <Bar dataKey="fechados" fill="#22c55e" name="Fechados" />
+              <Bar dataKey="abertos" fill="hsl(var(--primary))" name="Abertos" />
+              <Bar dataKey="fechados" fill="hsl(var(--success))" name="Fechados" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -111,7 +112,7 @@ export function DashboardCharts() {
               <XAxis type="number" />
               <YAxis dataKey="priority" type="category" />
               <Tooltip />
-              <Bar dataKey="count" fill="#8884d8" />
+              <Bar dataKey="count" fill="hsl(var(--secondary))" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -131,7 +132,7 @@ export function DashboardCharts() {
               <XAxis dataKey="category" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="count" fill="#10b981" />
+              <Bar dataKey="count" fill="hsl(var(--accent))" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -154,9 +155,9 @@ export function DashboardCharts() {
               <Line 
                 type="monotone" 
                 dataKey="avgTime" 
-                stroke="#f59e0b" 
+                stroke="hsl(var(--warning))" 
                 strokeWidth={2}
-                dot={{ fill: '#f59e0b' }}
+                dot={{ fill: 'hsl(var(--warning))' }}
               />
             </LineChart>
           </ResponsiveContainer>

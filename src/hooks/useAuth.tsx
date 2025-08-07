@@ -55,7 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
       
       if (error) {
-        console.error('Error fetching profile:', error)
+        // Only log critical profile errors in production
+        if (error.code !== 'PGRST116') {
+          console.error('Critical profile error:', error.code)
+        }
         return
       }
       
@@ -63,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(data)
       }
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      // Silently handle non-critical errors in production
     } finally {
       fetchingProfile.current = false
     }
@@ -72,44 +75,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     mounted.current = true
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted.current) return
-      
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user && !fetchingProfile.current) {
-        fetchProfile(session.user.id)
-      } else if (!session) {
-        setProfile(null)
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!mounted.current) return
+        
+        setSession(session)
+        setUser(session?.user ?? null)
+        
+        if (session?.user && !fetchingProfile.current) {
+          await fetchProfile(session.user.id)
+        } else if (!session) {
+          setProfile(null)
+        }
+        
+        if (!initialLoadComplete.current) {
+          initialLoadComplete.current = true
+          // Minimal delay for better UX
+          setTimeout(() => setLoading(false), 50)
+        }
+      } catch (error) {
+        setLoading(false)
       }
-      
-      // Reduzir tempo de loading inicial drasticamente
-      if (!initialLoadComplete.current) {
-        initialLoadComplete.current = true
-        setTimeout(() => setLoading(false), 100) // Mínimo delay para evitar flash
-      }
-    })
+    }
 
-    // Listen for auth changes
+    initializeAuth()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted.current) return
-      
-      console.log('Auth state change:', event, session?.user?.email)
       
       setSession(session)
       setUser(session?.user ?? null)
       
       if (session?.user && event === 'SIGNED_IN') {
         if (!fetchingProfile.current) {
-          fetchProfile(session.user.id)
+          await fetchProfile(session.user.id)
         }
       } else {
         setProfile(null)
       }
       
-      // Loading completo após primeira inicialização
       if (initialLoadComplete.current) {
         setLoading(false)
       }
@@ -160,7 +166,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     if (error) throw error
     
-    // Refetch profile
     await fetchProfile(user.id)
   }
 
