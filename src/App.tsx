@@ -18,7 +18,6 @@ import Announcements from "@/pages/Announcements"
 import { AdminLayout } from "@/components/AdminLayout"
 import { UserLayout } from "@/components/UserLayout"
 import { useAuth } from "@/hooks/useAuth"
-import { Landing } from "@/pages/Landing"
 
 const queryClient = new QueryClient()
 
@@ -36,7 +35,7 @@ function AppRoutes() {
   if (!user) {
     return (
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Login />} />
         <Route path="/auth" element={<Login />} />
         <Route path="*" element={<Login />} />
       </Routes>
