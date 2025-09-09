@@ -1,5 +1,5 @@
 
-import { Home, Ticket, Wrench, Settings, User, Building2, Megaphone, MessageSquare } from "lucide-react"
+import { Home, Ticket, Wrench, Settings, User, Building2, Megaphone, MessageSquare, Kanban } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -62,6 +62,11 @@ const adminItems = [
     title: "Atribuições",
     url: "/assignments",
     icon: Building2,
+  },
+  {
+    title: "Kanban",
+    url: "/kanban",
+    icon: Kanban,
   },
   {
     title: "Comunicados",

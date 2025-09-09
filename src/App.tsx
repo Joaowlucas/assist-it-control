@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "@/components/ui/toaster"
@@ -15,7 +14,8 @@ import UserDashboard from "@/pages/UserDashboard"
 import UserTickets from "@/pages/UserTickets"
 import UserAssignments from "@/pages/UserAssignments"
 import Announcements from "@/pages/Announcements"
-import Chats from "@/pages/Chats"
+import Chats from '@/pages/Chats'
+import Kanban from '@/pages/Kanban'
 import { AdminLayout } from "@/components/AdminLayout"
 import { UserLayout } from "@/components/UserLayout"
 import { useAuth } from "@/hooks/useAuth"
@@ -69,6 +69,7 @@ function AppRoutes() {
         <Route path="/announcements" element={<AdminLayout><Announcements /></AdminLayout>} />
         <Route path="/chats" element={<AdminLayout><Chats /></AdminLayout>} />
         <Route path="/settings" element={<AdminLayout><Settings /></AdminLayout>} />
+        <Route path="/kanban" element={<AdminLayout><Kanban /></AdminLayout>} />
         <Route path="*" element={<AdminLayout><Dashboard /></AdminLayout>} />
       </Routes>
     </SidebarProvider>
