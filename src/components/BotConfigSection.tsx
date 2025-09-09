@@ -511,6 +511,50 @@ export default function BotConfigSection() {
                 >
                   Verificar Instância
                 </Button>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      toast({
+                        title: "Reiniciando WhatsApp...",
+                        description: "Isso pode levar até 2 minutos. Aguarde..."
+                      });
+                      
+                      const { data, error } = await supabase.functions.invoke('restart-whatsapp-instance');
+                      
+                      if (error) {
+                        console.error('Erro ao reiniciar:', error);
+                        toast({
+                          title: "Erro ao reiniciar",
+                          description: error.message || "Não foi possível reiniciar a instância"
+                        });
+                        return;
+                      }
+
+                      console.log('Resultado do reinício:', data);
+                      
+                      if (data.needsQrScan) {
+                        toast({
+                          title: "⚠️ QR Code necessário",
+                          description: "Escaneie o QR Code no painel da Evolution API para reconectar"
+                        });
+                      } else {
+                        toast({
+                          title: "✅ Instância reiniciada",
+                          description: "WhatsApp reconectado. Teste enviando uma mensagem!"
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Erro ao reiniciar:', error);
+                      toast({
+                        title: "Erro ao reiniciar",
+                        description: "Não foi possível reiniciar a instância"
+                      });
+                    }
+                  }} 
+                  variant="destructive"
+                >
+                  🔄 Reiniciar WhatsApp
+                </Button>
               </div>
             </CardContent>
           </Card>
