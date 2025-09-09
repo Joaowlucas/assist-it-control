@@ -244,8 +244,7 @@ serve(async (req) => {
       .from('profiles')
       .select('id, name, email, unit_id')
       .or(`phone.eq.${phoneNumber},phone.eq.${normalizedPhone}`)
-      .eq('status', 'ativo')
-      .limit(1);
+      .eq('status', 'ativo');
 
     if (userError) {
       console.error('Erro ao buscar usuário:', userError);
@@ -265,7 +264,11 @@ serve(async (req) => {
       });
     }
 
+    // Se há múltiplos usuários, usar o primeiro (pode ser melhorado para critério específico)
     const userProfile = userProfiles[0];
+    if (userProfiles.length > 1) {
+      console.log(`Múltiplos usuários encontrados para o telefone ${phoneNumber}. Usando: ${userProfile.name}`);
+    }
     console.log('Usuário encontrado:', userProfile.name);
 
     // Processar conversa interativa
