@@ -118,13 +118,15 @@ export default function Tickets() {
     e.preventDefault();
     if (!user) return;
     const formData = new FormData(e.target as HTMLFormElement);
+    const requesterName = formData.get('requester_name') as string;
     const ticketData = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
       priority: formData.get('priority') as any,
       category: formData.get('category') as any,
       requester_id: user.id,
-      unit_id: formData.get('unit_id') as string
+      unit_id: formData.get('unit_id') as string,
+      requester_name: requesterName || undefined
     };
     await createUserTicket.mutateAsync({
       ...ticketData,
@@ -216,6 +218,19 @@ export default function Tickets() {
             </DialogHeader>
             <form onSubmit={handleCreateTicket} className="space-y-6">
               <div className="space-y-4">
+                <div>
+                  <Label htmlFor="requester_name" className="text-foreground">Nome do Usuário (Opcional)</Label>
+                  <Input 
+                    id="requester_name" 
+                    name="requester_name" 
+                    placeholder="Ex: João Silva (deixe em branco se for para você mesmo)" 
+                    className="border-input focus:border-ring" 
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Preencha apenas se estiver criando o chamado em nome de outro usuário
+                  </p>
+                </div>
+                
                 <div>
                   <Label htmlFor="title" className="text-foreground">Título</Label>
                   <Input id="title" name="title" placeholder="Descreva brevemente o problema" required className="border-input focus:border-ring" />
