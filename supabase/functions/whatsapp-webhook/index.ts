@@ -310,35 +310,79 @@ async function processConversation(
 }
 
 serve(async (req) => {
+  // Log TODAS as tentativas de acesso
+  console.log('🚀 === WEBHOOK CHAMADO ===');
+  console.log('🕒 Timestamp:', new Date().toISOString());
+  console.log('🌍 Method:', req.method);
+  console.log('📍 URL:', req.url);
+  
+  // Log headers importantes
+  const headers = {};
+  req.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  console.log('📋 Headers:', JSON.stringify(headers, null, 2));
+
   if (req.method === 'OPTIONS') {
+    console.log('✅ Respondendo OPTIONS (CORS)');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🤖 Webhook recebido');
+    console.log('🤖 Processando webhook...');
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body = await req.json();
-    console.log('📨 Dados:', JSON.stringify(body, null, 2));
+    // Tentar ler o body
+    let body;
+    let bodyText = '';
+    try {
+      bodyText = await req.text();
+      console.log('📥 Body raw:', bodyText);
+      
+      if (bodyText) {
+        body = JSON.parse(bodyText);
+        console.log('📨 Body parsed:', JSON.stringify(body, null, 2));
+      } else {
+        console.log('⚠️ Body vazio');
+        return new Response(JSON.stringify({ success: true, message: 'Body vazio' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse do body:', parseError);
+      console.log('📄 Raw body content:', bodyText);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON', 
+        rawBody: bodyText,
+        success: false 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Verificar evento
     if (body.event !== 'messages.upsert') {
       console.log('📭 Evento ignorado:', body.event);
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ success: true, ignored: true, event: body.event }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('✅ Evento aceito: messages.upsert');
+
     // Verificar mensagem
     if (!body.data?.key || body.data.key.fromMe) {
-      console.log('📱 Mensagem do bot ignorada');
-      return new Response(JSON.stringify({ success: true }), {
+      console.log('📱 Mensagem do bot ignorada - fromMe:', body.data?.key?.fromMe);
+      return new Response(JSON.stringify({ success: true, ignored: true, reason: 'fromMe' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('✅ Mensagem válida para processamento');
 
     const messageData: WhatsAppMessage = body.data;
     
@@ -351,20 +395,23 @@ serve(async (req) => {
     }
 
     if (!messageText?.trim()) {
-      console.log('📝 Mensagem sem texto');
-      return new Response(JSON.stringify({ success: true }), {
+      console.log('📝 Mensagem sem texto válido');
+      return new Response(JSON.stringify({ success: true, ignored: true, reason: 'no text' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('✅ Texto da mensagem:', messageText);
 
     // Extrair telefone
     const phoneNumber = messageData.key.remoteJid.replace('@s.whatsapp.net', '');
     const normalizedPhone = normalizePhone(phoneNumber);
     
-    console.log('📞 Telefone:', phoneNumber, '->', normalizedPhone);
-    console.log('💬 Mensagem:', messageText);
+    console.log('📞 Telefone original:', phoneNumber);
+    console.log('📞 Telefone normalizado:', normalizedPhone);
 
     // Buscar usuário
+    console.log('👤 Buscando usuário...');
     const { data: userProfiles } = await supabase
       .from('profiles')
       .select('id, name, email, unit_id')
@@ -372,23 +419,29 @@ serve(async (req) => {
       .eq('status', 'ativo');
 
     const userProfile = userProfiles?.[0];
-    console.log('👤 Usuário:', userProfile?.name || 'Novo usuário');
+    console.log('👤 Usuário encontrado:', userProfile?.name || 'Novo usuário');
 
     // Processar conversa
+    console.log('💬 Iniciando processamento da conversa...');
     await processConversation(supabase, phoneNumber, messageText, userProfile);
+
+    console.log('✅ Conversa processada com sucesso');
 
     return new Response(JSON.stringify({ 
       success: true, 
       user: userProfile?.name || 'Novo usuário',
-      message: messageText
+      message: messageText,
+      processed: true
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('❌ Erro:', error);
+    console.error('❌ ERRO CRÍTICO:', error);
+    console.error('📚 Stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: error.message,
+      stack: error.stack,
       success: false 
     }), {
       status: 500,
