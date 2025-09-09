@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useSystemSettings, useUpdateSystemSettings } from "@/hooks/useSystemSettings"
 import { Loader2, MessageSquare, TestTube, AlertTriangle } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import TestWebhookConfig from "./TestWebhookConfig"
 
 export function WhatsAppConfigSection() {
   const { toast } = useToast()
@@ -244,6 +245,9 @@ export function WhatsAppConfigSection() {
               {updateSettings.isPending ? "Salvando..." : "Salvar Configurações"}
             </Button>
           </div>
+
+          {/* Teste de Configuração do Webhook */}
+          <TestWebhookConfig />
         </CardContent>
       </Card>
     </div>
