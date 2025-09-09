@@ -24,6 +24,175 @@ interface WhatsAppMessage {
   messageTimestamp: number;
 }
 
+interface ConversationState {
+  step: 'greeting' | 'problem' | 'category' | 'priority' | 'confirmation' | 'completed';
+  userId: string;
+  userName: string;
+  problem?: string;
+  category?: string;
+  priority?: string;
+  phone: string;
+  unitId: string;
+}
+
+// Armazenamento temporário de conversas
+const activeConversations = new Map<string, ConversationState>();
+
+// Normalizar número de telefone
+function normalizePhone(phone: string): string {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.startsWith('55') && cleaned.length > 11) {
+    return cleaned.substring(2);
+  }
+  return cleaned;
+}
+
+// Enviar mensagem via WhatsApp
+async function sendWhatsAppMessage(supabase: any, phone: string, message: string) {
+  await supabase.functions.invoke('send-whatsapp', {
+    body: {
+      phone: phone,
+      message: message
+    }
+  });
+}
+
+// Processar diferentes etapas da conversa
+async function processConversation(
+  supabase: any, 
+  phone: string, 
+  messageText: string, 
+  userProfile: any
+): Promise<void> {
+  const conversationKey = normalizePhone(phone);
+  let conversation = activeConversations.get(conversationKey);
+
+  // Se não existe conversa, iniciar nova
+  if (!conversation) {
+    conversation = {
+      step: 'greeting',
+      userId: userProfile.id,
+      userName: userProfile.name,
+      phone: phone,
+      unitId: userProfile.unit_id
+    };
+    activeConversations.set(conversationKey, conversation);
+  }
+
+  switch (conversation.step) {
+    case 'greeting':
+      await sendWhatsAppMessage(supabase, phone, 
+        `Olá ${userProfile.name}! 👋\n\nSou o assistente de TI da Marka. Estou aqui para ajudar você a abrir um chamado.\n\n📝 *Por favor, descreva qual é o problema que você está enfrentando:*\n\nExemplo: "Meu computador não liga" ou "Não consigo acessar o email"`
+      );
+      conversation.step = 'problem';
+      break;
+
+    case 'problem':
+      conversation.problem = messageText;
+      await sendWhatsAppMessage(supabase, phone,
+        `✅ Problema registrado: "${messageText}"\n\n📂 *Agora me diga qual categoria melhor descreve seu problema:*\n\n1️⃣ Hardware (computador, impressora, equipamentos)\n2️⃣ Software (programas, aplicativos)\n3️⃣ Rede (internet, wifi, conexão)\n4️⃣ Email (problemas com e-mail)\n5️⃣ Acesso (senhas, permissões)\n6️⃣ Outros\n\n*Digite o número ou nome da categoria:*`
+      );
+      conversation.step = 'category';
+      break;
+
+    case 'category':
+      const categoryMap: { [key: string]: string } = {
+        '1': 'hardware', 'hardware': 'hardware',
+        '2': 'software', 'software': 'software', 
+        '3': 'rede', 'rede': 'rede',
+        '4': 'email', 'email': 'email',
+        '5': 'acesso', 'acesso': 'acesso',
+        '6': 'outros', 'outros': 'outros'
+      };
+      
+      const categoryInput = messageText.toLowerCase().trim();
+      conversation.category = categoryMap[categoryInput] || 'outros';
+      
+      await sendWhatsAppMessage(supabase, phone,
+        `✅ Categoria: ${conversation.category}\n\n⚡ *Qual é a urgência do seu problema?*\n\n🔴 *Alta* - Problema que impede completamente o trabalho\n🟡 *Média* - Problema que dificulta o trabalho\n🟢 *Baixa* - Problema que pode aguardar\n\n*Digite: Alta, Média ou Baixa*`
+      );
+      conversation.step = 'priority';
+      break;
+
+    case 'priority':
+      const priorityMap: { [key: string]: string } = {
+        'alta': 'alta', 'alto': 'alta', 'urgente': 'alta',
+        'media': 'media', 'média': 'media', 'normal': 'media',
+        'baixa': 'baixa', 'baixo': 'baixa', 'pouco': 'baixa'
+      };
+      
+      const priorityInput = messageText.toLowerCase().trim();
+      conversation.priority = priorityMap[priorityInput] || 'media';
+      
+      // Mostrar resumo para confirmação
+      await sendWhatsAppMessage(supabase, phone,
+        `📋 *RESUMO DO CHAMADO*\n\n👤 Solicitante: ${conversation.userName}\n📝 Problema: ${conversation.problem}\n📂 Categoria: ${conversation.category}\n⚡ Prioridade: ${conversation.priority}\n\n✅ *Digite "CONFIRMAR" para criar o chamado*\n❌ *Digite "CANCELAR" para cancelar*`
+      );
+      conversation.step = 'confirmation';
+      break;
+
+    case 'confirmation':
+      const confirmInput = messageText.toLowerCase().trim();
+      
+      if (confirmInput.includes('confirmar') || confirmInput.includes('sim') || confirmInput.includes('ok')) {
+        // Criar o chamado
+        const { data: newTicket, error: ticketError } = await supabase
+          .from('tickets')
+          .insert({
+            title: conversation.problem!.substring(0, 100),
+            description: `CHAMADO CRIADO VIA WHATSAPP\n\nUsuário: ${conversation.userName}\nTelefone: ${phone}\n\nDescrição do problema:\n${conversation.problem}`,
+            category: conversation.category,
+            priority: conversation.priority,
+            requester_id: conversation.userId,
+            unit_id: conversation.unitId,
+            status: 'aberto'
+          })
+          .select('ticket_number, id')
+          .single();
+
+        if (ticketError) {
+          console.error('Erro ao criar chamado:', ticketError);
+          await sendWhatsAppMessage(supabase, phone,
+            `❌ Erro ao criar o chamado. Tente novamente mais tarde ou entre em contato com o suporte.`
+          );
+        } else {
+          await sendWhatsAppMessage(supabase, phone,
+            `✅ *CHAMADO CRIADO COM SUCESSO!*\n\n🎫 *Número:* #${newTicket.ticket_number}\n📝 *Título:* ${conversation.problem}\n📂 *Categoria:* ${conversation.category}\n⚡ *Prioridade:* ${conversation.priority}\n\n🔄 *Status:* Aberto\n⏰ *Criado em:* ${new Date().toLocaleString('pt-BR')}\n\n✨ Seu chamado foi registrado e será atendido em breve!\n\n💬 Para abrir um novo chamado, basta enviar uma mensagem.`
+          );
+          console.log(`Chamado #${newTicket.ticket_number} criado via WhatsApp para ${conversation.userName}`);
+        }
+        
+        conversation.step = 'completed';
+        // Limpar conversa após 5 minutos
+        setTimeout(() => {
+          activeConversations.delete(conversationKey);
+        }, 5 * 60 * 1000);
+        
+      } else if (confirmInput.includes('cancelar') || confirmInput.includes('não') || confirmInput.includes('nao')) {
+        await sendWhatsAppMessage(supabase, phone,
+          `❌ Chamado cancelado.\n\n💬 Se precisar de ajuda, basta enviar uma nova mensagem!`
+        );
+        activeConversations.delete(conversationKey);
+      } else {
+        await sendWhatsAppMessage(supabase, phone,
+          `🔄 Não entendi sua resposta.\n\n✅ Digite "CONFIRMAR" para criar o chamado\n❌ Digite "CANCELAR" para cancelar`
+        );
+      }
+      break;
+
+    case 'completed':
+      // Reiniciar conversa
+      activeConversations.delete(conversationKey);
+      await processConversation(supabase, phone, messageText, userProfile);
+      break;
+  }
+
+  // Atualizar estado da conversa
+  if (conversation.step !== 'completed') {
+    activeConversations.set(conversationKey, conversation);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -34,8 +203,6 @@ serve(async (req) => {
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
@@ -66,24 +233,10 @@ serve(async (req) => {
       });
     }
 
-    // Extrair número de telefone (remover @s.whatsapp.net)
+    // Extrair e normalizar número de telefone
     const phoneNumber = messageData.key.remoteJid.replace('@s.whatsapp.net', '');
-    console.log('Número extraído:', phoneNumber);
-
-    // Normalizar número - remover código do país se presente e manter formato consistente
-    const normalizePhone = (phone: string): string => {
-      // Remove todos os caracteres não numéricos
-      const cleaned = phone.replace(/\D/g, '');
-      
-      // Se começar com 55 (código do Brasil) e tiver mais de 11 dígitos, remove o 55
-      if (cleaned.startsWith('55') && cleaned.length > 11) {
-        return cleaned.substring(2);
-      }
-      
-      return cleaned;
-    };
-    
     const normalizedPhone = normalizePhone(phoneNumber);
+    console.log('Número extraído:', phoneNumber);
     console.log('Número normalizado:', normalizedPhone);
 
     // Buscar usuário pelo telefone (tentando ambos os formatos)
@@ -102,13 +255,10 @@ serve(async (req) => {
     if (!userProfiles || userProfiles.length === 0) {
       console.log('Usuário não encontrado para o telefone:', phoneNumber);
       
-      // Enviar mensagem informando que o número não está cadastrado
-      await supabase.functions.invoke('send-whatsapp', {
-        body: {
-          phone: phoneNumber,
-          message: `Olá! Seu número não está cadastrado no sistema. Entre em contato com o administrador para cadastrar seu telefone e poder criar chamados via WhatsApp.`
-        }
-      });
+      // Mensagem explicativa para usuário não cadastrado
+      await sendWhatsAppMessage(supabase, phoneNumber,
+        `👋 Olá!\n\nSeu número de telefone não está cadastrado no sistema.\n\n📞 *Para usar o atendimento via WhatsApp, você precisa:*\n\n1️⃣ Solicitar ao administrador do sistema para cadastrar seu telefone\n2️⃣ Informar este número: ${phoneNumber}\n\n💬 Após o cadastro, você poderá criar chamados de TI diretamente pelo WhatsApp!\n\n📧 Entre em contato com o suporte para mais informações.`
+      );
 
       return new Response(JSON.stringify({ success: true, message: 'User not found' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -118,123 +268,13 @@ serve(async (req) => {
     const userProfile = userProfiles[0];
     console.log('Usuário encontrado:', userProfile.name);
 
-    // Usar OpenAI para analisar a mensagem e extrair informações
-    const aiPrompt = `
-Analise a seguinte mensagem de WhatsApp e extraia as informações para criar um chamado de TI:
-
-Mensagem: "${messageText}"
-
-Retorne APENAS um JSON válido com as seguintes informações:
-{
-  "title": "título curto e claro do problema (máximo 100 caracteres)",
-  "description": "descrição detalhada do problema baseada na mensagem",
-  "category": "uma das opções: hardware, software, rede, impressora, email, acesso, outros",
-  "priority": "uma das opções: baixa, media, alta, critica"
-}
-
-Regras:
-- Se a mensagem não parecer ser um problema de TI, use category "outros"
-- Para problemas urgentes ou que impedem o trabalho, use priority "alta" ou "critica"
-- Seja conciso no título mas detalhado na descrição
-- Mantenha o contexto original da mensagem do usuário
-`;
-
-    console.log('Enviando para OpenAI...');
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'Você é um assistente especializado em análise de chamados de TI. Sempre retorne apenas JSON válido.' },
-          { role: 'user', content: aiPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 500,
-      }),
-    });
-
-    if (!openaiResponse.ok) {
-      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
-    }
-
-    const aiResult = await openaiResponse.json();
-    const aiContent = aiResult.choices[0].message.content.trim();
-    
-    console.log('Resposta da IA:', aiContent);
-
-    let ticketData;
-    try {
-      // Tentar extrair JSON da resposta (pode vir com markdown)
-      const jsonMatch = aiContent.match(/\{.*\}/s);
-      if (jsonMatch) {
-        ticketData = JSON.parse(jsonMatch[0]);
-      } else {
-        ticketData = JSON.parse(aiContent);
-      }
-    } catch (parseError) {
-      console.error('Erro ao parsear resposta da IA:', parseError);
-      // Fallback para dados padrão
-      ticketData = {
-        title: 'Chamado via WhatsApp',
-        description: messageText,
-        category: 'outros',
-        priority: 'media'
-      };
-    }
-
-    console.log('Dados do chamado extraídos:', ticketData);
-
-    // Criar o chamado no sistema
-    const { data: newTicket, error: ticketError } = await supabase
-      .from('tickets')
-      .insert({
-        title: ticketData.title,
-        description: `CHAMADO CRIADO VIA WHATSAPP\n\nMensagem original: "${messageText}"\n\nUsuário: ${userProfile.name}\nTelefone: ${phoneNumber}\n\n${ticketData.description}`,
-        category: ticketData.category,
-        priority: ticketData.priority,
-        requester_id: userProfile.id,
-        unit_id: userProfile.unit_id,
-        status: 'aberto'
-      })
-      .select('ticket_number, id')
-      .single();
-
-    if (ticketError) {
-      console.error('Erro ao criar chamado:', ticketError);
-      throw ticketError;
-    }
-
-    console.log('Chamado criado:', newTicket);
-
-    // Enviar confirmação via WhatsApp
-    const confirmationMessage = `✅ Chamado criado com sucesso!
-
-📋 Número: #${newTicket.ticket_number}
-📝 Título: ${ticketData.title}
-📂 Categoria: ${ticketData.category}
-⚡ Prioridade: ${ticketData.priority}
-
-Sua solicitação foi registrada e será atendida em breve. Você pode acompanhar o status pelo sistema ou aguardar nosso contato.`;
-
-    await supabase.functions.invoke('send-whatsapp', {
-      body: {
-        phone: phoneNumber,
-        message: confirmationMessage,
-        ticketId: newTicket.id,
-        userId: userProfile.id
-      }
-    });
-
-    console.log('Confirmação enviada via WhatsApp');
+    // Processar conversa interativa
+    await processConversation(supabase, phoneNumber, messageText, userProfile);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      ticket: newTicket,
-      user: userProfile.name 
+      user: userProfile.name,
+      phone: phoneNumber
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
