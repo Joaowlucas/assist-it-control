@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
+import { AttachmentUpload } from './AttachmentUpload'
 
 interface ChatWindowProps {
   conversationId: string
@@ -28,6 +29,8 @@ export function ChatWindow({ conversationId, onClose }: ChatWindowProps) {
     messages, 
     loading, 
     sendMessage, 
+    editMessage,
+    deleteMessage,
     conversation,
     participants,
     typing
@@ -62,6 +65,35 @@ export function ChatWindow({ conversationId, onClose }: ChatWindowProps) {
     } catch (error) {
       console.error('Error sending message:', error)
     }
+  }
+
+  const handleSendAttachment = async (attachment: {
+    file_name: string
+    file_url: string
+    file_size: number
+    mime_type: string
+    attachment_type: 'image' | 'audio' | 'video' | 'document'
+  }) => {
+    try {
+      await sendMessage('', attachment.attachment_type, {
+        attachment_url: attachment.file_url,
+        attachment_name: attachment.file_name,
+        file_size: attachment.file_size,
+        mime_type: attachment.mime_type
+      })
+    } catch (error) {
+      console.error('Error sending attachment:', error)
+    }
+  }
+
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    if (!editMessage) return
+    await editMessage(messageId, newContent)
+  }
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!deleteMessage) return
+    await deleteMessage(messageId)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -175,6 +207,8 @@ export function ChatWindow({ conversationId, onClose }: ChatWindowProps) {
               key={message.id}
               message={message}
               isCurrentUser={message.user_id === user?.id}
+              onEdit={handleEditMessage}
+              onDelete={handleDeleteMessage}
             />
           ))}
           <div ref={messagesEndRef} />
@@ -184,14 +218,10 @@ export function ChatWindow({ conversationId, onClose }: ChatWindowProps) {
       {/* Input */}
       <div className="p-4 border-t bg-background">
         <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="mb-2"
-          >
-            <Paperclip className="h-4 w-4" />
-          </Button>
+          <AttachmentUpload 
+            onAttachmentReady={handleSendAttachment}
+            disabled={loading}
+          />
           
           <div className="flex-1">
             <Textarea

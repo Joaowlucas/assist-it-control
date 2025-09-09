@@ -23,7 +23,7 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [groupName, setGroupName] = useState('')
-  const [isGroup, setIsGroup] = useState(false)
+  const [chatType, setChatType] = useState<'direct' | 'group'>('direct')
   const [loading, setLoading] = useState(false)
   
   const { profile } = useAuth()
@@ -45,12 +45,6 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     )
-    
-    // Auto detectar se é grupo
-    const newSelectedCount = selectedUsers.includes(userId) 
-      ? selectedUsers.length - 1 
-      : selectedUsers.length + 1
-    setIsGroup(newSelectedCount > 1)
   }
 
   const handleCreateConversation = async () => {
@@ -63,7 +57,7 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
       return
     }
 
-    if (isGroup && !groupName.trim()) {
+    if (chatType === 'group' && !groupName.trim()) {
       toast({
         title: "Erro", 
         description: "Digite um nome para o grupo",
@@ -76,8 +70,8 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
     try {
       const conversationId = await createConversation(
         selectedUsers,
-        isGroup ? groupName.trim() : undefined,
-        isGroup ? 'group' : 'direct'
+        chatType === 'group' ? groupName.trim() : undefined,
+        chatType
       )
       
       onConversationCreated(conversationId)
@@ -86,7 +80,7 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
       setSelectedUsers([])
       setGroupName('')
       setSearchTerm('')
-      setIsGroup(false)
+      setChatType('direct')
       
       toast({
         title: "Sucesso",
@@ -123,9 +117,48 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Tipo de conversa */}
+          <div className="space-y-3">
+            <Label>Tipo de conversa</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={chatType === 'direct' ? 'default' : 'outline'}
+                onClick={() => setChatType('direct')}
+                className="flex-1 gap-2"
+              >
+                <User className="h-4 w-4" />
+                Conversa Direta
+              </Button>
+              <Button
+                type="button"
+                variant={chatType === 'group' ? 'default' : 'outline'}
+                onClick={() => setChatType('group')}
+                className="flex-1 gap-2"
+              >
+                <Users className="h-4 w-4" />
+                Grupo
+              </Button>
+            </div>
+          </div>
+
+          {/* Nome do grupo (se aplicável) */}
+          {chatType === 'group' && (
+            <div className="space-y-2">
+              <Label>Nome do grupo</Label>
+              <Input
+                placeholder="Digite o nome do grupo..."
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+            </div>
+          )}
+
           {/* Pesquisar usuários */}
           <div className="space-y-2">
-            <Label>Buscar usuários</Label>
+            <Label>
+              {chatType === 'direct' ? 'Selecionar usuário' : 'Selecionar participantes'}
+            </Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -137,23 +170,16 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
             </div>
           </div>
 
-          {/* Nome do grupo (se aplicável) */}
-          {isGroup && (
-            <div className="space-y-2">
-              <Label>Nome do grupo</Label>
-              <Input
-                placeholder="Digite o nome do grupo..."
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-              />
-            </div>
-          )}
-
           {/* Lista de usuários */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>
                 Usuários disponíveis ({filteredUsers.length})
+                {chatType === 'direct' && selectedUsers.length > 0 && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (máximo 1 para conversa direta)
+                  </span>
+                )}
               </Label>
               {selectedUsers.length > 0 && (
                 <Badge variant="outline">
@@ -170,40 +196,50 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                      onClick={() => handleUserToggle(user.id)}
-                    >
-                      <Checkbox
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => handleUserToggle(user.id)}
-                      />
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar_url} />
-                        <AvatarFallback>
-                          {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {user.name}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-muted-foreground truncate">
-                            {user.email}
+                  {filteredUsers.map((user) => {
+                    const isSelected = selectedUsers.includes(user.id)
+                    const isDisabledDirect = chatType === 'direct' && selectedUsers.length > 0 && !isSelected
+                    
+                    return (
+                      <div
+                        key={user.id}
+                        className={`flex items-center space-x-3 p-2 rounded-md cursor-pointer transition-colors ${
+                          isDisabledDirect 
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => !isDisabledDirect && handleUserToggle(user.id)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={isDisabledDirect}
+                          onChange={() => !isDisabledDirect && handleUserToggle(user.id)}
+                        />
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback>
+                            {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {user.name}
                           </p>
-                          <Badge 
-                            variant={getRoleBadgeVariant(user.role)}
-                            className="text-xs"
-                          >
-                            {getRoleLabel(user.role)}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-muted-foreground truncate">
+                              {user.email}
+                            </p>
+                            <Badge 
+                              variant={getRoleBadgeVariant(user.role)}
+                              className="text-xs"
+                            >
+                              {getRoleLabel(user.role)}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </ScrollArea>
@@ -213,13 +249,14 @@ export function StartChatDialog({ open, onOpenChange, onConversationCreated }: S
           {selectedUsers.length > 0 && (
             <div className="p-3 bg-muted/20 rounded-md">
               <div className="flex items-center gap-2 mb-2">
-                {isGroup ? (
+                {chatType === 'group' ? (
                   <Users className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <User className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className="text-sm font-medium">
-                  {isGroup ? 'Grupo' : 'Conversa direta'}
+                  {chatType === 'group' ? 'Grupo' : 'Conversa direta'}
+                  {chatType === 'group' && groupName && `: ${groupName}`}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">

@@ -74,11 +74,19 @@ export function useChatMessages(conversationId: string) {
           mentions,
           created_at,
           updated_at,
+          edited_at,
           is_deleted,
           profiles!sender_id (
             name,
             avatar_url,
             role
+          ),
+          message_attachments (
+            file_name,
+            file_url,
+            file_size,
+            mime_type,
+            attachment_type
           )
         `)
         .eq('conversation_id', conversationId)
@@ -87,12 +95,14 @@ export function useChatMessages(conversationId: string) {
 
       if (error) throw error
 
-      // Mapear para incluir user_id como alias de sender_id
+      // Mapear para incluir user_id como alias e anexos
       const mappedMessages = data.map(message => ({
         ...message,
         user_id: message.sender_id,
         content: message.content || '',
-        mentions: Array.isArray(message.mentions) ? message.mentions : []
+        mentions: Array.isArray(message.mentions) ? message.mentions : [],
+        attachment_url: message.message_attachments?.[0]?.file_url || undefined,
+        attachment_name: message.message_attachments?.[0]?.file_name || undefined
       }))
 
       setMessages(mappedMessages)
@@ -192,11 +202,19 @@ export function useChatMessages(conversationId: string) {
               mentions,
               created_at,
               updated_at,
+              edited_at,
               is_deleted,
               profiles!sender_id (
                 name,
                 avatar_url,
                 role
+              ),
+              message_attachments (
+                file_name,
+                file_url,
+                file_size,
+                mime_type,
+                attachment_type
               )
             `)
             .eq('id', payload.new.id)
@@ -207,7 +225,9 @@ export function useChatMessages(conversationId: string) {
               ...newMessage,
               user_id: newMessage.sender_id,
               content: newMessage.content || '',
-              mentions: Array.isArray(newMessage.mentions) ? newMessage.mentions : []
+              mentions: Array.isArray(newMessage.mentions) ? newMessage.mentions : [],
+              attachment_url: newMessage.message_attachments?.[0]?.file_url || undefined,
+              attachment_name: newMessage.message_attachments?.[0]?.file_name || undefined
             }
             setMessages(prev => [...prev, mappedMessage])
           }
@@ -236,11 +256,19 @@ export function useChatMessages(conversationId: string) {
               mentions,
               created_at,
               updated_at,
+              edited_at,
               is_deleted,
               profiles!sender_id (
                 name,
                 avatar_url,
                 role
+              ),
+              message_attachments (
+                file_name,
+                file_url,
+                file_size,
+                mime_type,
+                attachment_type
               )
             `)
             .eq('id', payload.new.id)
@@ -251,7 +279,9 @@ export function useChatMessages(conversationId: string) {
               ...updatedMessage,
               user_id: updatedMessage.sender_id,
               content: updatedMessage.content || '',
-              mentions: Array.isArray(updatedMessage.mentions) ? updatedMessage.mentions : []
+              mentions: Array.isArray(updatedMessage.mentions) ? updatedMessage.mentions : [],
+              attachment_url: updatedMessage.message_attachments?.[0]?.file_url || undefined,
+              attachment_name: updatedMessage.message_attachments?.[0]?.file_name || undefined
             }
             setMessages(prev => 
               prev.map(msg => 
@@ -268,26 +298,108 @@ export function useChatMessages(conversationId: string) {
     }
   }, [conversationId])
 
-  const sendMessage = async (content: string, messageType: string = 'text') => {
+  const sendMessage = async (content: string, messageType: string = 'text', attachmentData?: {
+    attachment_url: string
+    attachment_name: string
+    file_size: number
+    mime_type: string
+  }) => {
     if (!user || !conversationId) throw new Error('Usuário ou conversa não encontrados')
+    if (!content.trim() && messageType === 'text') throw new Error('Conteúdo não pode estar vazio')
 
     try {
-      const { error } = await supabase
+      const messageData: any = {
+        conversation_id: conversationId,
+        sender_id: user.id,
+        message_type: messageType,
+        status: 'sent'
+      }
+
+      if (content.trim()) {
+        messageData.content = content
+      }
+
+      const { data: messageResult, error } = await supabase
         .from('chat_messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content,
-          message_type: messageType,
-          status: 'sent'
-        })
+        .insert(messageData)
+        .select()
+        .single()
 
       if (error) throw error
+
+      // Se há anexo, criar entrada na tabela de anexos
+      if (attachmentData && messageResult) {
+        const { error: attachmentError } = await supabase
+          .from('message_attachments')
+          .insert({
+            message_id: messageResult.id,
+            file_name: attachmentData.attachment_name,
+            file_url: attachmentData.attachment_url,
+            file_size: attachmentData.file_size,
+            mime_type: attachmentData.mime_type,
+            attachment_type: messageType as any
+          })
+
+        if (attachmentError) {
+          console.error('Error saving attachment:', attachmentError)
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error)
       toast({
         title: "Erro",
         description: "Não foi possível enviar a mensagem",
+        variant: "destructive",
+      })
+      throw error
+    }
+  }
+
+  const editMessage = async (messageId: string, newContent: string) => {
+    if (!user) throw new Error('Usuário não autenticado')
+
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({
+          content: newContent,
+          edited_at: new Date().toISOString()
+        })
+        .eq('id', messageId)
+        .eq('sender_id', user.id) // Garantir que só o autor pode editar
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error editing message:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível editar a mensagem",
+        variant: "destructive",
+      })
+      throw error
+    }
+  }
+
+  const deleteMessage = async (messageId: string) => {
+    if (!user) throw new Error('Usuário não autenticado')
+
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          content: null
+        })
+        .eq('id', messageId)
+        .eq('sender_id', user.id) // Garantir que só o autor pode deletar
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error deleting message:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a mensagem",
         variant: "destructive",
       })
       throw error
@@ -301,6 +413,8 @@ export function useChatMessages(conversationId: string) {
     loading,
     typing,
     sendMessage,
+    editMessage,
+    deleteMessage,
     refetch: () => Promise.all([fetchMessages(), fetchConversation()])
   }
 }
