@@ -53,14 +53,27 @@ function normalizePhone(phone: string): string {
 // Enviar mensagem via WhatsApp
 async function sendWhatsAppMessage(supabase: any, phone: string, message: string) {
   try {
-    await supabase.functions.invoke('send-whatsapp', {
+    console.log(`💬 Tentando enviar mensagem para ${phone.substring(0, 6)}****`);
+    console.log(`📝 Mensagem: ${message.substring(0, 50)}...`);
+    
+    const { data, error } = await supabase.functions.invoke('send-whatsapp', {
       body: {
         phone: phone,
         message: message
       }
     });
+    
+    if (error) {
+      console.error('❌ Erro ao invocar send-whatsapp:', error);
+      throw error;
+    }
+    
+    console.log('✅ Resposta do send-whatsapp:', data);
+    
   } catch (error) {
-    console.error('Erro ao enviar mensagem WhatsApp:', error);
+    console.error('❌ Erro crítico ao enviar mensagem WhatsApp:', error);
+    console.error('📍 Stack trace:', error.stack);
+    // Não lançar erro para não parar o fluxo
   }
 }
 
@@ -71,8 +84,16 @@ async function processConversation(
   messageText: string, 
   userProfile?: any
 ): Promise<void> {
+  console.log('🔄 Iniciando processConversation');
+  console.log(`📞 Phone: ${phone.substring(0, 6)}****`);
+  console.log(`💬 Message: ${messageText}`);
+  console.log(`👤 UserProfile: ${userProfile ? userProfile.name : 'Novo usuário'}`);
+  
   const conversationKey = normalizePhone(phone);
   let conversation = activeConversations.get(conversationKey);
+  
+  console.log(`🗂️ Conversation key: ${conversationKey}`);
+  console.log(`💾 Existing conversation:`, conversation ? 'Sim' : 'Não');
 
   // Nova conversa
   if (!conversation) {
@@ -421,9 +442,22 @@ serve(async (req) => {
 
     // Processar conversa
     console.log('💬 Iniciando processamento da conversa...');
-    await processConversation(supabase, phoneNumber, messageText, userProfile);
-
-    console.log('✅ Conversa processada com sucesso');
+    try {
+      await processConversation(supabase, phoneNumber, messageText, userProfile);
+      console.log('✅ Conversa processada com sucesso');
+    } catch (conversationError) {
+      console.error('❌ Erro no processamento da conversa:', conversationError);
+      console.error('📍 Stack da conversa:', conversationError.stack);
+      
+      // Tentar enviar mensagem de erro para o usuário
+      try {
+        await sendWhatsAppMessage(supabase, phoneNumber, 
+          '🤖 Desculpe, ocorreu um erro temporário. Tente novamente em alguns instantes.'
+        );
+      } catch (errorMsgError) {
+        console.error('❌ Erro ao enviar mensagem de erro:', errorMsgError);
+      }
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
