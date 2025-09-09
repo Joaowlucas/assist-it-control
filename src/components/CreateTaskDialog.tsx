@@ -12,15 +12,17 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useCreateTask } from '@/hooks/useKanbanTasks'
 import { useAvailableUsers } from '@/hooks/useAvailableUsers'
+import { KanbanColumn } from '@/hooks/useKanbanColumns'
 
 interface CreateTaskDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   boardId: string
-  defaultStatus: 'todo' | 'in_progress' | 'done'
+  defaultStatus: string
+  columns: KanbanColumn[]
 }
 
-export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus, columns }: CreateTaskDialogProps) {
   const createTask = useCreateTask()
   const { data: users } = useAvailableUsers()
   
@@ -100,7 +102,7 @@ export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus }:
               <Label>Status</Label>
               <Select 
                 value={formData.status} 
-                onValueChange={(value: 'todo' | 'in_progress' | 'done') => 
+                onValueChange={(value: string) => 
                   setFormData(prev => ({ ...prev, status: value }))
                 }
               >
@@ -108,9 +110,11 @@ export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus }:
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todo">A Fazer</SelectItem>
-                  <SelectItem value="in_progress">Em Progresso</SelectItem>
-                  <SelectItem value="done">Concluído</SelectItem>
+                  {columns.map((column) => (
+                    <SelectItem key={column.id} value={column.name}>
+                      {column.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

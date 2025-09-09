@@ -7,7 +7,7 @@ export interface KanbanTask {
   board_id: string
   title: string
   description?: string
-  status: 'todo' | 'in_progress' | 'done'
+  status: string
   priority: 'low' | 'medium' | 'high' | 'urgent'
   assigned_to?: string
   created_by: string
@@ -26,7 +26,7 @@ export interface CreateTaskData {
   board_id: string
   title: string
   description?: string
-  status?: 'todo' | 'in_progress' | 'done'
+  status?: string
   priority?: 'low' | 'medium' | 'high' | 'urgent'
   assigned_to?: string
   due_date?: string
@@ -67,7 +67,7 @@ export function useCreateTask() {
         .from('kanban_tasks')
         .select('position')
         .eq('board_id', taskData.board_id)
-        .eq('status', taskData.status || 'todo')
+        .eq('status', taskData.status || 'A Fazer')
         .order('position', { ascending: false })
         .limit(1)
 
