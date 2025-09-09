@@ -24,6 +24,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     role: 'user' as 'admin' | 'technician' | 'user',
     unit_id: 'none',
     unit_ids: [] as string[],
@@ -42,6 +43,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
       setFormData({
         name: user.name,
         email: user.email,
+        phone: user.phone || '',
         role: user.role,
         unit_id: user.unit_id || 'none',
         unit_ids: user.role === 'technician' ? currentUnitIds : [],
@@ -72,6 +74,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
       id: user.id,
       name: formData.name,
       email: formData.email,
+      phone: formData.phone || null,
       role: formData.role,
       status: formData.status,
       // Para técnicos, usar unit_ids; para outros, usar unit_id
@@ -117,6 +120,17 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit-phone">Telefone</Label>
+            <Input
+              id="edit-phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="Ex: 85999999999"
             />
           </div>
           
