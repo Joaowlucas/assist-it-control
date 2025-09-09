@@ -9,7 +9,9 @@ const corsHeaders = {
 interface SendWhatsAppRequest {
   phone: string
   message: string
-  notificationId: string
+  notificationId?: string // Torna opcional
+  ticketId?: string
+  userId?: string
 }
 
 // Função para validar número de telefone brasileiro
@@ -50,7 +52,7 @@ serve(async (req) => {
 
   try {
     console.log('=== Iniciando envio de WhatsApp ===')
-    const { phone, message, notificationId }: SendWhatsAppRequest = await req.json()
+    const { phone, message, notificationId, ticketId, userId }: SendWhatsAppRequest = await req.json()
     
     console.log('Dados recebidos:', { 
       phone: phone?.substring(0, 4) + '****', 
@@ -59,8 +61,8 @@ serve(async (req) => {
     })
 
     // Validações básicas
-    if (!phone || !message || !notificationId) {
-      throw new Error('Telefone, mensagem e ID da notificação são obrigatórios')
+    if (!phone || !message) {
+      throw new Error('Telefone e mensagem são obrigatórios')
     }
 
     // Validar telefone
@@ -189,28 +191,32 @@ serve(async (req) => {
       evolutionResult = { status: 'sent', message: 'Enviado com sucesso' }
     }
 
-    // Atualizar notificação como enviada
-    console.log('Atualizando status da notificação...')
-    const updateResponse = await fetch(`${supabaseUrl}/rest/v1/whatsapp_notifications?id=eq.${notificationId}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        status: 'sent',
-        sent_at: new Date().toISOString(),
-        evolution_message_id: evolutionResult.key?.id || null,
-      }),
-    })
+    // Atualizar notificação como enviada (se existir)
+    if (notificationId) {
+      console.log('Atualizando status da notificação...')
+      const updateResponse = await fetch(`${supabaseUrl}/rest/v1/whatsapp_notifications?id=eq.${notificationId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          evolution_message_id: evolutionResult.key?.id || null,
+        }),
+      })
 
-    if (!updateResponse.ok) {
-      console.error('Erro ao atualizar status da notificação:', updateResponse.status)
-      const errorText = await updateResponse.text()
-      console.error('Detalhes do erro:', errorText)
+      if (!updateResponse.ok) {
+        console.error('Erro ao atualizar status da notificação:', updateResponse.status)
+        const errorText = await updateResponse.text()
+        console.error('Detalhes do erro:', errorText)
+      } else {
+        console.log('Status da notificação atualizado com sucesso')
+      }
     } else {
-      console.log('Status da notificação atualizado com sucesso')
+      console.log('Sem notificationId - mensagem enviada diretamente')
     }
 
     return new Response(JSON.stringify({ 

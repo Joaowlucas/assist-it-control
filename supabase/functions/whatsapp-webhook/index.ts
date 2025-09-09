@@ -70,11 +70,27 @@ serve(async (req) => {
     const phoneNumber = messageData.key.remoteJid.replace('@s.whatsapp.net', '');
     console.log('Número extraído:', phoneNumber);
 
-    // Buscar usuário pelo telefone
+    // Normalizar número - remover código do país se presente e manter formato consistente
+    const normalizePhone = (phone: string): string => {
+      // Remove todos os caracteres não numéricos
+      const cleaned = phone.replace(/\D/g, '');
+      
+      // Se começar com 55 (código do Brasil) e tiver mais de 11 dígitos, remove o 55
+      if (cleaned.startsWith('55') && cleaned.length > 11) {
+        return cleaned.substring(2);
+      }
+      
+      return cleaned;
+    };
+    
+    const normalizedPhone = normalizePhone(phoneNumber);
+    console.log('Número normalizado:', normalizedPhone);
+
+    // Buscar usuário pelo telefone (tentando ambos os formatos)
     const { data: userProfiles, error: userError } = await supabase
       .from('profiles')
       .select('id, name, email, unit_id')
-      .eq('phone', phoneNumber)
+      .or(`phone.eq.${phoneNumber},phone.eq.${normalizedPhone}`)
       .eq('status', 'ativo')
       .limit(1);
 
