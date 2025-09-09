@@ -18,27 +18,52 @@ interface SendWhatsAppRequest {
 function validateBrazilianPhone(phone: string): { isValid: boolean; formatted?: string; error?: string } {
   const cleanPhone = phone.replace(/\D/g, '')
   
-  // Verificar tamanho
-  if (cleanPhone.length < 10 || cleanPhone.length > 13) {
-    return { isValid: false, error: 'Número deve ter entre 10 e 13 dígitos' }
+  // Verificar tamanho mínimo
+  if (cleanPhone.length < 10) {
+    return { isValid: false, error: 'Número muito curto (mínimo 10 dígitos)' }
   }
   
-  // Adicionar código do país se não tiver
+  // Se tem mais de 13 dígitos, não é válido
+  if (cleanPhone.length > 13) {
+    return { isValid: false, error: 'Número muito longo (máximo 13 dígitos)' }
+  }
+  
   let formattedPhone = cleanPhone
+  
+  // Se não tem código do país, adicionar
   if (!formattedPhone.startsWith('55')) {
     formattedPhone = `55${formattedPhone}`
   }
   
-  // Verificar se tem 13 dígitos após adicionar código do país
+  // Se ficou muito longo após adicionar código do país, remover dígitos extras do início
+  if (formattedPhone.length > 13) {
+    // Manter apenas os últimos 13 dígitos
+    formattedPhone = formattedPhone.slice(-13)
+  }
+  
+  // Se ainda não tem 13 dígitos, pode ser um número local que precisa de formatação
+  if (formattedPhone.length < 13) {
+    // Para números com 10-11 dígitos, adicionar código 55 do Brasil
+    if (formattedPhone.length === 10 || formattedPhone.length === 11) {
+      formattedPhone = `55${formattedPhone}`
+    }
+  }
+  
+  // Validação final: deve ter exatamente 13 dígitos
   if (formattedPhone.length !== 13) {
-    return { isValid: false, error: 'Número inválido após formatação' }
+    return { isValid: false, error: `Formato inválido (${formattedPhone.length} dígitos, esperado 13)` }
+  }
+  
+  // Verificar se começa com 55 (Brasil)
+  if (!formattedPhone.startsWith('55')) {
+    return { isValid: false, error: 'Deve ser um número brasileiro (código 55)' }
   }
   
   // Verificar se o DDD é válido (11-99)
   const ddd = formattedPhone.substring(2, 4)
   const dddNumber = parseInt(ddd)
   if (dddNumber < 11 || dddNumber > 99) {
-    return { isValid: false, error: 'DDD inválido' }
+    return { isValid: false, error: `DDD inválido: ${ddd}` }
   }
   
   return { isValid: true, formatted: formattedPhone }
