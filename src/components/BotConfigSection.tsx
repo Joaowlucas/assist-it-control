@@ -148,6 +148,25 @@ export default function BotConfigSection() {
     }
   };
 
+  const fixWebhookConfig = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('fix-webhook-config');
+
+      if (error) throw error;
+
+      toast({
+        title: "Webhook corrigido",
+        description: "A configuração do webhook foi corrigida na Evolution API!"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao corrigir",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="flows" className="space-y-4">
@@ -343,9 +362,14 @@ export default function BotConfigSection() {
                 />
               </div>
 
-              <Button onClick={testWebhook} disabled={!testPhone || !testMessage}>
-                Enviar Teste
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={testWebhook} disabled={!testPhone || !testMessage}>
+                  Enviar Teste
+                </Button>
+                <Button onClick={fixWebhookConfig} variant="outline">
+                  Corrigir Webhook
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
