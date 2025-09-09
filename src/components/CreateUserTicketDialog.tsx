@@ -39,7 +39,8 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
     title: '',
     description: '',
     category: 'outros' as 'hardware' | 'software' | 'rede' | 'acesso' | 'outros',
-    priority: 'media' as 'baixa' | 'media' | 'alta' | 'critica'
+    priority: 'media' as 'baixa' | 'media' | 'alta' | 'critica',
+    requesterName: ''
   })
 
   const { profile } = useAuth()
@@ -56,7 +57,8 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
         category: formData.category,
         priority: formData.priority,
         unit_id: profile!.unit_id!, // Usuário só pode criar ticket para sua unidade
-        images: images
+        images: images,
+        requester_name: formData.requesterName || undefined
       })
       
       toast.success("Chamado criado com sucesso!")
@@ -67,7 +69,8 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
         title: '',
         description: '',
         category: 'outros',
-        priority: 'media'
+        priority: 'media',
+        requesterName: ''
       })
       setImages([])
     } catch (error: any) {
@@ -89,6 +92,19 @@ export function CreateUserTicketDialog({ open, onOpenChange }: CreateUserTicketD
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4">
+            <div>
+              <Label htmlFor="requesterName">Nome do Usuário (Opcional)</Label>
+              <Input 
+                id="requesterName" 
+                value={formData.requesterName}
+                onChange={(e) => setFormData({ ...formData, requesterName: e.target.value })}
+                placeholder="Ex: João Silva (deixe em branco se for para você mesmo)"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Preencha apenas se estiver criando o chamado em nome de outro usuário
+              </p>
+            </div>
+            
             <div>
               <Label htmlFor="title">Título *</Label>
               <Input 

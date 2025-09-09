@@ -44,6 +44,7 @@ export interface CreateTicketData {
   category: 'hardware' | 'software' | 'rede' | 'acesso' | 'outros'
   unit_id?: string
   images?: File[]
+  requester_name?: string // Nome do usuário para quem o chamado está sendo criado
 }
 
 export function useUserTickets() {
@@ -119,11 +120,15 @@ export function useCreateUserTicket() {
       }
 
       // Criar o chamado
+      const ticketDescription = ticketData.requester_name 
+        ? `${ticketData.description}\n\n--- Informações do Solicitante ---\nChamado criado em nome de: ${ticketData.requester_name}`
+        : ticketData.description
+        
       const { data: ticket, error: ticketError } = await supabase
         .from('tickets')
         .insert({
           title: ticketData.title,
-          description: ticketData.description,
+          description: ticketDescription,
           priority: ticketData.priority,
           category: ticketData.category,
           requester_id: profile.id,
