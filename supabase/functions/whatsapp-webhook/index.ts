@@ -93,10 +93,11 @@ async function processConversation(
   let conversation = activeConversations.get(conversationKey);
   
   console.log(`🗂️ Conversation key: ${conversationKey}`);
-  console.log(`💾 Existing conversation:`, conversation ? 'Sim' : 'Não');
+  console.log(`💾 Existing conversation:`, conversation ? `Sim - Etapa: ${conversation.step}` : 'Não');
 
   // Nova conversa
   if (!conversation) {
+    console.log('🆕 Criando nova conversa');
     conversation = {
       step: 'menu',
       phone: phone,
@@ -107,12 +108,16 @@ async function processConversation(
       conversation.userId = userProfile.id;
       conversation.userName = userProfile.name;
       conversation.unitId = userProfile.unit_id;
+      console.log(`👤 Usuário existente: ${userProfile.name}`);
+    } else {
+      console.log('👤 Novo usuário - vai solicitar cadastro');
     }
     
     activeConversations.set(conversationKey, conversation);
   }
 
   const input = messageText.trim().toLowerCase();
+  console.log(`🔍 Input processado: "${input}" (etapa atual: ${conversation.step})`);
 
   switch (conversation.step) {
     case 'menu':
@@ -163,25 +168,52 @@ async function processConversation(
       break;
 
     case 'name':
+      console.log(`📝 Processando nome: "${messageText.trim()}" (${messageText.trim().length} caracteres)`);
+      
       if (messageText.trim().length < 3) {
+        console.log('❌ Nome muito curto, solicitando novamente');
         await sendWhatsAppMessage(supabase, phone,
           `❌ Nome muito curto.\n\n*Digite seu NOME COMPLETO:*`
         );
         return;
       }
       
-      conversation.userName = messageText.trim();
+      // Verificar se não é uma mensagem de sistema ou comando
+      const cleanName = messageText.trim();
+      if (cleanName.toLowerCase().includes('digite') || cleanName.toLowerCase().includes('bot') || /^\d+$/.test(cleanName)) {
+        console.log('❌ Nome inválido (parece ser comando), solicitando novamente');
+        await sendWhatsAppMessage(supabase, phone,
+          `❌ Por favor, digite apenas seu nome completo.\n\nExemplo: João Silva\n\n*Digite seu NOME COMPLETO:*`
+        );
+        return;
+      }
+      
+      console.log(`✅ Nome válido aceito: ${cleanName}`);
+      conversation.userName = cleanName;
       
       // Buscar unidades
-      const { data: units } = await supabase.from('units').select('id, name').order('name');
+      const { data: units, error: unitsError } = await supabase.from('units').select('id, name').order('name');
+      
+      if (unitsError || !units || units.length === 0) {
+        console.error('❌ Erro ao buscar unidades:', unitsError);
+        await sendWhatsAppMessage(supabase, phone,
+          `❌ Erro ao carregar unidades. Tente novamente mais tarde.`
+        );
+        return;
+      }
+      
+      console.log(`📋 ${units.length} unidades encontradas`);
       let unitsMessage = `✅ Nome: ${conversation.userName}\n\n🏢 *Selecione sua unidade:*\n\n`;
       
-      units?.forEach((unit: any, index: number) => {
+      units.forEach((unit: any, index: number) => {
         unitsMessage += `${index + 1}️⃣ ${unit.name}\n`;
       });
       
+      unitsMessage += `\n*Digite o número da sua unidade:*`;
+      
       await sendWhatsAppMessage(supabase, phone, unitsMessage);
       conversation.step = 'unit';
+      console.log(`🔄 Avançou para etapa 'unit'`);
       break;
 
     case 'unit':
@@ -326,6 +358,8 @@ async function processConversation(
 
   // Atualizar conversa
   activeConversations.set(conversationKey, conversation);
+  console.log(`💾 Conversa atualizada - Etapa atual: ${conversation.step}`);
+  console.log(`📊 Total de conversas ativas: ${activeConversations.size}`);
 }
 
 serve(async (req) => {
