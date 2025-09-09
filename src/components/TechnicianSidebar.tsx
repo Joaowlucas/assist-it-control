@@ -44,7 +44,7 @@ export function TechnicianSidebar() {
   const location = useLocation()
 
   return (
-    <Sidebar className="bg-background/80 backdrop-blur-md border-r border-border/50">
+    <Sidebar className="bg-background dark:bg-background/20 backdrop-blur-md border-r border-border/50">
       <SidebarContent className="bg-transparent">
         <SidebarGroup>
           <SidebarGroupLabel className="text-foreground/70">Menu Principal</SidebarGroupLabel>
