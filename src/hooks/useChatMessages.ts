@@ -80,13 +80,6 @@ export function useChatMessages(conversationId: string) {
             name,
             avatar_url,
             role
-          ),
-          message_attachments (
-            file_name,
-            file_url,
-            file_size,
-            mime_type,
-            attachment_type
           )
         `)
         .eq('conversation_id', conversationId)
@@ -95,17 +88,29 @@ export function useChatMessages(conversationId: string) {
 
       if (error) throw error
 
-      // Mapear para incluir user_id como alias e anexos
-      const mappedMessages = data.map(message => ({
-        ...message,
-        user_id: message.sender_id,
-        content: message.content || '',
-        mentions: Array.isArray(message.mentions) ? message.mentions : [],
-        attachment_url: message.message_attachments?.[0]?.file_url || undefined,
-        attachment_name: message.message_attachments?.[0]?.file_name || undefined
-      }))
+      // Buscar anexos separadamente se necessário
+      let messagesWithAttachments = mappedMessages
 
-      setMessages(mappedMessages)
+      if (data.length > 0) {
+        const messageIds = data.map(m => m.id)
+        const { data: attachments } = await supabase
+          .from('message_attachments')
+          .select('*')
+          .in('message_id', messageIds)
+
+        if (attachments) {
+          messagesWithAttachments = mappedMessages.map(message => {
+            const attachment = attachments.find(att => att.message_id === message.id)
+            return {
+              ...message,
+              attachment_url: attachment?.file_url || undefined,
+              attachment_name: attachment?.file_name || undefined
+            }
+          })
+        }
+      }
+
+      setMessages(messagesWithAttachments)
     } catch (error) {
       console.error('Error fetching messages:', error)
       toast({
