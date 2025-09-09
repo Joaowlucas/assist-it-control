@@ -6,6 +6,7 @@ import { UnitManagementSection } from "@/components/UnitManagementSection"
 import { TicketConfigurationTabs } from "@/components/TicketConfigurationTabs"
 import { CompanySettingsSection } from "@/components/CompanySettingsSection"
 import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection"
+import WhatsAppTicketConfigSection from "@/components/WhatsAppTicketConfigSection"
 import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 import { AssignmentManagementSection } from "@/components/AssignmentManagementSection"
 
@@ -82,6 +83,7 @@ export default function Settings() {
 
         <TabsContent value="whatsapp" className="space-y-4">
           <WhatsAppConfigSection />
+          <WhatsAppTicketConfigSection />
         </TabsContent>
 
         <TabsContent value="logs" className="space-y-4">
