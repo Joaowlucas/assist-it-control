@@ -433,6 +433,42 @@ export default function BotConfigSection() {
                 >
                   Testar Webhook
                 </Button>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      toast({
+                        title: "Reconfigurando webhook...",
+                        description: "Aguarde, isso pode levar alguns segundos"
+                      });
+                      
+                      const { data, error } = await supabase.functions.invoke('verify-webhook-config');
+                      
+                      if (error) {
+                        console.error('Erro na reconfiguração:', error);
+                        toast({
+                          title: "Erro na reconfiguração",
+                          description: error.message || "Não foi possível reconfigurar o webhook"
+                        });
+                        return;
+                      }
+
+                      console.log('Resultado da reconfiguração:', data);
+                      toast({
+                        title: data.success ? "✅ Webhook reconfigurado" : "❌ Erro na reconfiguração",
+                        description: data.message
+                      });
+                    } catch (error) {
+                      console.error('Erro na reconfiguração:', error);
+                      toast({
+                        title: "Erro na reconfiguração",
+                        description: "Não foi possível reconfigurar o webhook"
+                      });
+                    }
+                  }} 
+                  variant="destructive"
+                >
+                  Reconfigurar Webhook
+                </Button>
               </div>
             </CardContent>
           </Card>
