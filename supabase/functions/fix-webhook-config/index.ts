@@ -34,16 +34,18 @@ serve(async (req) => {
     console.log('📍 URL do webhook:', webhookUrl);
     console.log('🏭 Instância:', settings.evolution_instance_name);
 
-    // Configurar webhook corretamente
+    // Configurar webhook corretamente - formato da Evolution API
     const webhookConfig = {
-      url: webhookUrl,
-      enabled: true,
-      events: [
-        'MESSAGES_UPSERT',
-        'CONNECTION_UPDATE'
-      ],
-      webhookByEvents: false,
-      webhookBase64: false
+      webhook: {
+        url: webhookUrl,
+        enabled: true,
+        events: [
+          'MESSAGES_UPSERT',
+          'CONNECTION_UPDATE'
+        ],
+        webhookByEvents: false,
+        webhookBase64: false
+      }
     };
 
     console.log('⚙️ Configuração do webhook:', JSON.stringify(webhookConfig, null, 2));
