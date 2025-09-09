@@ -15,6 +15,9 @@ interface Message {
   created_at: string
   updated_at: string
   is_deleted: boolean
+  edited_at?: string
+  attachment_url?: string
+  attachment_name?: string
   profiles: {
     name: string
     avatar_url?: string
@@ -238,11 +241,31 @@ export function useChatMessages(conversationId: string) {
               ...newMessage,
               user_id: newMessage.sender_id,
               content: newMessage.content || '',
-              mentions: Array.isArray(newMessage.mentions) ? newMessage.mentions : [],
-              attachment_url: newMessage.message_attachments?.[0]?.file_url || undefined,
-              attachment_name: newMessage.message_attachments?.[0]?.file_name || undefined
+              mentions: Array.isArray(newMessage.mentions) ? newMessage.mentions : []
             }
-            setMessages(prev => [...prev, mappedMessage])
+            
+            // Buscar anexo se necessário
+            let attachment_url = undefined
+            let attachment_name = undefined
+            
+            if (newMessage.message_type !== 'text') {
+              const { data: attachment } = await supabase
+                .from('message_attachments')
+                .select('*')
+                .eq('message_id', newMessage.id)
+                .single()
+              
+              if (attachment) {
+                attachment_url = attachment.file_url
+                attachment_name = attachment.file_name
+              }
+            }
+            
+            setMessages(prev => [...prev, {
+              ...mappedMessage,
+              attachment_url,
+              attachment_name
+            }])
           }
         }
       )
@@ -292,13 +315,33 @@ export function useChatMessages(conversationId: string) {
               ...updatedMessage,
               user_id: updatedMessage.sender_id,
               content: updatedMessage.content || '',
-              mentions: Array.isArray(updatedMessage.mentions) ? updatedMessage.mentions : [],
-              attachment_url: updatedMessage.message_attachments?.[0]?.file_url || undefined,
-              attachment_name: updatedMessage.message_attachments?.[0]?.file_name || undefined
+              mentions: Array.isArray(updatedMessage.mentions) ? updatedMessage.mentions : []
             }
+            
+            // Buscar anexo se necessário
+            let attachment_url = undefined
+            let attachment_name = undefined
+            
+            if (updatedMessage.message_type !== 'text') {
+              const { data: attachment } = await supabase
+                .from('message_attachments')
+                .select('*')
+                .eq('message_id', updatedMessage.id)
+                .single()
+              
+              if (attachment) {
+                attachment_url = attachment.file_url
+                attachment_name = attachment.file_name
+              }
+            }
+            
             setMessages(prev => 
               prev.map(msg => 
-                msg.id === mappedMessage.id ? mappedMessage : msg
+                msg.id === mappedMessage.id ? {
+                  ...mappedMessage,
+                  attachment_url,
+                  attachment_name
+                } : msg
               )
             )
           }

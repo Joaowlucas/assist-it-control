@@ -60,15 +60,19 @@ export function MessageBubble({ message, isCurrentUser, onEdit, onDelete }: Mess
           <img 
             src={message.attachment_url} 
             alt={message.attachment_name}
-            className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+            className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity border"
             onClick={() => window.open(message.attachment_url, '_blank')}
+            onError={(e) => {
+              console.error('Erro ao carregar imagem:', message.attachment_url)
+              e.currentTarget.style.display = 'none'
+            }}
           />
         </div>
       )
     }
 
     return (
-      <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
+      <div className="mt-2 p-3 bg-background/10 rounded-lg border">
         <div className="flex items-center gap-2">
           {getAttachmentIcon(message.message_type)}
           <span className="text-sm font-medium truncate flex-1">
@@ -78,6 +82,7 @@ export function MessageBubble({ message, isCurrentUser, onEdit, onDelete }: Mess
             size="sm"
             variant="ghost"
             onClick={() => handleDownload(message.attachment_url!, message.attachment_name!)}
+            className="h-6 w-6 p-0"
           >
             <Download className="h-3 w-3" />
           </Button>
@@ -112,13 +117,23 @@ export function MessageBubble({ message, isCurrentUser, onEdit, onDelete }: Mess
                 : 'bg-muted'
             }`}
           >
-            {message.content && (
+            {message.content && message.content.trim() && (
               <p className="text-sm whitespace-pre-wrap break-words">
                 {message.content}
               </p>
             )}
             
             {renderAttachment()}
+            
+            {/* Se for mensagem só de anexo sem texto, mostrar indicador */}
+            {!message.content && message.attachment_url && (
+              <div className="text-xs opacity-70 mb-2">
+                {message.message_type === 'image' && '📷 Imagem'}
+                {message.message_type === 'audio' && '🎵 Áudio'}  
+                {message.message_type === 'video' && '🎥 Vídeo'}
+                {message.message_type === 'document' && '📎 Documento'}
+              </div>
+            )}
             
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs opacity-70">
