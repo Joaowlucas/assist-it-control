@@ -2,3 +2,6 @@ project_id = "riqievnbraelqrzrovyr"
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.update-openai-key]
+verify_jwt = true
