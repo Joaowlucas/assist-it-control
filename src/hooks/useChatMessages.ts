@@ -278,6 +278,12 @@ export function useChatMessages(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`
         },
         async (payload) => {
+          // Se a mensagem foi deletada, remover da interface
+          if (payload.new.is_deleted) {
+            setMessages(prev => prev.filter(msg => msg.id !== payload.new.id))
+            return
+          }
+
           // Buscar dados completos da mensagem atualizada
           const { data: updatedMessage, error } = await supabase
             .from('chat_messages')
