@@ -23,35 +23,29 @@ function validateBrazilianPhone(phone: string): { isValid: boolean; formatted?: 
     return { isValid: false, error: 'Número muito curto (mínimo 10 dígitos)' }
   }
   
-  // Se tem mais de 13 dígitos, não é válido
-  if (cleanPhone.length > 13) {
-    return { isValid: false, error: 'Número muito longo (máximo 13 dígitos)' }
+  // Se tem mais de 15 dígitos, não é válido
+  if (cleanPhone.length > 15) {
+    return { isValid: false, error: 'Número muito longo (máximo 15 dígitos)' }
   }
   
   let formattedPhone = cleanPhone
   
-  // Se não tem código do país, adicionar
+  // Se começa com 55, usar como está
+  if (formattedPhone.startsWith('55')) {
+    // Se tem 12 ou 13 dígitos começando com 55, está ok
+    if (formattedPhone.length >= 12 && formattedPhone.length <= 13) {
+      return { isValid: true, formatted: formattedPhone }
+    }
+  }
+  
+  // Se não começa com 55, adicionar código do país
   if (!formattedPhone.startsWith('55')) {
     formattedPhone = `55${formattedPhone}`
   }
   
-  // Se ficou muito longo após adicionar código do país, remover dígitos extras do início
-  if (formattedPhone.length > 13) {
-    // Manter apenas os últimos 13 dígitos
-    formattedPhone = formattedPhone.slice(-13)
-  }
-  
-  // Se ainda não tem 13 dígitos, pode ser um número local que precisa de formatação
-  if (formattedPhone.length < 13) {
-    // Para números com 10-11 dígitos, adicionar código 55 do Brasil
-    if (formattedPhone.length === 10 || formattedPhone.length === 11) {
-      formattedPhone = `55${formattedPhone}`
-    }
-  }
-  
-  // Validação final: deve ter exatamente 13 dígitos
-  if (formattedPhone.length !== 13) {
-    return { isValid: false, error: `Formato inválido (${formattedPhone.length} dígitos, esperado 13)` }
+  // Aceitar números com 12 ou 13 dígitos (com código do país)
+  if (formattedPhone.length < 12 || formattedPhone.length > 13) {
+    return { isValid: false, error: `Formato inválido (${formattedPhone.length} dígitos, esperado 12-13)` }
   }
   
   // Verificar se começa com 55 (Brasil)
