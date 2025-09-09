@@ -402,6 +402,37 @@ export default function BotConfigSection() {
                 <Button onClick={diagnoseWebhook} variant="secondary">
                   Diagnosticar
                 </Button>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke('test-webhook-ping');
+                      
+                      if (error) {
+                        console.error('Erro no teste:', error);
+                        toast({
+                          title: "Erro no teste",
+                          description: error.message || "Não foi possível testar o webhook"
+                        });
+                        return;
+                      }
+
+                      console.log('Resultado do teste:', data);
+                      toast({
+                        title: data.success ? "✅ Webhook funcionando" : "❌ Webhook com problema",
+                        description: data.message
+                      });
+                    } catch (error) {
+                      console.error('Erro no teste de ping:', error);
+                      toast({
+                        title: "Erro no teste",
+                        description: "Não foi possível testar o webhook"
+                      });
+                    }
+                  }} 
+                  variant="secondary"
+                >
+                  Testar Webhook
+                </Button>
               </div>
             </CardContent>
           </Card>
