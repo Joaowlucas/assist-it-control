@@ -24,7 +24,7 @@ export function useBoardParticipants(boardId: string) {
         .from('kanban_board_participants')
         .select(`
           *,
-          profiles(name, email, avatar_url)
+          profiles!user_id(name, email, avatar_url)
         `)
         .eq('board_id', boardId)
         .order('added_at', { ascending: true })

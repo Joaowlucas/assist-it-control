@@ -61,7 +61,8 @@ export function useKanbanTasks(boardId: string) {
         .from('kanban_tasks')
         .select(`
           *,
-          profiles(name, avatar_url),
+          assigned_user:profiles!assigned_to(name, avatar_url),
+          created_user:profiles!created_by(name, avatar_url),
           equipment(id, name, type, tombamento, status),
           tickets(id, title, ticket_number, status, priority)
         `)
@@ -77,7 +78,7 @@ export function useKanbanTasks(boardId: string) {
       
       return (data as any[])?.map(item => ({
         ...item,
-        profiles: item.profiles || { name: 'Usuário', avatar_url: null },
+        profiles: item.assigned_user || item.created_user || { name: 'Usuário', avatar_url: null },
         equipment: item.equipment || null,
         ticket: item.tickets || null
       })) as KanbanTask[]
