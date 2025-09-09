@@ -123,7 +123,7 @@ async function processConversation(
     case 'menu':
       if (conversation.isNewUser) {
         await sendWhatsAppMessage(supabase, phone, 
-          `🤖 *BOT DE SUPORTE TI*\n\n👋 Olá! Seu número não está cadastrado.\n\n*Digite seu NOME COMPLETO para prosseguir:*`
+          `🤖 *BOT DE SUPORTE TI*\n\n👋 Olá! Seu número não está cadastrado.\n\n*Digite seu NOME COMPLETO para prosseguir:*\n\n_Ou digite "pular" para criar chamado sem cadastro_`
         );
         conversation.step = 'name';
       } else {
@@ -170,25 +170,30 @@ async function processConversation(
     case 'name':
       console.log(`📝 Processando nome: "${messageText.trim()}" (${messageText.trim().length} caracteres)`);
       
-      if (messageText.trim().length < 3) {
+      // Permitir pular cadastro
+      if (input === 'pular' || input === 'skip') {
+        console.log('⏭️ Pulando cadastro, indo direto para problema');
+        conversation.userName = 'Usuário Anônimo';
+        conversation.isNewUser = false;
+        conversation.step = 'problem';
+        
+        await sendWhatsAppMessage(supabase, phone,
+          `📝 *NOVO CHAMADO (SEM CADASTRO)*\n\n*Descreva o problema em poucas palavras:*\n\nExemplos:\n• Computador não liga\n• Internet lenta\n• Email não funciona\n• Impressora com defeito`
+        );
+        break;
+      }
+      
+      if (messageText.trim().length < 2) {
         console.log('❌ Nome muito curto, solicitando novamente');
         await sendWhatsAppMessage(supabase, phone,
-          `❌ Nome muito curto.\n\n*Digite seu NOME COMPLETO:*`
+          `❌ Nome muito curto.\n\n*Digite seu NOME COMPLETO:*\n\n_Ou digite "pular" para criar chamado sem cadastro_`
         );
         return;
       }
       
-      // Verificar se não é uma mensagem de sistema ou comando
+      // Aceitar qualquer texto como nome válido (não muito restritivo)
       const cleanName = messageText.trim();
-      if (cleanName.toLowerCase().includes('digite') || cleanName.toLowerCase().includes('bot') || /^\d+$/.test(cleanName)) {
-        console.log('❌ Nome inválido (parece ser comando), solicitando novamente');
-        await sendWhatsAppMessage(supabase, phone,
-          `❌ Por favor, digite apenas seu nome completo.\n\nExemplo: João Silva\n\n*Digite seu NOME COMPLETO:*`
-        );
-        return;
-      }
-      
-      console.log(`✅ Nome válido aceito: ${cleanName}`);
+      console.log(`✅ Nome aceito: ${cleanName}`);
       conversation.userName = cleanName;
       
       // Buscar unidades
@@ -196,10 +201,12 @@ async function processConversation(
       
       if (unitsError || !units || units.length === 0) {
         console.error('❌ Erro ao buscar unidades:', unitsError);
+        // Se não conseguir buscar unidades, pular para problema direto
+        conversation.step = 'problem';
         await sendWhatsAppMessage(supabase, phone,
-          `❌ Erro ao carregar unidades. Tente novamente mais tarde.`
+          `✅ Nome: ${conversation.userName}\n\n📝 *Descreva o problema:*\n\nExemplos:\n• Computador não liga\n• Internet lenta\n• Email não funciona`
         );
-        return;
+        break;
       }
       
       console.log(`📋 ${units.length} unidades encontradas`);
@@ -313,15 +320,48 @@ async function processConversation(
     case 'confirmation':
       if (input.includes('sim') || input.includes('s') || input === '1') {
         // Criar chamado
+        let requester_id = conversation.userId;
+        let unit_id = conversation.unitId || conversation.selectedUnitId;
+        
+        // Se não tem usuário cadastrado, criar um temporário ou usar dados padrão
+        if (!requester_id && conversation.userName) {
+          console.log('🆕 Criando usuário temporário para chamado');
+          
+          // Buscar primeira unidade disponível se não tem unit_id
+          if (!unit_id) {
+            const { data: firstUnit } = await supabase.from('units').select('id').limit(1).single();
+            unit_id = firstUnit?.id;
+          }
+          
+          // Tentar criar usuário temporário
+          const { data: tempUser, error: userError } = await supabase
+            .from('profiles')
+            .insert({
+              name: conversation.userName,
+              email: `${normalizePhone(phone)}@whatsapp.temp`,
+              phone: normalizePhone(phone),
+              unit_id: unit_id,
+              role: 'user',
+              status: 'ativo'
+            })
+            .select('id')
+            .single();
+            
+          if (!userError && tempUser) {
+            requester_id = tempUser.id;
+            console.log('✅ Usuário temporário criado');
+          }
+        }
+        
         const { data: newTicket, error } = await supabase
           .from('tickets')
           .insert({
             title: conversation.problem!.substring(0, 100),
             description: `CHAMADO VIA WHATSAPP\n\nUsuário: ${conversation.userName}\nTelefone: ${phone}\n\nProblema: ${conversation.problem}`,
-            category: conversation.category,
-            priority: conversation.priority,
-            requester_id: conversation.userId,
-            unit_id: conversation.unitId || conversation.selectedUnitId,
+            category: conversation.category || 'outros',
+            priority: conversation.priority || 'media',
+            requester_id: requester_id,
+            unit_id: unit_id,
             status: 'aberto'
           })
           .select('ticket_number')
@@ -334,8 +374,9 @@ async function processConversation(
           
           console.log(`Chamado #${newTicket.ticket_number} criado via WhatsApp para ${conversation.userName}`);
         } else {
+          console.error('❌ Erro ao criar chamado:', error);
           await sendWhatsAppMessage(supabase, phone,
-            `❌ Erro ao criar chamado.\n\n*Digite SIM para tentar novamente*`
+            `❌ Erro ao criar chamado: ${error.message}\n\n*Digite SIM para tentar novamente*`
           );
           return;
         }
