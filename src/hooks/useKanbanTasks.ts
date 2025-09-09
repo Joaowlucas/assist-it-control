@@ -68,7 +68,13 @@ export function useKanbanTasks(boardId: string) {
         .eq('board_id', boardId)
         .order('position', { ascending: true })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching kanban tasks:', error)
+        throw error
+      }
+      
+      console.log('Fetched tasks for board:', boardId, data)
+      
       return (data as any[])?.map(item => ({
         ...item,
         profiles: item.profiles || { name: 'Usuário', avatar_url: null },
@@ -77,6 +83,9 @@ export function useKanbanTasks(boardId: string) {
       })) as KanbanTask[]
     },
     enabled: !!boardId,
+    // Adicionar opções para garantir que os dados sejam sempre atualizados
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -111,7 +120,14 @@ export function useCreateTask() {
       return data
     },
     onSuccess: (data) => {
+      // Invalidar múltiplas queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['kanban-tasks', data.board_id] })
+      queryClient.invalidateQueries({ queryKey: ['kanban-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['kanban-columns', data.board_id] })
+      
+      // Forçar refetch imediatamente
+      queryClient.refetchQueries({ queryKey: ['kanban-tasks', data.board_id] })
+      
       toast({
         title: 'Sucesso',
         description: 'Tarefa criada com sucesso',
