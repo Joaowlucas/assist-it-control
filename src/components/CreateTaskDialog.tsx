@@ -29,7 +29,7 @@ export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus }:
     description: '',
     status: defaultStatus,
     priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
-    assigned_to: '',
+    assigned_to: 'none',
     due_date: undefined as Date | undefined,
     labels: [] as string[]
   })
@@ -44,7 +44,7 @@ export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus }:
         description: formData.description || undefined,
         status: formData.status,
         priority: formData.priority,
-        assigned_to: formData.assigned_to || undefined,
+        assigned_to: formData.assigned_to === 'none' ? undefined : formData.assigned_to || undefined,
         due_date: formData.due_date ? format(formData.due_date, 'yyyy-MM-dd') : undefined,
         labels: formData.labels
       })
@@ -54,7 +54,7 @@ export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus }:
         description: '',
         status: defaultStatus,
         priority: 'medium',
-        assigned_to: '',
+        assigned_to: 'none',
         due_date: undefined,
         labels: []
       })
@@ -147,7 +147,7 @@ export function CreateTaskDialog({ open, onOpenChange, boardId, defaultStatus }:
                   <SelectValue placeholder="Selecionar responsável" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {users?.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}

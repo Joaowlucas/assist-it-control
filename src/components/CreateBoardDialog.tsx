@@ -23,7 +23,7 @@ export function CreateBoardDialog({ open, onOpenChange }: CreateBoardDialogProps
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    unit_id: profile?.unit_id || '',
+        unit_id: profile?.unit_id || 'none',
     is_unit_wide: false
   })
 
@@ -34,14 +34,14 @@ export function CreateBoardDialog({ open, onOpenChange }: CreateBoardDialogProps
       await createBoard.mutateAsync({
         name: formData.name,
         description: formData.description || undefined,
-        unit_id: formData.unit_id || undefined,
+        unit_id: formData.unit_id === 'none' ? undefined : formData.unit_id || undefined,
         is_unit_wide: formData.is_unit_wide
       })
       
       setFormData({
         name: '',
         description: '',
-        unit_id: profile?.unit_id || '',
+        unit_id: profile?.unit_id || 'none',
         is_unit_wide: false
       })
       
@@ -92,7 +92,7 @@ export function CreateBoardDialog({ open, onOpenChange }: CreateBoardDialogProps
                   <SelectValue placeholder="Selecione uma unidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma unidade específica</SelectItem>
+                  <SelectItem value="none">Nenhuma unidade específica</SelectItem>
                   {units?.map((unit) => (
                     <SelectItem key={unit.id} value={unit.id}>
                       {unit.name}
