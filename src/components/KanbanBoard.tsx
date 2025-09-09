@@ -95,106 +95,139 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{board.name}</h1>
-            {board.description && (
-              <p className="text-muted-foreground">{board.description}</p>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Badge variant={board.is_unit_wide ? 'default' : 'secondary'}>
-              {board.is_unit_wide ? 'Toda a unidade' : 'Privado'}
-            </Badge>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowParticipants(true)}
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Participantes
-          </Button>
-          {columns && columns.length > 0 && (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-6">
             <Button 
-              onClick={() => {
-                setSelectedColumn(columns[0].name)
-                setShowCreateTask(true)
-              }}
+              variant="ghost" 
+              onClick={onBack}
+              className="group hover:bg-white/60 backdrop-blur-sm border border-white/20 shadow-sm transition-all duration-300 hover:shadow-md"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Tarefa
+              <ArrowLeft className="h-4 w-4 mr-2 transition-transform group-hover:-translate-x-1" />
+              Voltar
             </Button>
-          )}
-          {isOwner && (
-            <Button 
-              variant="outline"
-              onClick={() => setShowCreateColumn(true)}
-            >
-              <Columns className="h-4 w-4 mr-2" />
-              Nova Coluna
-            </Button>
-          )}
-          {isOwner && (
-            <Button variant="outline">
-              <Settings className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <DndContext onDragEnd={handleDragEnd}>
-        {columns && columns.length > 0 ? (
-          <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(300px, 1fr))` }}>
-            {columns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                id={column.name}
-                title={column.name}
-                color={column.color}
-                tasks={tasksByColumn[column.name] || []}
-                onAddTask={() => {
-                  setSelectedColumn(column.name)
-                  setShowCreateTask(true)
-                }}
-                onEditColumn={() => {
-                  setEditingColumn(column)
-                  setShowEditColumn(true)
-                }}
-                onTaskClick={(task) => {
-                  setSelectedTask(task)
-                  setShowTaskDetails(true)
-                }}
-                isOwner={isOwner}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <Columns className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma coluna criada</h3>
-              <p className="text-muted-foreground mb-4">
-                Crie sua primeira coluna para começar a organizar suas tarefas.
-              </p>
-              {isOwner && (
-                <Button onClick={() => setShowCreateColumn(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeira Coluna
-                </Button>
+            <div className="animate-fade-in">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+                {board.name}
+              </h1>
+              {board.description && (
+                <p className="text-slate-600 mt-1">{board.description}</p>
               )}
             </div>
+            <div className="flex items-center space-x-3">
+              <Badge 
+                variant={board.is_unit_wide ? 'default' : 'secondary'}
+                className={`px-3 py-1 rounded-full font-medium transition-all duration-200 ${
+                  board.is_unit_wide 
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25' 
+                    : 'bg-white/80 text-slate-700 border border-slate-200 shadow-sm'
+                }`}
+              >
+                {board.is_unit_wide ? 'Toda a unidade' : 'Privado'}
+              </Badge>
+            </div>
           </div>
-        )}
-      </DndContext>
+          
+          <div className="flex items-center space-x-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowParticipants(true)}
+              className="group hover:bg-white/60 backdrop-blur-sm border border-white/20 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105"
+            >
+              <Users className="h-4 w-4 mr-2 transition-transform group-hover:scale-110" />
+              Participantes
+            </Button>
+            {columns && columns.length > 0 && (
+              <Button 
+                onClick={() => {
+                  setSelectedColumn(columns[0].name)
+                  setShowCreateTask(true)
+                }}
+                className="group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105"
+              >
+                <Plus className="h-4 w-4 mr-2 transition-transform group-hover:rotate-90" />
+                Nova Tarefa
+              </Button>
+            )}
+            {isOwner && (
+              <Button 
+                variant="outline"
+                onClick={() => setShowCreateColumn(true)}
+                className="group hover:bg-white/60 backdrop-blur-sm border border-white/20 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105"
+              >
+                <Columns className="h-4 w-4 mr-2 transition-transform group-hover:scale-110" />
+                Nova Coluna
+              </Button>
+            )}
+            {isOwner && (
+              <Button 
+                variant="outline"
+                className="group hover:bg-white/60 backdrop-blur-sm border border-white/20 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105"
+              >
+                <Settings className="h-4 w-4 transition-transform group-hover:rotate-12" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <DndContext onDragEnd={handleDragEnd}>
+          {columns && columns.length > 0 ? (
+            <div 
+              className="grid gap-6 pb-8 animate-fade-in" 
+              style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(320px, 1fr))` }}
+            >
+              {columns.map((column, index) => (
+                <div
+                  key={column.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <KanbanColumn
+                    id={column.name}
+                    title={column.name}
+                    color={column.color}
+                    tasks={tasksByColumn[column.name] || []}
+                    onAddTask={() => {
+                      setSelectedColumn(column.name)
+                      setShowCreateTask(true)
+                    }}
+                    onEditColumn={() => {
+                      setEditingColumn(column)
+                      setShowEditColumn(true)
+                    }}
+                    onTaskClick={(task) => {
+                      setSelectedTask(task)
+                      setShowTaskDetails(true)
+                    }}
+                    isOwner={isOwner}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 animate-fade-in">
+              <div className="max-w-md mx-auto bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg">
+                <div className="w-16 h-16 bg-gradient-to-br from-slate-200 to-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <Columns className="h-8 w-8 text-slate-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">Nenhuma coluna criada</h3>
+                <p className="text-slate-600 mb-6 leading-relaxed">
+                  Crie sua primeira coluna para começar a organizar suas tarefas com estilo.
+                </p>
+                {isOwner && (
+                  <Button 
+                    onClick={() => setShowCreateColumn(true)}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeira Coluna
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DndContext>
 
       <CreateTaskDialog
         open={showCreateTask}
@@ -228,6 +261,7 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
         task={selectedTask}
         columns={columns}
       />
+      </div>
     </div>
   )
 }
