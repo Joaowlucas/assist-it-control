@@ -88,6 +88,14 @@ export function useChatMessages(conversationId: string) {
 
       if (error) throw error
 
+      // Mapear para incluir user_id como alias de sender_id
+      const mappedMessages = data.map(message => ({
+        ...message,
+        user_id: message.sender_id,
+        content: message.content || '',
+        mentions: Array.isArray(message.mentions) ? message.mentions : []
+      }))
+
       // Buscar anexos separadamente se necessário
       let messagesWithAttachments = mappedMessages
 
