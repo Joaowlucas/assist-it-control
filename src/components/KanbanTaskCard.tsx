@@ -7,6 +7,7 @@ import { useDraggable } from '@dnd-kit/core'
 
 interface KanbanTaskCardProps {
   task: KanbanTask
+  onClick?: () => void
 }
 
 const PRIORITY_COLORS = {
@@ -23,7 +24,7 @@ const PRIORITY_LABELS = {
   urgent: 'Urgente'
 }
 
-export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
+export function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id
   })
@@ -31,6 +32,15 @@ export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
   } : undefined
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Permitir clique apenas se não estiver arrastando
+    if (!isDragging && onClick) {
+      e.preventDefault()
+      e.stopPropagation()
+      onClick()
+    }
+  }
 
   const getTaskTypeIcon = (task: KanbanTask) => {
     switch (task.task_type) {
@@ -51,9 +61,10 @@ export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
       style={style}
       {...listeners}
       {...attributes}
+      onClick={handleClick}
       className={`cursor-grab hover:shadow-md transition-shadow ${
         isDragging ? 'opacity-50' : ''
-      } ${isOverdue ? 'border-red-200' : ''}`}
+      } ${isOverdue ? 'border-red-200' : ''} ${onClick ? 'hover:cursor-pointer' : ''}`}
     >
       <CardContent className="p-3">
         <div className="space-y-2">

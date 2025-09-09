@@ -12,10 +12,11 @@ interface KanbanColumnProps {
   tasks: KanbanTask[]
   onAddTask: () => void
   onEditColumn?: () => void
+  onTaskClick?: (task: KanbanTask) => void
   isOwner?: boolean
 }
 
-export function KanbanColumn({ id, title, color, tasks, onAddTask, onEditColumn, isOwner }: KanbanColumnProps) {
+export function KanbanColumn({ id, title, color, tasks, onAddTask, onEditColumn, onTaskClick, isOwner }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({ id })
 
   return (
@@ -42,7 +43,11 @@ export function KanbanColumn({ id, title, color, tasks, onAddTask, onEditColumn,
       </CardHeader>
       <CardContent ref={setNodeRef} className="space-y-3 min-h-[200px] p-3">
         {tasks.map((task) => (
-          <KanbanTaskCard key={task.id} task={task} />
+          <KanbanTaskCard 
+            key={task.id} 
+            task={task} 
+            onClick={() => onTaskClick?.(task)}
+          />
         ))}
         {tasks.length === 0 && (
           <div className="text-center text-muted-foreground py-8">

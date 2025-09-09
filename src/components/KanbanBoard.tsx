@@ -8,7 +8,8 @@ import { CreateTaskDialog } from '@/components/CreateTaskDialog'
 import { CreateColumnDialog } from '@/components/CreateColumnDialog'
 import { EditColumnDialog } from '@/components/EditColumnDialog'
 import { ManageParticipantsDialog } from '@/components/ManageParticipantsDialog'
-import { useKanbanTasks } from '@/hooks/useKanbanTasks'
+import { TaskDetailsDialog } from '@/components/TaskDetailsDialog'
+import { useKanbanTasks, useUpdateTask } from '@/hooks/useKanbanTasks'
 import { useKanbanBoards } from '@/hooks/useKanbanBoards'
 import { useKanbanColumns } from '@/hooks/useKanbanColumns'
 import { useAuth } from '@/hooks/useAuth'
@@ -24,12 +25,15 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
   const { data: boards } = useKanbanBoards()
   const { data: tasks, isLoading: tasksLoading } = useKanbanTasks(boardId)
   const { data: columns, isLoading: columnsLoading } = useKanbanColumns(boardId)
+  const updateTaskMutation = useUpdateTask()
   const [showCreateTask, setShowCreateTask] = useState(false)
   const [showCreateColumn, setShowCreateColumn] = useState(false)
   const [showEditColumn, setShowEditColumn] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
+  const [showTaskDetails, setShowTaskDetails] = useState(false)
   const [selectedColumn, setSelectedColumn] = useState<string>('')
   const [editingColumn, setEditingColumn] = useState<any>(null)
+  const [selectedTask, setSelectedTask] = useState<any>(null)
 
   const board = boards?.find(b => b.id === boardId)
   const isOwner = board?.created_by === profile?.id
@@ -47,10 +51,18 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
     if (!over) return
 
     const taskId = active.id as string
-    const newColumn = over.id as string
+    const newStatus = over.id as string
     
-    // TODO: Implement task status update
-    console.log('Move task', taskId, 'to', newColumn)
+    // Encontrar a tarefa que está sendo movida
+    const task = tasks?.find(t => t.id === taskId)
+    if (!task || task.status === newStatus) return
+
+    // Usar o hook de update para mover a tarefa
+    updateTaskMutation.mutate({
+      id: taskId,
+      board_id: boardId,
+      status: newStatus
+    })
   }
 
   if (isLoading) {
@@ -157,6 +169,10 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
                   setEditingColumn(column)
                   setShowEditColumn(true)
                 }}
+                onTaskClick={(task) => {
+                  setSelectedTask(task)
+                  setShowTaskDetails(true)
+                }}
                 isOwner={isOwner}
               />
             ))}
@@ -205,6 +221,12 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
         onOpenChange={setShowParticipants}
         boardId={boardId}
         isOwner={isOwner}
+      />
+      <TaskDetailsDialog
+        open={showTaskDetails}
+        onOpenChange={setShowTaskDetails}
+        task={selectedTask}
+        columns={columns}
       />
     </div>
   )
