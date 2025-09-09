@@ -69,7 +69,7 @@ export function useAvailableTickets() {
           priority,
           description,
           requester_id,
-          profiles(name)
+          profiles!tickets_requester_id_fkey(name)
         `)
         .in('status', ['aberto', 'em_andamento'])
         .order('created_at', { ascending: false })
@@ -94,7 +94,7 @@ export function useAllTickets() {
           priority,
           description,
           requester_id,
-          profiles(name)
+          profiles!tickets_requester_id_fkey(name)
         `)
         .order('created_at', { ascending: false })
 

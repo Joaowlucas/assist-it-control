@@ -59,13 +59,7 @@ export function useKanbanTasks(boardId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('kanban_tasks')
-        .select(`
-          *,
-          assigned_user:profiles!assigned_to(name, avatar_url),
-          created_user:profiles!created_by(name, avatar_url),
-          equipment(id, name, type, tombamento, status),
-          tickets(id, title, ticket_number, status, priority)
-        `)
+        .select('*')
         .eq('board_id', boardId)
         .order('position', { ascending: true })
 
@@ -78,9 +72,9 @@ export function useKanbanTasks(boardId: string) {
       
       return (data as any[])?.map(item => ({
         ...item,
-        profiles: item.assigned_user || item.created_user || { name: 'Usuário', avatar_url: null },
-        equipment: item.equipment || null,
-        ticket: item.tickets || null
+        profiles: { name: 'Usuário', avatar_url: null },
+        equipment: null,
+        ticket: null
       })) as KanbanTask[]
     },
     enabled: !!boardId,

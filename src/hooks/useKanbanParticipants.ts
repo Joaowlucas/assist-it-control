@@ -22,17 +22,14 @@ export function useBoardParticipants(boardId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('kanban_board_participants')
-        .select(`
-          *,
-          profiles!user_id(name, email, avatar_url)
-        `)
+        .select('*')
         .eq('board_id', boardId)
         .order('added_at', { ascending: true })
 
       if (error) throw error
       return (data as any[])?.map(item => ({
         ...item,
-        profiles: item.profiles || { name: 'Usuário', email: '', avatar_url: null }
+        profiles: { name: 'Usuário', email: '', avatar_url: null }
       })) as KanbanParticipant[]
     },
     enabled: !!boardId,
