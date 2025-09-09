@@ -106,39 +106,22 @@ export function TaskDetailsDialog({ open, onOpenChange, task, columns }: TaskDet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-lg border-0 shadow-2xl rounded-2xl animate-scale-in">
-        <DialogHeader className="border-b border-slate-100 pb-6">
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span className="text-xl font-semibold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
-              Detalhes da Tarefa
-            </span>
+            <span>Detalhes da Tarefa</span>
             <div className="flex items-center space-x-2">
               {!isEditing ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setIsEditing(true)}
-                  className="hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200"
-                >
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                   Editar
                 </Button>
               ) : (
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setIsEditing(false)}
-                    className="hover:bg-slate-50 hover:border-slate-200 transition-all duration-200"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
                     <X className="h-4 w-4 mr-1" />
                     Cancelar
                   </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={handleSave} 
-                    disabled={updateTaskMutation.isPending}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md transition-all duration-200"
-                  >
+                  <Button size="sm" onClick={handleSave} disabled={updateTaskMutation.isPending}>
                     <Save className="h-4 w-4 mr-1" />
                     Salvar
                   </Button>

@@ -95,134 +95,106 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0079bf]">
-      <div className="container mx-auto p-4">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              onClick={onBack}
-              className="text-white hover:bg-white/20 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-white">
-                {board.name}
-              </h1>
-              {board.description && (
-                <p className="text-blue-100 text-sm mt-1">{board.description}</p>
-              )}
-            </div>
-            <Badge 
-              variant={board.is_unit_wide ? 'default' : 'secondary'}
-              className={`px-3 py-1 text-xs ${
-                board.is_unit_wide 
-                  ? 'bg-white/20 text-white border-white/30' 
-                  : 'bg-white/10 text-blue-100 border-white/20'
-              }`}
-            >
+    <div className="container mx-auto p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{board.name}</h1>
+            {board.description && (
+              <p className="text-muted-foreground">{board.description}</p>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant={board.is_unit_wide ? 'default' : 'secondary'}>
               {board.is_unit_wide ? 'Toda a unidade' : 'Privado'}
             </Badge>
           </div>
-          
-          <div className="flex items-center space-x-2">
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowParticipants(true)}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Participantes
+          </Button>
+          {columns && columns.length > 0 && (
             <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowParticipants(true)}
-              className="text-white hover:bg-white/20 transition-colors"
+              onClick={() => {
+                setSelectedColumn(columns[0].name)
+                setShowCreateTask(true)
+              }}
             >
-              <Users className="h-4 w-4 mr-2" />
-              Participantes
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Tarefa
             </Button>
-            {columns && columns.length > 0 && (
-              <Button 
-                size="sm"
-                onClick={() => {
-                  setSelectedColumn(columns[0].name)
+          )}
+          {isOwner && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowCreateColumn(true)}
+            >
+              <Columns className="h-4 w-4 mr-2" />
+              Nova Coluna
+            </Button>
+          )}
+          {isOwner && (
+            <Button variant="outline">
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <DndContext onDragEnd={handleDragEnd}>
+        {columns && columns.length > 0 ? (
+          <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(300px, 1fr))` }}>
+            {columns.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                id={column.name}
+                title={column.name}
+                color={column.color}
+                tasks={tasksByColumn[column.name] || []}
+                onAddTask={() => {
+                  setSelectedColumn(column.name)
                   setShowCreateTask(true)
                 }}
-                className="bg-white/20 text-white hover:bg-white/30 transition-colors"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Tarefa
-              </Button>
-            )}
-            {isOwner && (
-              <Button 
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCreateColumn(true)}
-                className="text-white hover:bg-white/20 transition-colors"
-              >
-                <Columns className="h-4 w-4 mr-2" />
-                Nova Coluna
-              </Button>
-            )}
-            {isOwner && (
-              <Button 
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/20 transition-colors"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
+                onEditColumn={() => {
+                  setEditingColumn(column)
+                  setShowEditColumn(true)
+                }}
+                onTaskClick={(task) => {
+                  setSelectedTask(task)
+                  setShowTaskDetails(true)
+                }}
+                isOwner={isOwner}
+              />
+            ))}
           </div>
-        </div>
-
-        <DndContext onDragEnd={handleDragEnd}>
-          {columns && columns.length > 0 ? (
-            <div className="flex gap-3 overflow-x-auto pb-4">
-              {columns.map((column) => (
-                <div key={column.id} className="flex-shrink-0">
-                  <KanbanColumn
-                    id={column.name}
-                    title={column.name}
-                    color={column.color}
-                    tasks={tasksByColumn[column.name] || []}
-                    onAddTask={() => {
-                      setSelectedColumn(column.name)
-                      setShowCreateTask(true)
-                    }}
-                    onEditColumn={() => {
-                      setEditingColumn(column)
-                      setShowEditColumn(true)
-                    }}
-                    onTaskClick={(task) => {
-                      setSelectedTask(task)
-                      setShowTaskDetails(true)
-                    }}
-                    isOwner={isOwner}
-                  />
-                </div>
-              ))}
+        ) : (
+          <div className="text-center py-12">
+            <div className="max-w-md mx-auto">
+              <Columns className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhuma coluna criada</h3>
+              <p className="text-muted-foreground mb-4">
+                Crie sua primeira coluna para começar a organizar suas tarefas.
+              </p>
+              {isOwner && (
+                <Button onClick={() => setShowCreateColumn(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Primeira Coluna
+                </Button>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="max-w-md mx-auto bg-white rounded-lg p-8 shadow-sm">
-                <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Columns className="h-8 w-8 text-slate-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-3">Nenhuma coluna criada</h3>
-                <p className="text-slate-600 mb-6">
-                  Crie sua primeira coluna para começar a organizar suas tarefas.
-                </p>
-                {isOwner && (
-                  <Button 
-                    onClick={() => setShowCreateColumn(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Primeira Coluna
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </DndContext>
+          </div>
+        )}
+      </DndContext>
 
       <CreateTaskDialog
         open={showCreateTask}
@@ -256,7 +228,6 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
         task={selectedTask}
         columns={columns}
       />
-      </div>
     </div>
   )
 }
