@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Plus, Settings, Users, Columns } from 'lucide-react'
+import { ArrowLeft, Plus, Settings, Users, Columns, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -31,9 +31,11 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
   const [showEditColumn, setShowEditColumn] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
   const [showTaskDetails, setShowTaskDetails] = useState(false)
+  const [showBackgroundPicker, setShowBackgroundPicker] = useState(false)
   const [selectedColumn, setSelectedColumn] = useState<string>('')
   const [editingColumn, setEditingColumn] = useState<any>(null)
   const [selectedTask, setSelectedTask] = useState<any>(null)
+  const [backgroundColor, setBackgroundColor] = useState('#0079bf')
 
   const board = boards?.find(b => b.id === boardId)
   const isOwner = board?.created_by === profile?.id
@@ -95,7 +97,7 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0079bf]">
+    <div className="min-h-screen" style={{ backgroundColor }}>
       <div className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
@@ -161,6 +163,15 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
                 Nova Coluna
               </Button>
             )}
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowBackgroundPicker(true)}
+              className="text-white hover:bg-white/20 transition-colors"
+            >
+              <Palette className="h-4 w-4 mr-2" />
+              Fundo
+            </Button>
             {isOwner && (
               <Button 
                 variant="ghost"
@@ -256,6 +267,62 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
         task={selectedTask}
         columns={columns}
       />
+
+      {/* Background Color Picker Dialog */}
+      {showBackgroundPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowBackgroundPicker(false)}>
+          <div className="bg-white rounded-lg p-6 m-4 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">Escolher Cor de Fundo</h3>
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {[
+                '#0079bf', '#d29034', '#519839', '#b04632',
+                '#89609e', '#cd5a91', '#4bbf6b', '#00aecc',
+                '#838c91', '#172b4d', '#026aa7', '#ffd500',
+                '#eb5a46', '#c377e0', '#ff9f1a', '#51e898'
+              ].map((color) => (
+                <button
+                  key={color}
+                  className={`w-12 h-12 rounded-lg border-2 transition-all ${
+                    backgroundColor === color ? 'border-gray-800 scale-110' : 'border-gray-200 hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setBackgroundColor(color)}
+                />
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="w-12 h-10 rounded border"
+              />
+              <input
+                type="text"
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                placeholder="#0079bf"
+                className="flex-1 px-3 py-2 border rounded text-sm"
+              />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowBackgroundPicker(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => setShowBackgroundPicker(false)}
+                className="flex-1"
+              >
+                Aplicar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   )

@@ -20,7 +20,7 @@ export function KanbanColumn({ id, title, color, tasks, onAddTask, onEditColumn,
   const { setNodeRef } = useDroppable({ id })
 
   return (
-    <div className="w-72 bg-[#ebecf0] rounded-lg">
+    <div className="w-72 rounded-lg" style={{ backgroundColor: color }}>
       <div className="p-2">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-sm text-slate-800 flex items-center">
