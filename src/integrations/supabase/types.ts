@@ -526,11 +526,14 @@ export type Database = {
           created_by: string
           description: string | null
           due_date: string | null
+          equipment_id: string | null
           id: string
           labels: Json | null
           position: number
           priority: string
           status: string
+          task_type: string
+          ticket_id: string | null
           title: string
           updated_at: string
         }
@@ -541,11 +544,14 @@ export type Database = {
           created_by: string
           description?: string | null
           due_date?: string | null
+          equipment_id?: string | null
           id?: string
           labels?: Json | null
           position?: number
           priority?: string
           status?: string
+          task_type?: string
+          ticket_id?: string | null
           title: string
           updated_at?: string
         }
@@ -556,15 +562,33 @@ export type Database = {
           created_by?: string
           description?: string | null
           due_date?: string | null
+          equipment_id?: string | null
           id?: string
           labels?: Json | null
           position?: number
           priority?: string
           status?: string
+          task_type?: string
+          ticket_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kanban_tasks_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_tasks_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       landing_page_content: {
         Row: {

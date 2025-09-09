@@ -16,9 +16,26 @@ export interface KanbanTask {
   labels: string[]
   created_at: string
   updated_at: string
+  task_type: 'custom' | 'equipment' | 'ticket'
+  equipment_id?: string
+  ticket_id?: string
   profiles?: {
     name: string
     avatar_url?: string
+  }
+  equipment?: {
+    id: string
+    name: string
+    type: string
+    tombamento?: string
+    status: string
+  }
+  ticket?: {
+    id: string
+    title: string
+    ticket_number: number
+    status: string
+    priority: string
   }
 }
 
@@ -31,6 +48,9 @@ export interface CreateTaskData {
   assigned_to?: string
   due_date?: string
   labels?: string[]
+  task_type?: 'custom' | 'equipment' | 'ticket'
+  equipment_id?: string
+  ticket_id?: string
 }
 
 export function useKanbanTasks(boardId: string) {
@@ -41,7 +61,9 @@ export function useKanbanTasks(boardId: string) {
         .from('kanban_tasks')
         .select(`
           *,
-          profiles(name, avatar_url)
+          profiles(name, avatar_url),
+          equipment(id, name, type, tombamento, status),
+          tickets(id, title, ticket_number, status, priority)
         `)
         .eq('board_id', boardId)
         .order('position', { ascending: true })
@@ -49,7 +71,9 @@ export function useKanbanTasks(boardId: string) {
       if (error) throw error
       return (data as any[])?.map(item => ({
         ...item,
-        profiles: item.profiles || { name: 'Usuário', avatar_url: null }
+        profiles: item.profiles || { name: 'Usuário', avatar_url: null },
+        equipment: item.equipment || null,
+        ticket: item.tickets || null
       })) as KanbanTask[]
     },
     enabled: !!boardId,

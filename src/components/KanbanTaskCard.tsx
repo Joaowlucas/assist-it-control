@@ -1,4 +1,4 @@
-import { Calendar, User, AlertCircle } from 'lucide-react'
+import { Calendar, User, AlertCircle, Wrench, Ticket } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -32,6 +32,17 @@ export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
   } : undefined
 
+  const getTaskTypeIcon = (task: KanbanTask) => {
+    switch (task.task_type) {
+      case 'equipment':
+        return <Wrench className="h-4 w-4 text-blue-600" />
+      case 'ticket':
+        return <Ticket className="h-4 w-4 text-green-600" />
+      default:
+        return null
+    }
+  }
+
   const isOverdue = task.due_date && new Date(task.due_date) < new Date()
 
   return (
@@ -47,11 +58,33 @@ export function KanbanTaskCard({ task }: KanbanTaskCardProps) {
       <CardContent className="p-3">
         <div className="space-y-2">
           <div className="flex items-start justify-between">
-            <h4 className="font-medium text-sm line-clamp-2">{task.title}</h4>
+            <div className="flex items-center gap-2 flex-1">
+              {getTaskTypeIcon(task)}
+              <h4 className="font-medium text-sm line-clamp-2">{task.title}</h4>
+            </div>
             {isOverdue && (
               <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 ml-1" />
             )}
           </div>
+          
+          {/* Mostrar informações específicas do tipo de tarefa */}
+          {task.task_type === 'equipment' && task.equipment && (
+            <div className="p-2 bg-blue-50 rounded-md">
+              <p className="text-xs font-medium text-blue-900">Equipamento</p>
+              <p className="text-xs text-blue-700">{task.equipment.name}</p>
+              <p className="text-xs text-blue-600">
+                {task.equipment.type} • {task.equipment.tombamento}
+              </p>
+            </div>
+          )}
+          
+          {task.task_type === 'ticket' && task.ticket && (
+            <div className="p-2 bg-green-50 rounded-md">
+              <p className="text-xs font-medium text-green-900">Chamado</p>
+              <p className="text-xs text-green-700">#{task.ticket.ticket_number}</p>
+              <p className="text-xs text-green-600">{task.ticket.status}</p>
+            </div>
+          )}
           
           {task.description && (
             <p className="text-xs text-muted-foreground line-clamp-2">
