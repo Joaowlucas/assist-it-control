@@ -93,14 +93,12 @@ export function MessageBubble({ message, isCurrentUser, onEdit, onDelete }: Mess
 
   return (
     <div className={`flex gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'} group`}>
-      {!isCurrentUser && (
-        <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={message.profiles.avatar_url} />
-          <AvatarFallback>
-            {message.profiles.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      )}
+      <Avatar className="h-8 w-8 flex-shrink-0">
+        <AvatarImage src={message.profiles.avatar_url} />
+        <AvatarFallback>
+          {message.profiles.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
       
       <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
         {!isCurrentUser && (
