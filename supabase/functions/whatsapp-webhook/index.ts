@@ -327,10 +327,26 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Dados recebidos:', JSON.stringify(body, null, 2));
 
+    // Verificar se é um evento de mensagem
+    if (!body.event || body.event !== 'messages.upsert') {
+      console.log(`Evento ignorado: ${body.event || 'sem evento'}`);
+      return new Response(JSON.stringify({ success: true, message: 'Event ignored' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verificar se há dados da mensagem
+    if (!body.data || !body.data.key) {
+      console.log('Dados de mensagem inválidos');
+      return new Response(JSON.stringify({ success: true, message: 'Invalid message data' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Verificar se é uma mensagem recebida (não enviada pelo bot)
-    if (!body.data || body.data.key?.fromMe) {
-      console.log('Mensagem ignorada: enviada pelo bot ou sem dados');
-      return new Response(JSON.stringify({ success: true, message: 'Ignored' }), {
+    if (body.data.key.fromMe) {
+      console.log('Mensagem ignorada: enviada pelo bot');
+      return new Response(JSON.stringify({ success: true, message: 'Message from bot ignored' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
