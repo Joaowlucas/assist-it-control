@@ -1616,6 +1616,10 @@ export type Database = {
         Args: { technician_id: string; unit_id: string }
         Returns: boolean
       }
+      user_can_access_board: {
+        Args: { board_id: string; user_id: string }
+        Returns: boolean
+      }
       user_can_approve_posts: {
         Args: { post_unit_ids: Json; user_id: string; user_role: string }
         Returns: boolean
