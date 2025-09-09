@@ -11,6 +11,7 @@ import WhatsAppAdminPanel from "@/components/WhatsAppAdminPanel"
 import WhatsAppSetupGuide from "@/components/WhatsAppSetupGuide"
 import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 import { AssignmentManagementSection } from "@/components/AssignmentManagementSection"
+import BotConfigSection from "@/components/BotConfigSection"
 
 export default function Settings() {
   return (
@@ -23,13 +24,14 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="units">Unidades</TabsTrigger>
           <TabsTrigger value="tickets">Chamados</TabsTrigger>
           <TabsTrigger value="assignments">Atribuições</TabsTrigger>
           <TabsTrigger value="company">Empresa</TabsTrigger>
           <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+          <TabsTrigger value="bot">Bot</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
@@ -88,6 +90,10 @@ export default function Settings() {
           <WhatsAppTicketConfigSection />
           <WhatsAppAdminPanel />
           <WhatsAppSetupGuide />
+        </TabsContent>
+
+        <TabsContent value="bot" className="space-y-4">
+          <BotConfigSection />
         </TabsContent>
 
         <TabsContent value="logs" className="space-y-4">
