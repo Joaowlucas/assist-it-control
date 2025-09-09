@@ -101,10 +101,7 @@ async function processConversation(
         );
         conversation.step = 'name';
       } else {
-        await sendWhatsAppMessage(supabase, phone,
-          `🤖 *BOT DE SUPORTE TI*\n\n👋 Olá ${conversation.userName}!\n\n*Escolha uma opção:*\n\n1️⃣ Abrir novo chamado\n2️⃣ Status dos meus chamados\n3️⃣ Falar com atendente\n\n*Digite o número da opção:*`
-        );
-        
+        // Para usuários existentes, processar a opção do menu
         if (input === '1') {
           conversation.step = 'problem';
           await sendWhatsAppMessage(supabase, phone,
@@ -136,8 +133,9 @@ async function processConversation(
             `👨‍💻 *ATENDIMENTO HUMANO*\n\nEm breve um técnico entrará em contato.\n\n*Digite 1 para abrir chamado automático*`
           );
         } else {
+          // Primeira vez ou opção inválida - mostrar menu
           await sendWhatsAppMessage(supabase, phone,
-            `❌ Opção inválida.\n\n*Digite:*\n1 - Novo chamado\n2 - Meus chamados\n3 - Atendente`
+            `🤖 *BOT DE SUPORTE TI*\n\n👋 Olá ${conversation.userName}!\n\n*Escolha uma opção:*\n\n1️⃣ Abrir novo chamado\n2️⃣ Status dos meus chamados\n3️⃣ Falar com atendente\n\n*Digite o número da opção:*`
           );
         }
       }
