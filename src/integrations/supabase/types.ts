@@ -1590,6 +1590,118 @@ export type Database = {
           },
         ]
       }
+      whatsapp_flow_steps: {
+        Row: {
+          actions: Json | null
+          condition_field: string | null
+          condition_operator: string | null
+          condition_value: string | null
+          created_at: string
+          flow_id: string
+          id: string
+          input_options: Json | null
+          input_type: string | null
+          message_text: string | null
+          next_step_failure: string | null
+          next_step_success: string | null
+          step_name: string
+          step_order: number
+          step_type: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json | null
+          condition_field?: string | null
+          condition_operator?: string | null
+          condition_value?: string | null
+          created_at?: string
+          flow_id: string
+          id?: string
+          input_options?: Json | null
+          input_type?: string | null
+          message_text?: string | null
+          next_step_failure?: string | null
+          next_step_success?: string | null
+          step_name: string
+          step_order: number
+          step_type: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json | null
+          condition_field?: string | null
+          condition_operator?: string | null
+          condition_value?: string | null
+          created_at?: string
+          flow_id?: string
+          id?: string
+          input_options?: Json | null
+          input_type?: string | null
+          message_text?: string | null
+          next_step_failure?: string | null
+          next_step_success?: string | null
+          step_name?: string
+          step_order?: number
+          step_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_flow_steps_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flow_steps_next_step_failure_fkey"
+            columns: ["next_step_failure"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flow_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flow_steps_next_step_success_fkey"
+            columns: ["next_step_success"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_flows: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          trigger_keywords: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          trigger_keywords?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          trigger_keywords?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_notifications: {
         Row: {
           created_at: string | null

@@ -26,10 +26,9 @@ interface ConversationState {
   userName?: string;
   userId?: string;
   unitId?: string;
-  problem?: string;
-  category?: string;
-  priority?: string;
-  isNewUser?: boolean;
+  currentFlowId?: string;
+  currentStepId?: string;
+  flowData: { [key: string]: any };
 }
 
 // Armazenar conversas ativas temporariamente
@@ -37,13 +36,13 @@ const activeConversations = new Map<string, ConversationState>();
 
 // Função para normalizar número de telefone
 function normalizePhone(phone: string): string {
-  return phone.replace(/[^\d]/g, '').slice(-10); // Últimos 10 dígitos
+  return phone.replace(/[^\d]/g, '').slice(-10);
 }
 
 // Função para enviar mensagem via WhatsApp
 async function sendWhatsAppMessage(supabase: any, phone: string, message: string): Promise<void> {
   try {
-    console.log(`💬 Tentando enviar mensagem para ${phone.substring(0, 6)}****`);
+    console.log(`💬 Enviando mensagem para ${phone.substring(0, 6)}****`);
     console.log(`📝 Mensagem: ${message.substring(0, 50)}...`);
     
     await supabase.functions.invoke('send-whatsapp', {
@@ -53,160 +52,152 @@ async function sendWhatsAppMessage(supabase: any, phone: string, message: string
       }
     });
     
-    console.log('✅ Resposta do send-whatsapp enviada');
+    console.log('✅ Mensagem enviada com sucesso');
   } catch (error) {
-    console.error('❌ Erro ao invocar send-whatsapp:', error);
-    console.error('📍 Stack trace:', error.stack);
+    console.error('❌ Erro ao enviar mensagem:', error);
   }
 }
 
-// FLUXO SIMPLIFICADO DE CONVERSA
-async function processConversation(
-  supabase: any, 
-  phone: string, 
-  messageText: string, 
-  userProfile?: any
-): Promise<void> {
-  console.log('🔄 Iniciando processConversation');
-  console.log(`📞 Phone: ${phone.substring(0, 6)}****`);
-  console.log(`💬 Message: ${messageText}`);
-  console.log(`👤 UserProfile: ${userProfile ? userProfile.name : 'Novo usuário'}`);
+// Função para substituir variáveis na mensagem
+function replaceVariables(message: string, data: { [key: string]: any }): string {
+  let result = message;
   
-  const conversationKey = normalizePhone(phone);
-  let conversation = activeConversations.get(conversationKey);
+  // Substituir variáveis entre chaves {}
+  Object.keys(data).forEach(key => {
+    const regex = new RegExp(`\\{${key}\\}`, 'g');
+    result = result.replace(regex, data[key] || '');
+  });
   
-  console.log(`🗂️ Conversation key: ${conversationKey}`);
-  console.log(`💾 Existing conversation: ${conversation ? `Etapa: ${conversation.step}` : 'Nova'}`);
+  return result;
+}
 
-  const input = messageText.trim().toLowerCase();
+// Função para buscar fluxos ativos
+async function getActiveFlows(supabase: any) {
+  const { data: flows } = await supabase
+    .from('whatsapp_flows')
+    .select(`
+      *,
+      whatsapp_flow_steps (*)
+    `)
+    .eq('is_active', true);
+  
+  return flows || [];
+}
 
-  // PRIMEIRA MENSAGEM - INICIAR FLUXO
-  if (!conversation) {
-    console.log('🆕 Nova conversa - iniciando');
-    
-    if (userProfile) {
-      // Usuário cadastrado - menu completo
-      await sendWhatsAppMessage(supabase, phone,
-        `🤖 *BOT DE SUPORTE TI*\n\n👋 Olá ${userProfile.name}!\n\n*Digite 1 para criar chamado*\n\n1️⃣ Novo chamado\n2️⃣ Meus chamados\n3️⃣ Atendimento humano`
-      );
-      
-      conversation = {
-        step: 'menu',
-        phone: phone,
-        userName: userProfile.name,
-        userId: userProfile.id,
-        unitId: userProfile.unit_id,
-        isNewUser: false
-      };
-    } else {
-      // Novo usuário - direto ao problema
-      await sendWhatsAppMessage(supabase, phone,
-        `🤖 *BOT DE SUPORTE TI*\n\n👋 Olá! Vou te ajudar a abrir um chamado.\n\n📝 *Descreva o problema:*\n\nExemplos:\n• Computador não liga\n• Internet lenta\n• Email não funciona`
-      );
-      
-      conversation = {
-        step: 'problem',
-        phone: phone,
-        userName: 'Usuário WhatsApp',
-        isNewUser: true
-      };
+// Função para encontrar fluxo baseado em palavra-chave
+function findFlowByKeyword(flows: any[], messageText: string) {
+  const lowerMessage = messageText.toLowerCase();
+  
+  for (const flow of flows) {
+    if (flow.trigger_keywords?.some((keyword: string) => 
+      lowerMessage.includes(keyword.toLowerCase())
+    )) {
+      return flow;
     }
-    
-    activeConversations.set(conversationKey, conversation);
-    return;
-  }
-
-  // PROCESSAR ETAPAS
-  switch (conversation.step) {
-    case 'menu':
-      if (input === '1') {
-        conversation.step = 'problem';
-        await sendWhatsAppMessage(supabase, phone,
-          `📝 *NOVO CHAMADO*\n\n*Descreva o problema:*`
-        );
-      } else if (input === '2' && conversation.userId) {
-        // Buscar chamados do usuário
-        const { data: tickets } = await supabase
-          .from('tickets')
-          .select('ticket_number, title, status')
-          .eq('requester_id', conversation.userId)
-          .order('created_at', { ascending: false })
-          .limit(3);
-
-        let statusMessage = `📋 *SEUS CHAMADOS:*\n\n`;
-        if (tickets && tickets.length > 0) {
-          tickets.forEach((ticket: any) => {
-            statusMessage += `🎫 #${ticket.ticket_number}: ${ticket.title} (${ticket.status})\n`;
-          });
-        } else {
-          statusMessage += `Nenhum chamado encontrado.\n`;
-        }
-        statusMessage += `\n*Digite 1 para novo chamado*`;
-        
-        await sendWhatsAppMessage(supabase, phone, statusMessage);
-      } else {
-        await sendWhatsAppMessage(supabase, phone,
-          `❓ Digite 1 para criar chamado`
-        );
-      }
-      break;
-
-    case 'problem':
-      if (messageText.trim().length < 3) {
-        await sendWhatsAppMessage(supabase, phone,
-          `❌ Muito curto.\n\n*Descreva o problema:*`
-        );
-        return;
-      }
-      
-      conversation.problem = messageText.trim();
-      conversation.step = 'priority';
-      
-      await sendWhatsAppMessage(supabase, phone,
-        `✅ *CHAMADO:* ${messageText.trim()}\n\n⚡ *Urgência:*\n\n1️⃣ 🔴 Urgente\n2️⃣ 🟡 Normal\n3️⃣ 🟢 Baixa\n\n*Digite o número:*`
-      );
-      break;
-
-    case 'priority':
-      const priorities = ['alta', 'media', 'baixa'];
-      const priorityLabels = ['🔴 Urgente', '🟡 Normal', '🟢 Baixa'];
-      const priorityIndex = parseInt(input) - 1;
-      
-      if (priorityIndex >= 0 && priorityIndex < priorities.length) {
-        conversation.priority = priorities[priorityIndex];
-        
-        // CRIAR CHAMADO IMEDIATAMENTE
-        await createTicket(supabase, phone, conversation);
-        
-        // Limpar conversa
-        activeConversations.delete(conversationKey);
-        return;
-      } else {
-        await sendWhatsAppMessage(supabase, phone,
-          `❌ Digite 1, 2 ou 3`
-        );
-      }
-      break;
   }
   
-  // Salvar estado da conversa
-  activeConversations.set(conversationKey, conversation);
-  console.log(`💾 Conversa salva - Etapa: ${conversation.step}`);
+  return flows.find(flow => flow.name.includes('padrão') || flow.name.includes('Criar Chamado'));
 }
 
-// Função para criar chamado
-async function createTicket(supabase: any, phone: string, conversation: ConversationState) {
+// Função para processar passo do fluxo
+async function processFlowStep(
+  supabase: any,
+  phone: string,
+  messageText: string,
+  conversation: ConversationState,
+  flows: any[]
+) {
+  const currentFlow = flows.find(f => f.id === conversation.currentFlowId);
+  if (!currentFlow) return;
+
+  const steps = currentFlow.whatsapp_flow_steps.sort((a: any, b: any) => a.step_order - b.step_order);
+  
+  let currentStep = steps.find((s: any) => s.id === conversation.currentStepId);
+  if (!currentStep) {
+    currentStep = steps[0]; // Primeiro passo
+  }
+
+  console.log(`📍 Processando passo: ${currentStep.step_name} (${currentStep.step_type})`);
+
+  switch (currentStep.step_type) {
+    case 'message':
+      // Enviar mensagem e avançar para próximo passo
+      const message = replaceVariables(currentStep.message_text, conversation.flowData);
+      await sendWhatsAppMessage(supabase, phone, message);
+      
+      // Avançar para próximo passo
+      const nextStep = steps.find((s: any) => s.step_order === currentStep.step_order + 1);
+      if (nextStep) {
+        conversation.currentStepId = nextStep.id;
+      }
+      break;
+
+    case 'input':
+      // Processar entrada do usuário
+      if (currentStep.input_type === 'options') {
+        // Verificar se entrada é válida
+        const validOption = currentStep.input_options?.find((opt: any) => 
+          opt.key === messageText.trim() || opt.value === messageText.toLowerCase()
+        );
+        
+        if (validOption) {
+          // Salvar valor na conversa
+          conversation.flowData[currentStep.step_name] = validOption.value;
+          
+          // Avançar para próximo passo
+          const nextStep = steps.find((s: any) => s.step_order === currentStep.step_order + 1);
+          if (nextStep) {
+            conversation.currentStepId = nextStep.id;
+            await processFlowStep(supabase, phone, '', conversation, flows);
+          }
+        } else {
+          // Reenviar opções
+          await sendWhatsAppMessage(supabase, phone, 
+            `❌ Opção inválida. ${currentStep.message_text || 'Digite uma opção válida:'}`);
+        }
+      } else {
+        // Texto livre ou número
+        if (messageText.trim().length < 3) {
+          await sendWhatsAppMessage(supabase, phone, 
+            "❌ Muito curto. Tente novamente:");
+          return;
+        }
+        
+        // Salvar entrada
+        conversation.flowData[currentStep.step_name] = messageText.trim();
+        
+        // Avançar para próximo passo
+        const nextStep = steps.find((s: any) => s.step_order === currentStep.step_order + 1);
+        if (nextStep) {
+          conversation.currentStepId = nextStep.id;
+          await processFlowStep(supabase, phone, '', conversation, flows);
+        }
+      }
+      break;
+
+    case 'action':
+      // Executar ação
+      if (currentStep.actions?.ticket) {
+        await createTicketFromFlow(supabase, phone, conversation, currentStep);
+      }
+      
+      // Limpar conversa após ação
+      const conversationKey = normalizePhone(phone);
+      activeConversations.delete(conversationKey);
+      break;
+  }
+}
+
+// Função para criar ticket a partir do fluxo
+async function createTicketFromFlow(supabase: any, phone: string, conversation: ConversationState, step: any) {
   try {
-    console.log('🎫 Criando chamado...');
+    console.log('🎫 Criando chamado via fluxo...');
     
     let requester_id = conversation.userId;
     let unit_id = conversation.unitId;
     
-    // Se não tem usuário, criar temporário
+    // Criar usuário temporário se necessário
     if (!requester_id) {
-      console.log('🆕 Criando usuário temporário');
-      
-      // Buscar primeira unidade
       const { data: firstUnit } = await supabase.from('units').select('id').limit(1).single();
       unit_id = firstUnit?.id;
       
@@ -226,7 +217,6 @@ async function createTicket(supabase: any, phone: string, conversation: Conversa
           
         if (newUser) {
           requester_id = newUser.id;
-          console.log('✅ Usuário criado');
         }
       }
     }
@@ -235,10 +225,10 @@ async function createTicket(supabase: any, phone: string, conversation: Conversa
     const { data: ticket, error } = await supabase
       .from('tickets')
       .insert({
-        title: conversation.problem!.substring(0, 100),
-        description: `CHAMADO VIA WHATSAPP\n\nUsuário: ${conversation.userName}\nTelefone: ${phone}\n\nProblema: ${conversation.problem}`,
-        category: 'outros',
-        priority: conversation.priority || 'media',
+        title: (conversation.flowData.problema || 'Chamado via WhatsApp').substring(0, 100),
+        description: `📱 CHAMADO VIA WHATSAPP\n\n👤 ${conversation.userName}\n📞 ${phone}\n\n📝 PROBLEMA:\n${conversation.flowData.problema || 'Não especificado'}`,
+        category: step.actions.ticket?.category || 'outros',
+        priority: conversation.flowData.prioridade_escolha || conversation.flowData.prioridade || 'media',
         requester_id: requester_id,
         unit_id: unit_id,
         status: 'aberto'
@@ -247,23 +237,79 @@ async function createTicket(supabase: any, phone: string, conversation: Conversa
       .single();
 
     if (!error && ticket) {
-      await sendWhatsAppMessage(supabase, phone,
-        `✅ *CHAMADO CRIADO!*\n\n🎫 #${ticket.ticket_number}\n📝 ${conversation.problem}\n⚡ ${conversation.priority}\n\n🕐 Nossa equipe entrará em contato!\n\n💬 *Digite qualquer mensagem para novo chamado*`
+      const responseMessage = replaceVariables(
+        step.message_text || '🎉 *CHAMADO CRIADO!*\n\n🎫 Número: *#{ticket_number}*',
+        { 
+          ...conversation.flowData, 
+          ticket_number: ticket.ticket_number 
+        }
       );
       
-      console.log(`✅ Chamado #${ticket.ticket_number} criado!`);
+      await sendWhatsAppMessage(supabase, phone, responseMessage);
+      console.log(`✅ Chamado #${ticket.ticket_number} criado via fluxo!`);
     } else {
       console.error('❌ Erro ao criar chamado:', error);
       await sendWhatsAppMessage(supabase, phone,
-        `❌ Erro ao criar chamado.\n\n*Digite qualquer mensagem para tentar novamente*`
-      );
+        '❌ Erro ao criar chamado. Tente novamente.');
     }
   } catch (error) {
-    console.error('❌ Erro na criação:', error);
+    console.error('❌ Erro na criação via fluxo:', error);
     await sendWhatsAppMessage(supabase, phone,
-      `❌ Erro interno.\n\n*Digite qualquer mensagem para tentar novamente*`
-    );
+      '❌ Erro interno. Nossa equipe foi notificada.');
   }
+}
+
+// Função principal para processar conversa
+async function processConversation(
+  supabase: any, 
+  phone: string, 
+  messageText: string, 
+  userProfile?: any
+): Promise<void> {
+  console.log('🔄 Processando conversa...');
+  
+  const conversationKey = normalizePhone(phone);
+  let conversation = activeConversations.get(conversationKey);
+  
+  // Buscar fluxos ativos
+  const flows = await getActiveFlows(supabase);
+  
+  // NOVA CONVERSA
+  if (!conversation) {
+    console.log('🆕 Nova conversa iniciada');
+    
+    // Encontrar fluxo apropriado
+    const selectedFlow = findFlowByKeyword(flows, messageText);
+    if (!selectedFlow) {
+      await sendWhatsAppMessage(supabase, phone, 
+        '❌ Desculpe, não consegui entender. Tente enviar "ajuda" ou "suporte".');
+      return;
+    }
+    
+    // Iniciar nova conversa
+    conversation = {
+      step: 'flow',
+      phone: phone,
+      userName: userProfile ? userProfile.name : 'Usuário WhatsApp',
+      userId: userProfile ? userProfile.id : undefined,
+      unitId: userProfile ? userProfile.unit_id : undefined,
+      currentFlowId: selectedFlow.id,
+      currentStepId: undefined,
+      flowData: {}
+    };
+    
+    activeConversations.set(conversationKey, conversation);
+    
+    // Iniciar fluxo
+    await processFlowStep(supabase, phone, messageText, conversation, flows);
+  } else {
+    // Continuar conversa existente
+    console.log(`🔄 Continuando conversa - Fluxo: ${conversation.currentFlowId}`);
+    await processFlowStep(supabase, phone, messageText, conversation, flows);
+  }
+  
+  // Salvar estado da conversa
+  activeConversations.set(conversationKey, conversation);
 }
 
 // WEBHOOK PRINCIPAL
@@ -274,25 +320,21 @@ serve(async (req) => {
 
   try {
     console.log('🚀 === WEBHOOK CHAMADO ===');
-    console.log(`🕒 Timestamp: ${new Date().toISOString()}`);
-    console.log(`📍 URL: ${req.url}`);
-    console.log(`🌍 Method: ${req.method}`);
-    console.log(`📋 Headers:`, Object.fromEntries(req.headers.entries()));
+    console.log(`🕒 ${new Date().toISOString()}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.text();
-    console.log(`📥 Body raw: ${body}`);
-    
     const parsedBody: WhatsAppMessage = JSON.parse(body);
-    console.log(`📨 Body parsed:`, JSON.stringify(parsedBody, null, 2));
+    
+    console.log(`📨 Evento: ${parsedBody.event}`);
 
     // Filtrar apenas mensagens válidas
     if (parsedBody.event !== 'messages.upsert') {
       console.log(`⏭️ Evento ignorado: ${parsedBody.event}`);
-      return new Response(JSON.stringify({ success: true, ignored: true, event: parsedBody.event }), {
+      return new Response(JSON.stringify({ success: true, ignored: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -302,7 +344,7 @@ serve(async (req) => {
     // Ignorar mensagens próprias
     if (messageData.key.fromMe) {
       console.log('⏭️ Mensagem própria ignorada');
-      return new Response(JSON.stringify({ success: true, ignored: true, reason: 'own_message' }), {
+      return new Response(JSON.stringify({ success: true, ignored: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -311,37 +353,32 @@ serve(async (req) => {
     const messageText = messageData.message?.conversation;
     if (!messageText || messageText.trim() === '') {
       console.log('⏭️ Mensagem vazia ignorada');
-      return new Response(JSON.stringify({ success: true, ignored: true, reason: 'empty_message' }), {
+      return new Response(JSON.stringify({ success: true, ignored: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log(`✅ Texto da mensagem: ${messageText}`);
-    console.log(`✅ Evento aceito: ${parsedBody.event}`);
+    console.log(`✅ Mensagem: ${messageText}`);
 
     // Extrair número de telefone
     const originalPhone = messageData.key.remoteJid.split('@')[0];
-    console.log(`📞 Telefone original: ${originalPhone}`);
-    
     const normalizedPhone = normalizePhone(originalPhone);
-    console.log(`📞 Telefone normalizado: ${normalizedPhone}`);
+    
+    console.log(`📞 Telefone: ${normalizedPhone}`);
     
     // Buscar usuário no sistema
-    console.log('👤 Buscando usuário...');
     const { data: userProfile } = await supabase
       .from('profiles')
       .select('id, name, unit_id, phone')
       .eq('phone', normalizedPhone)
       .single();
       
-    console.log(`👤 Usuário encontrado: ${userProfile ? userProfile.name : 'Novo usuário'}`);
-    
-    console.log('💬 Iniciando processamento da conversa...');
+    console.log(`👤 Usuário: ${userProfile ? userProfile.name : 'Novo usuário'}`);
     
     // Processar conversa
     await processConversation(supabase, originalPhone, messageText, userProfile);
     
-    console.log('✅ Conversa processada com sucesso');
+    console.log('✅ Processamento concluído');
 
     return new Response(JSON.stringify({
       success: true,
@@ -365,156 +402,3 @@ serve(async (req) => {
     });
   }
 });
-
-// FLUXO SIMPLIFICADO DE CONVERSA
-async function processConversation(
-  supabase: any, 
-  phone: string, 
-  messageText: string, 
-  userProfile?: any
-): Promise<void> {
-  const conversationKey = normalizePhone(phone);
-  let conversation = activeConversations.get(conversationKey);
-  const input = messageText.trim().toLowerCase();
-  
-  console.log(`🔍 Input: "${input}"`);
-  console.log(`📊 Conversa atual: ${conversation ? conversation.step : 'Nova'}`);
-
-  // NOVA CONVERSA
-  if (!conversation) {
-    console.log('🆕 Iniciando nova conversa');
-    
-    // Ir direto para o problema
-    conversation = {
-      step: 'problem',
-      phone: phone,
-      userName: userProfile ? userProfile.name : 'Usuário WhatsApp',
-      userId: userProfile ? userProfile.id : undefined,
-      unitId: userProfile ? userProfile.unit_id : undefined,
-      isNewUser: !userProfile
-    };
-    
-    await sendWhatsAppMessage(supabase, phone,
-      `🤖 *BOT DE SUPORTE TI*\n\n👋 Olá${userProfile ? ` ${userProfile.name}` : ''}!\n\n📝 *Descreva seu problema:*\n\nExemplos:\n• Computador não liga\n• Internet lenta\n• Email não funciona`
-    );
-    
-    activeConversations.set(conversationKey, conversation);
-    return;
-  }
-
-  // PROCESSAR ETAPAS
-  switch (conversation.step) {
-    case 'problem':
-      if (messageText.trim().length < 3) {
-        await sendWhatsAppMessage(supabase, phone,
-          `❌ Muito curto.\n\n*Descreva melhor o problema:*`
-        );
-        return;
-      }
-      
-      conversation.problem = messageText.trim();
-      conversation.step = 'priority';
-      
-      await sendWhatsAppMessage(supabase, phone,
-        `✅ Problema registrado!\n\n⚡ *Qual a urgência?*\n\n1️⃣ 🔴 Urgente\n2️⃣ 🟡 Normal  \n3️⃣ 🟢 Baixa\n\n*Digite 1, 2 ou 3:*`
-      );
-      break;
-
-    case 'priority':
-      const priorities = ['alta', 'media', 'baixa'];
-      const priorityIndex = parseInt(input) - 1;
-      
-      if (priorityIndex >= 0 && priorityIndex < 3) {
-        conversation.priority = priorities[priorityIndex];
-        console.log(`✅ Prioridade selecionada: ${conversation.priority}`);
-        
-        // CRIAR CHAMADO IMEDIATAMENTE
-        await createTicketNow(supabase, phone, conversation);
-        
-        // Limpar conversa
-        activeConversations.delete(conversationKey);
-        return;
-      } else {
-        await sendWhatsAppMessage(supabase, phone,
-          `❌ Digite 1, 2 ou 3`
-        );
-      }
-      break;
-  }
-  
-  // Salvar conversa
-  activeConversations.set(conversationKey, conversation);
-  console.log(`💾 Conversa atualizada - Etapa: ${conversation.step}`);
-}
-
-// CRIAR CHAMADO
-async function createTicketNow(supabase: any, phone: string, conversation: ConversationState) {
-  try {
-    console.log('🎫 Criando chamado final...');
-    
-    let requester_id = conversation.userId;
-    let unit_id = conversation.unitId;
-    
-    // Criar usuário temporário se necessário
-    if (!requester_id) {
-      console.log('👤 Criando usuário temporário');
-      
-      // Buscar primeira unidade
-      const { data: firstUnit } = await supabase.from('units').select('id').limit(1).single();
-      unit_id = firstUnit?.id;
-      
-      if (unit_id) {
-        const { data: newUser } = await supabase
-          .from('profiles')
-          .insert({
-            name: conversation.userName || 'Usuário WhatsApp',
-            email: `${normalizePhone(phone)}@whatsapp.temp`,
-            phone: normalizePhone(phone),
-            unit_id: unit_id,
-            role: 'user',
-            status: 'ativo'
-          })
-          .select('id')
-          .single();
-          
-        if (newUser) {
-          requester_id = newUser.id;
-          console.log('✅ Usuário temporário criado');
-        }
-      }
-    }
-    
-    // Criar chamado
-    const { data: ticket, error } = await supabase
-      .from('tickets')
-      .insert({
-        title: conversation.problem!.substring(0, 100),
-        description: `📱 CHAMADO VIA WHATSAPP\n\n👤 ${conversation.userName}\n📞 ${phone}\n\n📝 PROBLEMA:\n${conversation.problem}`,
-        category: 'outros',
-        priority: conversation.priority || 'media',
-        requester_id: requester_id,
-        unit_id: unit_id,
-        status: 'aberto'
-      })
-      .select('ticket_number')
-      .single();
-
-    if (!error && ticket) {
-      await sendWhatsAppMessage(supabase, phone,
-        `🎉 *CHAMADO CRIADO!*\n\n🎫 Número: *#${ticket.ticket_number}*\n📝 ${conversation.problem}\n⚡ Prioridade: ${conversation.priority}\n\n✅ Nossa equipe foi notificada!\n\n📱 *Digite qualquer mensagem para criar outro chamado*`
-      );
-      
-      console.log(`🎉 SUCESSO! Chamado #${ticket.ticket_number} criado via WhatsApp`);
-    } else {
-      console.error('❌ Erro ao criar chamado:', error);
-      await sendWhatsAppMessage(supabase, phone,
-        `❌ Erro ao criar chamado.\n\n*Digite qualquer mensagem para tentar novamente*`
-      );
-    }
-  } catch (error) {
-    console.error('❌ Erro na criação do chamado:', error);
-    await sendWhatsAppMessage(supabase, phone,
-      `❌ Erro interno. Nossa equipe foi notificada.\n\n*Digite qualquer mensagem para tentar novamente*`
-    );
-  }
-}

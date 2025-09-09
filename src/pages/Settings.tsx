@@ -12,6 +12,7 @@ import WhatsAppSetupGuide from "@/components/WhatsAppSetupGuide"
 import { WhatsAppLogsSection } from "@/components/WhatsAppLogsSection"
 import { AssignmentManagementSection } from "@/components/AssignmentManagementSection"
 import BotConfigSection from "@/components/BotConfigSection"
+import { WhatsAppFlowManagement } from "@/components/WhatsAppFlowManagement"
 
 export default function Settings() {
   return (
@@ -30,7 +31,8 @@ export default function Settings() {
           <TabsTrigger value="tickets">Chamados</TabsTrigger>
           <TabsTrigger value="assignments">Atribuições</TabsTrigger>
           <TabsTrigger value="company">Empresa</TabsTrigger>
-          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+            <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+            <TabsTrigger value="whatsapp-flows">Fluxos WhatsApp</TabsTrigger>
           <TabsTrigger value="bot">Bot</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
@@ -85,11 +87,15 @@ export default function Settings() {
           <CompanySettingsSection />
         </TabsContent>
 
-        <TabsContent value="whatsapp" className="space-y-4">
+        <TabsContent value="whatsapp" className="space-y-6">
           <WhatsAppConfigSection />
           <WhatsAppTicketConfigSection />
           <WhatsAppAdminPanel />
           <WhatsAppSetupGuide />
+        </TabsContent>
+        
+        <TabsContent value="whatsapp-flows" className="space-y-6">
+          <WhatsAppFlowManagement />
         </TabsContent>
 
         <TabsContent value="bot" className="space-y-4">
