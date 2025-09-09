@@ -203,23 +203,23 @@ const WhatsAppSetupGuide: React.FC = () => {
             
             <div className="space-y-2">
               <div className="flex items-center gap-3 p-2 bg-muted rounded">
-                <Badge variant="outline">Joao Wianney</Badge>
-                <code className="text-sm">98988120100</code>
+                <Badge variant="outline">Seu Nome</Badge>
+                <code className="text-sm">85999999999</code>
                 <Button 
                   size="sm" 
                   variant="ghost"
-                  onClick={() => window.open(`https://wa.me/5598988120100?text=${encodeURIComponent('Teste: Meu computador não está funcionando!')}`, '_blank')}
+                  onClick={() => window.open(`https://wa.me/5585999999999?text=${encodeURIComponent('Teste: Meu computador não está funcionando!')}`, '_blank')}
                 >
                   <ExternalLink className="h-3 w-3" />
                 </Button>
               </div>
               <div className="flex items-center gap-3 p-2 bg-muted rounded">
-                <Badge variant="outline">William Silva</Badge>
-                <code className="text-sm">98991272078</code>
+                <Badge variant="outline">Outro Usuário</Badge>
+                <code className="text-sm">85888888888</code>
                 <Button 
                   size="sm" 
                   variant="ghost"
-                  onClick={() => window.open(`https://wa.me/5598991272078?text=${encodeURIComponent('Teste: Preciso de suporte técnico!')}`, '_blank')}
+                  onClick={() => window.open(`https://wa.me/5585888888888?text=${encodeURIComponent('Teste: Preciso de suporte técnico!')}`, '_blank')}
                 >
                   <ExternalLink className="h-3 w-3" />
                 </Button>
