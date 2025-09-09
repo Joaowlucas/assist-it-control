@@ -469,6 +469,48 @@ export default function BotConfigSection() {
                 >
                   Reconfigurar Webhook
                 </Button>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      toast({
+                        title: "Verificando instância...",
+                        description: "Analisando conexão WhatsApp"
+                      });
+                      
+                      const { data, error } = await supabase.functions.invoke('check-whatsapp-instance');
+                      
+                      if (error) {
+                        console.error('Erro na verificação:', error);
+                        toast({
+                          title: "Erro na verificação",
+                          description: error.message || "Não foi possível verificar a instância"
+                        });
+                        return;
+                      }
+
+                      console.log('Status da instância:', data);
+                      
+                      const instance = data.diagnosis?.instance;
+                      const connected = instance?.connected;
+                      
+                      toast({
+                        title: connected ? "✅ Instância conectada" : "❌ Instância desconectada",
+                        description: connected ? 
+                          `WhatsApp ativo como: ${instance.profileName}` : 
+                          "Escaneie o QR Code para conectar"
+                      });
+                    } catch (error) {
+                      console.error('Erro na verificação:', error);
+                      toast({
+                        title: "Erro na verificação",
+                        description: "Não foi possível verificar a instância"
+                      });
+                    }
+                  }} 
+                  variant="outline"
+                >
+                  Verificar Instância
+                </Button>
               </div>
             </CardContent>
           </Card>
