@@ -15,6 +15,7 @@ import UserDashboard from "@/pages/UserDashboard"
 import UserTickets from "@/pages/UserTickets"
 import UserAssignments from "@/pages/UserAssignments"
 import Announcements from "@/pages/Announcements"
+import Chats from "@/pages/Chats"
 import { AdminLayout } from "@/components/AdminLayout"
 import { UserLayout } from "@/components/UserLayout"
 import { useAuth } from "@/hooks/useAuth"
@@ -51,6 +52,7 @@ function AppRoutes() {
           <Route path="/user-tickets" element={<UserLayout><UserTickets /></UserLayout>} />
           <Route path="/user-assignments" element={<UserLayout><UserAssignments /></UserLayout>} />
           <Route path="/announcements" element={<UserLayout><Announcements /></UserLayout>} />
+          <Route path="/chats" element={<UserLayout><Chats /></UserLayout>} />
           <Route path="*" element={<UserLayout><UserDashboard /></UserLayout>} />
         </Routes>
       </SidebarProvider>
@@ -65,6 +67,7 @@ function AppRoutes() {
         <Route path="/equipment" element={<AdminLayout><Equipment /></AdminLayout>} />
         <Route path="/assignments" element={<AdminLayout><Assignments /></AdminLayout>} />
         <Route path="/announcements" element={<AdminLayout><Announcements /></AdminLayout>} />
+        <Route path="/chats" element={<AdminLayout><Chats /></AdminLayout>} />
         <Route path="/settings" element={<AdminLayout><Settings /></AdminLayout>} />
         <Route path="*" element={<AdminLayout><Dashboard /></AdminLayout>} />
       </Routes>

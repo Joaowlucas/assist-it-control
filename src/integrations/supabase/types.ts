@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -1455,9 +1455,9 @@ export type Database = {
     Functions: {
       approve_equipment_request_and_assign: {
         Args: {
-          request_id: string
-          equipment_id: string
           admin_comments?: string
+          equipment_id: string
+          request_id: string
         }
         Returns: undefined
       }
@@ -1470,11 +1470,11 @@ export type Database = {
         Returns: string
       }
       get_notification_recipients: {
-        Args: { notification_type: string; entity_data?: Json }
+        Args: { entity_data?: Json; notification_type: string }
         Returns: {
-          user_id: string
-          phone: string
           name: string
+          phone: string
+          user_id: string
         }[]
       }
       get_technician_units: {
@@ -1501,7 +1501,7 @@ export type Database = {
         Returns: undefined
       }
       reject_equipment_request: {
-        Args: { request_id: string; admin_comments?: string }
+        Args: { admin_comments?: string; request_id: string }
         Returns: undefined
       }
       technician_has_unit_access: {
@@ -1509,11 +1509,11 @@ export type Database = {
         Returns: boolean
       }
       user_can_approve_posts: {
-        Args: { user_role: string; user_id: string; post_unit_ids: Json }
+        Args: { post_unit_ids: Json; user_id: string; user_role: string }
         Returns: boolean
       }
       user_can_view_post: {
-        Args: { post_unit_ids: Json; user_unit_id: string; user_role: string }
+        Args: { post_unit_ids: Json; user_role: string; user_unit_id: string }
         Returns: boolean
       }
     }

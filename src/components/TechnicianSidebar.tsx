@@ -1,5 +1,5 @@
 
-import { Home, Ticket, Wrench, Building2, Megaphone } from "lucide-react"
+import { Home, Ticket, Wrench, Building2, Megaphone, MessageSquare } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -37,6 +37,11 @@ const technicianItems = [
     title: "Comunicados",
     url: "/announcements",
     icon: Megaphone,
+  },
+  {
+    title: "Chat",
+    url: "/chats",
+    icon: MessageSquare,
   },
 ]
 

@@ -9,6 +9,7 @@ export interface AvailableUser {
   email: string
   role: 'admin' | 'technician' | 'user'
   status: string
+  avatar_url?: string
   unit?: {
     name: string
   }
@@ -31,6 +32,7 @@ export function useAvailableUsers() {
           email,
           role,
           status,
+          avatar_url,
           unit_id,
           unit:units(name)
         `)
@@ -90,6 +92,7 @@ export function useUsersByUnit(unitId: string) {
           email,
           role,
           status,
+          avatar_url,
           unit_id,
           unit:units(name)
         `)
