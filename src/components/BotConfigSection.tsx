@@ -167,6 +167,36 @@ export default function BotConfigSection() {
     }
   };
 
+  const diagnoseWebhook = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('diagnose-webhook');
+
+      if (error) throw error;
+
+      console.log('Diagnóstico:', data);
+      
+      const recommendations = data.recommendations || [];
+      if (recommendations.length === 0) {
+        toast({
+          title: "Diagnóstico completo",
+          description: "Tudo parece estar configurado corretamente!"
+        });
+      } else {
+        toast({
+          title: "Problemas encontrados",
+          description: `${recommendations.length} problema(s) detectado(s). Verifique o console.`,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro no diagnóstico",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="flows" className="space-y-4">
@@ -368,6 +398,9 @@ export default function BotConfigSection() {
                 </Button>
                 <Button onClick={fixWebhookConfig} variant="outline">
                   Corrigir Webhook
+                </Button>
+                <Button onClick={diagnoseWebhook} variant="secondary">
+                  Diagnosticar
                 </Button>
               </div>
             </CardContent>
