@@ -25,14 +25,17 @@ interface WhatsAppMessage {
 }
 
 interface ConversationState {
-  step: 'greeting' | 'problem' | 'category' | 'priority' | 'confirmation' | 'completed';
-  userId: string;
-  userName: string;
+  step: 'greeting' | 'registration_name' | 'registration_unit' | 'registration_confirm' | 'problem' | 'category' | 'priority' | 'confirmation' | 'completed';
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  selectedUnitId?: string;
   problem?: string;
   category?: string;
   priority?: string;
   phone: string;
-  unitId: string;
+  unitId?: string;
+  isRegistering?: boolean;
 }
 
 // Armazenamento temporário de conversas
@@ -62,29 +65,145 @@ async function processConversation(
   supabase: any, 
   phone: string, 
   messageText: string, 
-  userProfile: any
+  userProfile?: any
 ): Promise<void> {
   const conversationKey = normalizePhone(phone);
   let conversation = activeConversations.get(conversationKey);
 
   // Se não existe conversa, iniciar nova
   if (!conversation) {
-    conversation = {
-      step: 'greeting',
-      userId: userProfile.id,
-      userName: userProfile.name,
-      phone: phone,
-      unitId: userProfile.unit_id
-    };
+    if (userProfile) {
+      // Usuário cadastrado - fluxo normal
+      conversation = {
+        step: 'greeting',
+        userId: userProfile.id,
+        userName: userProfile.name,
+        phone: phone,
+        unitId: userProfile.unit_id,
+        isRegistering: false
+      };
+    } else {
+      // Usuário não cadastrado - fluxo de registro
+      conversation = {
+        step: 'greeting',
+        phone: phone,
+        isRegistering: true
+      };
+    }
     activeConversations.set(conversationKey, conversation);
   }
 
   switch (conversation.step) {
     case 'greeting':
-      await sendWhatsAppMessage(supabase, phone, 
-        `Olá ${userProfile.name}! 👋\n\nSou o assistente de TI da Marka. Estou aqui para ajudar você a abrir um chamado.\n\n📝 *Por favor, descreva qual é o problema que você está enfrentando:*\n\nExemplo: "Meu computador não liga" ou "Não consigo acessar o email"`
-      );
-      conversation.step = 'problem';
+      if (conversation.isRegistering) {
+        await sendWhatsAppMessage(supabase, phone, 
+          `👋 Olá! Bem-vindo ao atendimento de TI!\n\nVejo que seu número ainda não está cadastrado no sistema. Vou te ajudar a se registrar rapidamente para que você possa abrir chamados.\n\n📝 *Para começar, me informe seu nome completo:*`
+        );
+        conversation.step = 'registration_name';
+      } else {
+        await sendWhatsAppMessage(supabase, phone, 
+          `Olá ${userProfile.name}! 👋\n\nSou o assistente de TI da Marka. Estou aqui para ajudar você a abrir um chamado.\n\n📝 *Por favor, descreva qual é o problema que você está enfrentando:*\n\nExemplo: "Meu computador não liga" ou "Não consigo acessar o email"`
+        );
+        conversation.step = 'problem';
+      }
+      break;
+
+    case 'registration_name':
+      conversation.userName = messageText.trim();
+      
+      // Buscar unidades disponíveis
+      const { data: units } = await supabase.from('units').select('id, name').order('name');
+      let unitsMessage = `✅ Obrigado, ${conversation.userName}!\n\n🏢 *Agora selecione sua unidade/setor:*\n\n`;
+      
+      units?.forEach((unit: any, index: number) => {
+        unitsMessage += `${index + 1}️⃣ ${unit.name}\n`;
+      });
+      
+      unitsMessage += `\n*Digite o número da sua unidade:*`;
+      
+      await sendWhatsAppMessage(supabase, phone, unitsMessage);
+      conversation.step = 'registration_unit';
+      break;
+
+    case 'registration_unit':
+      // Buscar unidades novamente para mapear a seleção
+      const { data: availableUnits } = await supabase.from('units').select('id, name').order('name');
+      const unitIndex = parseInt(messageText.trim()) - 1;
+      
+      if (unitIndex >= 0 && unitIndex < availableUnits.length) {
+        const selectedUnit = availableUnits[unitIndex];
+        conversation.selectedUnitId = selectedUnit.id;
+        conversation.userEmail = `${normalizePhone(phone)}@temp.whatsapp.com`;
+        
+        await sendWhatsAppMessage(supabase, phone,
+          `✅ *Informações do cadastro:*\n\n👤 Nome: ${conversation.userName}\n🏢 Unidade: ${selectedUnit.name}\n📱 WhatsApp: ${phone}\n\n*Digite "CONFIRMAR" para finalizar o cadastro ou "CORRIGIR" para refazer:*`
+        );
+        conversation.step = 'registration_confirm';
+      } else {
+        await sendWhatsAppMessage(supabase, phone,
+          `❌ Opção inválida. Por favor, digite o número correspondente à sua unidade (1 a ${availableUnits.length}).`
+        );
+      }
+      break;
+
+    case 'registration_confirm':
+      const confirmText = messageText.toLowerCase().trim();
+      
+      if (confirmText.includes('confirmar') || confirmText.includes('sim') || confirmText.includes('ok')) {
+        try {
+          // Criar o usuário
+          const { data: newUser, error: userError } = await supabase
+            .from('profiles')
+            .insert({
+              name: conversation.userName,
+              email: conversation.userEmail,
+              phone: normalizePhone(phone),
+              unit_id: conversation.selectedUnitId,
+              role: 'user',
+              status: 'ativo'
+            })
+            .select()
+            .single();
+
+          if (userError) {
+            console.error('Erro ao criar usuário:', userError);
+            await sendWhatsAppMessage(supabase, phone,
+              `❌ Erro ao criar cadastro. Tente novamente mais tarde ou entre em contato com o suporte.`
+            );
+            activeConversations.delete(conversationKey);
+            return;
+          }
+
+          // Atualizar conversa com dados do usuário criado
+          conversation.userId = newUser.id;
+          conversation.unitId = newUser.unit_id;
+          conversation.isRegistering = false;
+
+          await sendWhatsAppMessage(supabase, phone,
+            `✅ *Cadastro realizado com sucesso!*\n\n🎉 Bem-vindo ao sistema, ${conversation.userName}!\n\nAgora você pode abrir chamados de TI sempre que precisar.\n\n📝 *Vamos abrir seu primeiro chamado! Descreva qual é o problema que você está enfrentando:*\n\nExemplo: "Meu computador não liga" ou "Não consigo acessar o email"`
+          );
+          conversation.step = 'problem';
+        } catch (error) {
+          console.error('Erro no cadastro:', error);
+          await sendWhatsAppMessage(supabase, phone,
+            `❌ Erro interno. Tente novamente mais tarde.`
+          );
+          activeConversations.delete(conversationKey);
+        }
+      } else if (confirmText.includes('corrigir') || confirmText.includes('não') || confirmText.includes('nao')) {
+        await sendWhatsAppMessage(supabase, phone,
+          `🔄 Vamos refazer o cadastro.\n\n📝 *Me informe seu nome completo:*`
+        );
+        conversation.step = 'registration_name';
+        // Limpar dados anteriores
+        delete conversation.userName;
+        delete conversation.selectedUnitId;
+        delete conversation.userEmail;
+      } else {
+        await sendWhatsAppMessage(supabase, phone,
+          `🔄 Não entendi sua resposta.\n\n✅ Digite "CONFIRMAR" para finalizar o cadastro\n❌ Digite "CORRIGIR" para refazer`
+        );
+      }
       break;
 
     case 'problem':
@@ -144,7 +263,7 @@ async function processConversation(
             category: conversation.category,
             priority: conversation.priority,
             requester_id: conversation.userId,
-            unit_id: conversation.unitId,
+            unit_id: conversation.unitId || conversation.selectedUnitId,
             status: 'aberto'
           })
           .select('ticket_number, id')
@@ -251,32 +370,24 @@ serve(async (req) => {
       throw userError;
     }
 
-    if (!userProfiles || userProfiles.length === 0) {
+    let userProfile = null;
+    if (userProfiles && userProfiles.length > 0) {
+      // Se há múltiplos usuários, usar o primeiro
+      userProfile = userProfiles[0];
+      if (userProfiles.length > 1) {
+        console.log(`Múltiplos usuários encontrados para o telefone ${phoneNumber}. Usando: ${userProfile.name}`);
+      }
+      console.log('Usuário encontrado:', userProfile.name);
+    } else {
       console.log('Usuário não encontrado para o telefone:', phoneNumber);
-      
-      // Mensagem explicativa para usuário não cadastrado
-      await sendWhatsAppMessage(supabase, phoneNumber,
-        `👋 Olá!\n\nSeu número de telefone não está cadastrado no sistema.\n\n📞 *Para usar o atendimento via WhatsApp, você precisa:*\n\n1️⃣ Solicitar ao administrador do sistema para cadastrar seu telefone\n2️⃣ Informar este número: ${phoneNumber}\n\n💬 Após o cadastro, você poderá criar chamados de TI diretamente pelo WhatsApp!\n\n📧 Entre em contato com o suporte para mais informações.`
-      );
-
-      return new Response(JSON.stringify({ success: true, message: 'User not found' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
-    // Se há múltiplos usuários, usar o primeiro (pode ser melhorado para critério específico)
-    const userProfile = userProfiles[0];
-    if (userProfiles.length > 1) {
-      console.log(`Múltiplos usuários encontrados para o telefone ${phoneNumber}. Usando: ${userProfile.name}`);
-    }
-    console.log('Usuário encontrado:', userProfile.name);
-
-    // Processar conversa interativa
+    // Processar conversa interativa (com ou sem usuário cadastrado)
     await processConversation(supabase, phoneNumber, messageText, userProfile);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      user: userProfile.name,
+      user: userProfile?.name || 'Usuário não cadastrado',
       phone: phoneNumber
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
