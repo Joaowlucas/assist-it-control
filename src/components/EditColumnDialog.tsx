@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -8,19 +8,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useCreateColumn } from '@/hooks/useKanbanColumns'
+import { useUpdateColumn, useDeleteColumn, KanbanColumn } from '@/hooks/useKanbanColumns'
+import { Trash2 } from 'lucide-react'
 
-interface CreateColumnDialogProps {
+interface EditColumnDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  boardId: string
+  column: KanbanColumn | null
 }
 
 const COLUMN_COLORS = [
@@ -55,31 +49,52 @@ const COLUMN_COLORS = [
   { value: 'bg-teal-200 border-teal-300', label: 'Turquesa', color: 'bg-teal-200' },
 ]
 
-export function CreateColumnDialog({ open, onOpenChange, boardId }: CreateColumnDialogProps) {
+export function EditColumnDialog({ open, onOpenChange, column }: EditColumnDialogProps) {
   const [name, setName] = useState('')
   const [color, setColor] = useState('bg-slate-100 border-slate-200')
-  const createColumn = useCreateColumn()
+  const updateColumn = useUpdateColumn()
+  const deleteColumn = useDeleteColumn()
+
+  useEffect(() => {
+    if (column) {
+      setName(column.name)
+      setColor(column.color)
+    }
+  }, [column])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || !column) return
 
-    await createColumn.mutateAsync({
-      board_id: boardId,
+    await updateColumn.mutateAsync({
+      id: column.id,
+      board_id: column.board_id,
       name: name.trim(),
       color,
     })
 
-    setName('')
-    setColor('bg-slate-100 border-slate-200')
     onOpenChange(false)
   }
 
+  const handleDelete = async () => {
+    if (!column) return
+    
+    if (confirm('Tem certeza que deseja excluir esta coluna? Todas as tarefas nela serão perdidas.')) {
+      await deleteColumn.mutateAsync({
+        id: column.id,
+        board_id: column.board_id
+      })
+      onOpenChange(false)
+    }
+  }
+
+  if (!column) return null
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nova Coluna</DialogTitle>
+          <DialogTitle>Editar Coluna</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -125,20 +140,32 @@ export function CreateColumnDialog({ open, onOpenChange, boardId }: CreateColumn
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="flex justify-between pt-4">
             <Button
               type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteColumn.isPending}
             >
-              Cancelar
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleteColumn.isPending ? 'Excluindo...' : 'Excluir Coluna'}
             </Button>
-            <Button 
-              type="submit" 
-              disabled={!name.trim() || createColumn.isPending}
-            >
-              {createColumn.isPending ? 'Criando...' : 'Criar Coluna'}
-            </Button>
+            
+            <div className="space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={!name.trim() || updateColumn.isPending}
+              >
+                {updateColumn.isPending ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

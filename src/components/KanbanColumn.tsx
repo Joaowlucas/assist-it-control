@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { KanbanTaskCard } from '@/components/KanbanTaskCard'
@@ -11,9 +11,11 @@ interface KanbanColumnProps {
   color: string
   tasks: KanbanTask[]
   onAddTask: () => void
+  onEditColumn?: () => void
+  isOwner?: boolean
 }
 
-export function KanbanColumn({ id, title, color, tasks, onAddTask }: KanbanColumnProps) {
+export function KanbanColumn({ id, title, color, tasks, onAddTask, onEditColumn, isOwner }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({ id })
 
   return (
@@ -26,9 +28,16 @@ export function KanbanColumn({ id, title, color, tasks, onAddTask }: KanbanColum
               {tasks.length}
             </span>
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onAddTask}>
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center space-x-1">
+            <Button variant="ghost" size="sm" onClick={onAddTask}>
+              <Plus className="h-4 w-4" />
+            </Button>
+            {isOwner && onEditColumn && (
+              <Button variant="ghost" size="sm" onClick={onEditColumn}>
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent ref={setNodeRef} className="space-y-3 min-h-[200px] p-3">

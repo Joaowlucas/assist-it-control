@@ -55,7 +55,7 @@ export function useCreateColumn() {
         .from('kanban_columns')
         .insert([{ 
           ...columnData, 
-          color: columnData.color || 'bg-slate-100',
+          color: columnData.color || 'bg-slate-100 border-slate-200',
           position 
         }])
         .select()

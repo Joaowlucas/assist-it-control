@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { KanbanColumn } from '@/components/KanbanColumn'
 import { CreateTaskDialog } from '@/components/CreateTaskDialog'
 import { CreateColumnDialog } from '@/components/CreateColumnDialog'
+import { EditColumnDialog } from '@/components/EditColumnDialog'
 import { ManageParticipantsDialog } from '@/components/ManageParticipantsDialog'
 import { useKanbanTasks } from '@/hooks/useKanbanTasks'
 import { useKanbanBoards } from '@/hooks/useKanbanBoards'
@@ -25,8 +26,10 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
   const { data: columns, isLoading: columnsLoading } = useKanbanColumns(boardId)
   const [showCreateTask, setShowCreateTask] = useState(false)
   const [showCreateColumn, setShowCreateColumn] = useState(false)
+  const [showEditColumn, setShowEditColumn] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
   const [selectedColumn, setSelectedColumn] = useState<string>('')
+  const [editingColumn, setEditingColumn] = useState<any>(null)
 
   const board = boards?.find(b => b.id === boardId)
   const isOwner = board?.created_by === profile?.id
@@ -150,6 +153,11 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
                   setSelectedColumn(column.name)
                   setShowCreateTask(true)
                 }}
+                onEditColumn={() => {
+                  setEditingColumn(column)
+                  setShowEditColumn(true)
+                }}
+                isOwner={isOwner}
               />
             ))}
           </div>
@@ -184,6 +192,12 @@ export function KanbanBoard({ boardId, onBack }: KanbanBoardProps) {
         open={showCreateColumn}
         onOpenChange={setShowCreateColumn}
         boardId={boardId}
+      />
+
+      <EditColumnDialog
+        open={showEditColumn}
+        onOpenChange={setShowEditColumn}
+        column={editingColumn}
       />
 
       <ManageParticipantsDialog
